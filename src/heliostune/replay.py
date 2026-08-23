@@ -616,12 +616,45 @@ def compare_methods(
 
     headline_budget = min(8, max_budget)
     point_index = headline_budget - 1
+    curve_methods = (
+        "static",
+        "random",
+        "nearest_shape",
+        "cold_thompson",
+        "transfer_thompson",
+    )
+    auc = {
+        method: float(
+            np.mean([point["mean_fraction_oracle"] for point in methods[method]])
+        )
+        for method in curve_methods
+    }
+    strongest_legacy = max(
+        ("static", "random", "nearest_shape", "cold_thompson"),
+        key=lambda method: (auc[method], method),
+    )
+    queries_to_95 = {
+        method: next(
+            (
+                int(point["budget"])
+                for point in methods[method]
+                if point["mean_fraction_oracle"] >= 0.95
+            ),
+            None,
+        )
+        for method in curve_methods
+    }
     measurements_per_gpu = len(all_workloads) * len(configs) * 3
     return {
         "project": "HeliosTune",
         "data_kind": "measured",
         "source_gpu": source_gpu,
         "target_gpu": target_gpu,
+        "methodology": (
+            "Grouped leave-one-model-family-out transfer. Policies see only timing bank 0; "
+            "bank 1 selects the best-of-manifest reference and bank 2 evaluates every "
+            "recommendation. Source acquisition is disclosed outside the target query budget."
+        ),
         "workloads": len(all_workloads),
         "configs": len(configs),
         "model_families": len(models),
@@ -643,7 +676,17 @@ def compare_methods(
             "random_fraction_oracle": methods["random"][point_index][
                 "mean_fraction_oracle"
             ],
+            "transfer_auc": auc["transfer_thompson"],
+            "strongest_legacy_method": strongest_legacy,
+            "auc_delta_vs_strongest_legacy": (
+                auc["transfer_thompson"] - auc[strongest_legacy]
+            ),
             "trials_avoided_vs_exhaustive": len(configs) - headline_budget,
+        },
+        "primary_metrics": {
+            "fraction_reference_auc": auc,
+            "queries_to_95_percent_reference": queries_to_95,
+            "primary_budget": headline_budget,
         },
         "source_cost": {
             "collected_measurements_per_gpu": measurements_per_gpu,
