@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "study": "HeliosTune L4-A10 transfer replay",
+  "protocol_commit": "5919cbb4a9d7684ac835ab7bfd89879ac8c82344",
+  "collection_run": "https://modal.com/apps/mottopanikeiku/main/ap-ccgVXq137C9p6vVUxPlvXA",
+  "artifact_created_at_utc": "2026-08-23T08:42:09Z",
+  "scope": {
+    "model_families": 4,
+    "workloads": 96,
+    "launch_configurations": 36,
+    "measurement_banks": 3,
+    "records_per_gpu": 10368,
+    "dtype": "float16",
+    "warmup_ms": 25,
+    "repetition_ms": 100,
+    "primary_target_budget_per_workload": 8,
+    "policy_seeds": 30
+  },
+  "hardware": [
+    {
+      "modal_selector": "L4",
+      "device_name": "NVIDIA L4",
+      "compute_capability": [8, 9],
+      "multiprocessor_count": 58,
+      "total_memory_gb": 22.0343017578125
+    },
+    {
+      "modal_selector": "A10",
+      "device_name": "NVIDIA A10",
+      "compute_capability": [8, 6],
+      "multiprocessor_count": 72,
+      "total_memory_gb": 22.0582275390625
+    }
+  ],
+  "software": {
+    "python": "3.11",
+    "cuda": "12.8",
+    "torch": "2.8.0+cu128",
+    "triton": "3.4.0",
+    "modal_client": "1.5.3"
+  },
+  "banks": {
+    "0": "policy-visible observations",
+    "1": "best-of-manifest reference selection",
+    "2": "held-out recommendation evaluation"
+  },
+  "data": {
+    "path": "data/measurements.jsonl.zst",
+    "compression": "zstd",
+    "sha256": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72"
+  },
+  "results": [
+    "results/l4-to-a10.json",
+    "results/a10-to-l4.json"
+  ]
+}
