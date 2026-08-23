@@ -11,8 +11,10 @@ from typing import Any
 from rich.console import Console
 from rich.table import Table
 
+from heliostune.multisource import compare_multisource
 from heliostune.replay import BenchmarkTable, compare_methods
 from heliostune.schema import read_jsonl, write_jsonl
+from heliostune.selection import select_parhelion
 
 _CONSOLE = Console()
 
@@ -27,6 +29,13 @@ def _write_json(value: dict[str, Any], path: Path) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _parse_sources(value: str) -> tuple[str, ...]:
+    sources = tuple(source.strip() for source in value.split(","))
+    if not sources or any(not source for source in sources):
+        raise ValueError("sources must be a non-empty comma-separated list")
+    return sources
+
+
 def _compare(args: argparse.Namespace) -> int:
     summary = compare_methods(
         _read_measurements(args.input),
@@ -38,6 +47,39 @@ def _compare(args: argparse.Namespace) -> int:
     )
     _write_json(summary, args.output)
     _CONSOLE.print(f"Wrote replay summary to [bold]{args.output}[/bold]")
+    return 0
+
+
+def _compare_multisource(args: argparse.Namespace) -> int:
+    summary = compare_multisource(
+        _read_measurements(args.input),
+        source_gpus=_parse_sources(args.sources),
+        target_gpu=args.target,
+        max_budget=args.max_budget,
+        seeds=args.seeds,
+        k=args.k,
+        temperature=args.temperature,
+        transfer_strength=args.transfer_strength,
+        retrieval_k=args.retrieval_k,
+        retrieval_temperature=args.retrieval_temperature,
+        pooled_transfer_strength=args.pooled_transfer_strength,
+        primary_comparator=args.primary_comparator,
+        protocol_role=args.protocol_role,
+    )
+    _write_json(summary, args.output)
+    _CONSOLE.print(f"Wrote multi-source replay summary to [bold]{args.output}[/bold]")
+    return 0
+
+
+def _select_parhelion(args: argparse.Namespace) -> int:
+    selection, summary = select_parhelion(
+        _read_measurements(args.input),
+        jobs=args.jobs,
+    )
+    _write_json(selection, args.output)
+    _write_json(summary, args.summary_output)
+    _CONSOLE.print(f"Wrote frozen Parhelion selection to [bold]{args.output}[/bold]")
+    _CONSOLE.print(f"Wrote selected T4 replay to [bold]{args.summary_output}[/bold]")
     return 0
 
 
@@ -121,6 +163,38 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--transfer-strength", type=float, default=0.08)
     compare.add_argument("--output", type=Path, default=Path("summary.json"))
     compare.set_defaults(handler=_compare)
+
+    multisource = subparsers.add_parser(
+        "compare-multisource", help="replay Parhelion and baselines from a multi-GPU archive"
+    )
+    multisource.add_argument("input", type=Path)
+    multisource.add_argument("--sources", required=True, help="comma-separated source GPU labels")
+    multisource.add_argument("--target", required=True, help="target GPU label in the dataset")
+    multisource.add_argument("--max-budget", type=int, default=8)
+    multisource.add_argument("--seeds", type=int, default=30)
+    multisource.add_argument("--k", type=int)
+    multisource.add_argument("--temperature", type=float)
+    multisource.add_argument("--transfer-strength", type=float)
+    multisource.add_argument("--retrieval-k", type=int)
+    multisource.add_argument("--retrieval-temperature", type=float)
+    multisource.add_argument("--pooled-transfer-strength", type=float)
+    multisource.add_argument("--primary-comparator")
+    multisource.add_argument(
+        "--protocol-role",
+        choices=("development", "validation", "final"),
+        default="development",
+    )
+    multisource.add_argument("--output", type=Path, default=Path("multisource-summary.json"))
+    multisource.set_defaults(handler=_compare_multisource)
+
+    selection = subparsers.add_parser(
+        "select-parhelion", help="run the frozen 48-point Parhelion grid on T4"
+    )
+    selection.add_argument("input", type=Path)
+    selection.add_argument("--jobs", type=int, default=1)
+    selection.add_argument("--output", type=Path, default=Path("parhelion-selection.json"))
+    selection.add_argument("--summary-output", type=Path, default=Path("t4-summary.json"))
+    selection.set_defaults(handler=_select_parhelion)
 
     report = subparsers.add_parser("report", help="render a replay summary as standalone HTML")
     report.add_argument("input", type=Path)
