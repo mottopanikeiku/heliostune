@@ -42,22 +42,27 @@ class KernelConfig:
 
 @dataclass(frozen=True, slots=True)
 class Workload:
-    """A row-major ``A[M,K] @ B[K,N]`` workload."""
+    """A row-major ``A[M,K] @ B[K,N]`` workload from a named model projection."""
 
     m: int
     n: int
     k: int
-    family: str
+    model: str
+    projection: str
+    regime: str
 
     def __post_init__(self) -> None:
         if min(self.m, self.n, self.k) <= 0:
             raise ValueError("matrix dimensions must be positive")
-        if not self.family:
-            raise ValueError("family must not be empty")
+        if not self.model or not self.projection or not self.regime:
+            raise ValueError("model, projection, and regime must not be empty")
 
     @property
     def key(self) -> str:
-        return f"{self.family}-m{self.m}-n{self.n}-k{self.k}"
+        return (
+            f"{self.model}-{self.projection}-{self.regime}"
+            f"-m{self.m}-n{self.n}-k{self.k}"
+        )
 
     @property
     def flops(self) -> int:
@@ -72,33 +77,120 @@ class Workload:
             m=int(value["m"]),
             n=int(value["n"]),
             k=int(value["k"]),
-            family=str(value["family"]),
+            model=str(value["model"]),
+            projection=str(value["projection"]),
+            regime=str(value["regime"]),
         )
 
 
-DEFAULT_CONFIGS: tuple[KernelConfig, ...] = (
-    KernelConfig(16, 32, 32, 4, 3),
-    KernelConfig(16, 64, 32, 4, 3),
-    KernelConfig(16, 128, 32, 4, 4),
-    KernelConfig(32, 32, 32, 4, 3),
-    KernelConfig(32, 64, 32, 4, 3),
-    KernelConfig(32, 128, 32, 4, 4),
-    KernelConfig(64, 32, 32, 4, 3),
-    KernelConfig(64, 64, 32, 4, 3),
-    KernelConfig(64, 128, 32, 8, 3),
-    KernelConfig(128, 64, 32, 4, 3),
-    KernelConfig(128, 128, 32, 8, 3),
-    KernelConfig(64, 64, 64, 8, 4),
+@dataclass(frozen=True, slots=True)
+class ModelSpec:
+    """Public model dimensions used to derive the benchmark corpus."""
+
+    name: str
+    hidden_size: int
+    intermediate_size: int
+    attention_heads: int
+    key_value_heads: int
+    config_url: str
+
+    @property
+    def key_value_size(self) -> int:
+        return self.hidden_size // self.attention_heads * self.key_value_heads
+
+
+MODEL_SPECS: tuple[ModelSpec, ...] = (
+    ModelSpec(
+        "mistral-7b",
+        4096,
+        14336,
+        32,
+        8,
+        "https://huggingface.co/mistralai/Mistral-7B-v0.1/resolve/main/config.json",
+    ),
+    ModelSpec(
+        "qwen2.5-7b",
+        3584,
+        18944,
+        28,
+        4,
+        "https://huggingface.co/Qwen/Qwen2.5-7B/resolve/main/config.json",
+    ),
+    ModelSpec(
+        "phi-3-mini",
+        3072,
+        8192,
+        32,
+        32,
+        "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/resolve/main/config.json",
+    ),
+    ModelSpec(
+        "granite-3.1-8b",
+        4096,
+        12800,
+        32,
+        8,
+        "https://huggingface.co/ibm-granite/granite-3.1-8b-instruct/resolve/main/config.json",
+    ),
 )
 
 
-_BATCH_SIZES = (1, 8, 32, 128)
-DEFAULT_WORKLOADS: tuple[Workload, ...] = tuple(
-    Workload(batch, n, k, family)
-    for family, n, k in (
-        ("qkv", 4096, 4096),
-        ("ffn-up", 11008, 4096),
-        ("ffn-down", 4096, 11008),
+_TILES = tuple(
+    (block_m, block_n)
+    for block_m in (16, 32, 64, 128)
+    for block_n in (32, 64, 128)
+)
+
+
+def _tile_warps(block_m: int, block_n: int) -> int:
+    return 8 if block_m * block_n >= 8192 else 4
+
+
+DEFAULT_CONFIGS: tuple[KernelConfig, ...] = (
+    tuple(
+        KernelConfig(block_m, block_n, 32, _tile_warps(block_m, block_n), 3, 8)
+        for block_m, block_n in _TILES
     )
-    for batch in _BATCH_SIZES
+    + tuple(
+        KernelConfig(block_m, block_n, 64, _tile_warps(block_m, block_n), 2, 8)
+        for block_m, block_n in _TILES
+    )
+    + tuple(
+        KernelConfig(block_m, block_n, 32, _tile_warps(block_m, block_n), 4, 4)
+        for block_m, block_n in _TILES
+    )
+)
+
+
+_TOKEN_REGIMES: tuple[tuple[str, int], ...] = (
+    ("decode-1", 1),
+    ("decode-7", 7),
+    ("mixed-31", 31),
+    ("mixed-96", 96),
+    ("prefill-257", 257),
+    ("prefill-1024", 1024),
+)
+
+
+def _projection_shapes(model: ModelSpec) -> tuple[tuple[str, int, int], ...]:
+    return (
+        ("attention-qkv", model.hidden_size + 2 * model.key_value_size, model.hidden_size),
+        ("attention-out", model.hidden_size, model.hidden_size),
+        ("ffn-up", model.intermediate_size, model.hidden_size),
+        ("ffn-down", model.hidden_size, model.intermediate_size),
+    )
+
+
+DEFAULT_WORKLOADS: tuple[Workload, ...] = tuple(
+    Workload(
+        m=tokens,
+        n=n,
+        k=k,
+        model=model.name,
+        projection=projection,
+        regime=regime,
+    )
+    for model in MODEL_SPECS
+    for projection, n, k in _projection_shapes(model)
+    for regime, tokens in _TOKEN_REGIMES
 )
