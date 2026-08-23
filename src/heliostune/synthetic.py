@@ -9,7 +9,6 @@ import numpy as np
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, KernelConfig, Workload
 from heliostune.schema import HardwareProfile, Measurement
 
-
 SYNTHETIC_HARDWARE: tuple[HardwareProfile, ...] = (
     HardwareProfile("sim-source", "Synthetic source GPU", (8, 9), 60, 24.0),
     HardwareProfile("sim-target", "Synthetic target GPU", (8, 6), 72, 24.0),

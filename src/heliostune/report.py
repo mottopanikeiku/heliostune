@@ -625,8 +625,10 @@ def _format_value(value: Any, key: str | None = None) -> str:
         return _MISSING
     if isinstance(value, bool):
         return "Yes" if value else "No"
-    if key == "compute_capability" and isinstance(value, Sequence) and not isinstance(
-        value, (str, bytes)
+    if (
+        key == "compute_capability"
+        and isinstance(value, Sequence)
+        and not isinstance(value, (str, bytes))
     ):
         return ".".join(str(part) for part in value)
     if isinstance(value, float):
@@ -825,9 +827,7 @@ def _marker_svg(kind: str, x: float, y: float, color: str, label: str) -> str:
     return f'<g class="series-point" fill="{color}"><title>{safe_label}</title>{shape}</g>'
 
 
-def _render_chart(
-    methods: Mapping[str, list[dict[str, float]]], labels: Mapping[str, str]
-) -> str:
+def _render_chart(methods: Mapping[str, list[dict[str, float]]], labels: Mapping[str, str]) -> str:
     all_points = [point for points in methods.values() for point in points]
     if not all_points:
         return '<div class="empty-state">No budget-efficiency points were supplied.</div>'
@@ -848,7 +848,7 @@ def _render_chart(
     elements = [
         f'<svg viewBox="0 0 {_CHART_WIDTH} {_CHART_HEIGHT}" role="img" aria-labelledby="curve-title curve-desc">',
         '<title id="curve-title">Budget efficiency by tuning method</title>',
-        '<desc id="curve-desc">Mean fraction of oracle by target evaluation budget. Shaded regions show supplied 95 percent confidence intervals.</desc>',
+        '<desc id="curve-desc">Mean fraction of the held-out reference by target evaluation budget. Shaded regions show supplied 95 percent confidence intervals.</desc>',
         f'<defs><clipPath id="plot-clip"><rect x="{_PLOT_LEFT}" y="{_PLOT_TOP}" width="{plot_width}" height="{plot_height}" /></clipPath></defs>',
     ]
 
@@ -875,11 +875,11 @@ def _render_chart(
     elements.extend(
         [
             f'<line class="oracle-line" x1="{_PLOT_LEFT}" x2="{_CHART_WIDTH - _PLOT_RIGHT}" y1="{oracle_y:.2f}" y2="{oracle_y:.2f}" />',
-            f'<text class="chart-text" x="{_CHART_WIDTH - _PLOT_RIGHT - 4}" y="{oracle_y - 8:.2f}" text-anchor="end">oracle parity</text>',
+            f'<text class="chart-text" x="{_CHART_WIDTH - _PLOT_RIGHT - 4}" y="{oracle_y - 8:.2f}" text-anchor="end">reference parity</text>',
             f'<line class="chart-axis" x1="{_PLOT_LEFT}" x2="{_PLOT_LEFT}" y1="{_PLOT_TOP}" y2="{_CHART_HEIGHT - _PLOT_BOTTOM}" />',
             f'<line class="chart-axis" x1="{_PLOT_LEFT}" x2="{_CHART_WIDTH - _PLOT_RIGHT}" y1="{_CHART_HEIGHT - _PLOT_BOTTOM}" y2="{_CHART_HEIGHT - _PLOT_BOTTOM}" />',
             f'<text class="chart-label" x="{_PLOT_LEFT + plot_width / 2:.2f}" y="{_CHART_HEIGHT - 18}" text-anchor="middle">Target evaluation budget</text>',
-            f'<text class="chart-label" x="22" y="{_PLOT_TOP + plot_height / 2:.2f}" text-anchor="middle" transform="rotate(-90 22 {_PLOT_TOP + plot_height / 2:.2f})">Mean fraction of oracle</text>',
+            f'<text class="chart-label" x="22" y="{_PLOT_TOP + plot_height / 2:.2f}" text-anchor="middle" transform="rotate(-90 22 {_PLOT_TOP + plot_height / 2:.2f})">Fraction of held-out reference</text>',
             '<g clip-path="url(#plot-clip)">',
         ]
     )
@@ -892,7 +892,9 @@ def _render_chart(
         dash = _DASH_PATTERNS[(series_index // _SERIES_COUNT + series_index) % len(_DASH_PATTERNS)]
         marker = _MARKERS[series_index % len(_MARKERS)]
         upper = [(x_position(point["budget"]), y_position(point["high"])) for point in points]
-        lower = [(x_position(point["budget"]), y_position(point["low"])) for point in reversed(points)]
+        lower = [
+            (x_position(point["budget"]), y_position(point["low"])) for point in reversed(points)
+        ]
         band_path = " ".join(
             [f"M {upper[0][0]:.2f} {upper[0][1]:.2f}"]
             + [f"L {x:.2f} {y:.2f}" for x, y in upper[1:] + lower]
@@ -920,9 +922,7 @@ def _render_chart(
     return "".join(elements)
 
 
-def _render_legend(
-    methods: Mapping[str, list[dict[str, float]]], labels: Mapping[str, str]
-) -> str:
+def _render_legend(methods: Mapping[str, list[dict[str, float]]], labels: Mapping[str, str]) -> str:
     items = []
     for series_index, (name, points) in enumerate(methods.items()):
         color = f"var(--series-{series_index % _SERIES_COUNT})"
@@ -934,7 +934,7 @@ def _render_legend(
             else "no points"
         )
         items.append(
-            '<li>'
+            "<li>"
             '<svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true">'
             f'<line x1="1" x2="41" y1="7" y2="7" stroke="{color}" stroke-width="3"{dash_attribute} />'
             f'<circle cx="21" cy="7" r="3.5" fill="{color}" />'
@@ -1015,15 +1015,15 @@ def _render_comparison(
         '<div class="comparison-lead">'
         f'<span class="{delta_class}">{delta:+.1f} pp</span>'
         '<span class="delta-context">'
-        f'<strong>{_escape(labels[transfer])}</strong> is {direction} than <strong>{_escape(labels[cold])}</strong> '
-        f'at their largest shared budget ({_escape(_format_budget(budget))}). Deltas compare supplied means only.'
+        f"<strong>{_escape(labels[transfer])}</strong> is {direction} than <strong>{_escape(labels[cold])}</strong> "
+        f"at their largest shared budget ({_escape(_format_budget(budget))}). Deltas compare supplied means only."
         "</span></div>"
         '<div class="table-wrap"><table>'
-        '<caption>Like-for-like transfer comparison at shared target budgets</caption>'
+        "<caption>Like-for-like transfer comparison at shared target budgets</caption>"
         '<thead><tr><th scope="col">Budget</th>'
         f'<th scope="col">{_escape(labels[transfer])}</th><th scope="col">{_escape(labels[cold])}</th>'
         '<th scope="col">Transfer delta</th></tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></div>'
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
 
 
@@ -1107,7 +1107,7 @@ def _render_fact_list(facts: Mapping[str, Any]) -> str:
         )
     if not rows:
         rows.append(
-            '<div><dt>Additional facts</dt><dd>Not supplied; memory, SM count, and compute capability cannot be verified.</dd></div>'
+            "<div><dt>Additional facts</dt><dd>Not supplied; memory, SM count, and compute capability cannot be verified.</dd></div>"
         )
     return f'<dl class="fact-list">{"".join(rows)}</dl>'
 
@@ -1164,7 +1164,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
             '<div class="table-wrap"><table><caption>Workload dimensions and candidate-set coverage</caption>'
             '<thead><tr><th scope="col">ID</th><th scope="col">Family</th><th scope="col">M</th>'
             '<th scope="col">N</th><th scope="col">K</th><th scope="col">Candidate configs</th></tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div></details>'
+            f"<tbody>{''.join(rows)}</tbody></table></div></details>"
         )
     else:
         workload_keys = [
@@ -1219,7 +1219,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
             '<thead><tr><th scope="col">ID</th><th scope="col">Block M</th><th scope="col">Block N</th>'
             '<th scope="col">Block K</th><th scope="col">Warps</th><th scope="col">Stages</th>'
             '<th scope="col">Group M</th></tr></thead>'
-            f'<tbody>{"".join(rows)}</tbody></table></div></details>'
+            f"<tbody>{''.join(rows)}</tbody></table></div></details>"
         )
     else:
         config_keys = [
@@ -1273,9 +1273,9 @@ def _render_raw_table(
     return (
         '<div class="table-wrap"><table><caption>Values used to draw the budget-efficiency figure</caption>'
         '<thead><tr><th scope="col">Method</th><th scope="col">Budget</th>'
-        '<th scope="col">Mean fraction of oracle</th><th scope="col">CI95 low</th>'
+        '<th scope="col">Mean fraction of held-out reference</th><th scope="col">CI95 low</th>'
         '<th scope="col">CI95 high</th></tr></thead>'
-        f'<tbody>{"".join(rows)}</tbody></table></div>'
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
 
 
@@ -1352,13 +1352,17 @@ def _render_reproducibility(
         or isinstance(reproducibility, Mapping)
         or any(field in summary for field in known_fields)
     )
-    note = "" if metadata_supplied else (
-        '<div class="empty-state">No run metadata was supplied. Seed, repetition count, software versions, '
-        "timing protocol, correctness protocol, and source revision cannot be verified from this report.</div>"
+    note = (
+        ""
+        if metadata_supplied
+        else (
+            '<div class="empty-state">No run metadata was supplied. Seed, repetition count, software versions, '
+            "timing protocol, correctness protocol, and source revision cannot be verified from this report.</div>"
+        )
     )
     table = (
         '<div class="table-wrap panel-table"><table>'
-        '<caption>Protocol, aggregation, and run metadata supplied with this report</caption>'
+        "<caption>Protocol, aggregation, and run metadata supplied with this report</caption>"
         '<thead><tr><th scope="col">Field</th><th scope="col">Reported value</th></tr></thead>'
         f"<tbody>{rows}</tbody></table></div>"
     )
@@ -1393,13 +1397,13 @@ def _render_cost_disclosure(summary: Mapping[str, Any]) -> str:
         )
     return (
         '<div class="disclosure"><strong>Reported source collection cost</strong>'
-        f'<p>{_escape(_format_value(cost))}. This value is separate from target evaluation budgets.</p></div>'
+        f"<p>{_escape(_format_value(cost))}. This value is separate from target evaluation budgets.</p></div>"
     )
 
 
 def _render_limitations(summary: Mapping[str, Any]) -> str:
     limitations = [
-        "Fraction of oracle is an aggregate efficiency measure; without workload-level distributions, it can hide regressions on individual matrix shapes.",
+        "Fraction of the held-out reference is an aggregate efficiency measure; without workload-level distributions, it can hide regressions on individual matrix shapes.",
         "Confidence intervals communicate the supplied sampling uncertainty but do not by themselves establish independence, causal transfer benefit, or performance outside this matrix.",
         "Conclusions are bounded to the reported GPUs, workloads, candidate launch configurations, and FP16 Triton matmul implementation.",
     ]
@@ -1413,9 +1417,11 @@ def _render_limitations(summary: Mapping[str, Any]) -> str:
         limitations.append(supplied.strip())
     elif isinstance(supplied, Sequence) and not isinstance(supplied, (str, bytes)):
         limitations.extend(str(item) for item in supplied if str(item).strip())
-    return '<ul class="limitations">' + "".join(
-        f"<li>{_escape(item)}</li>" for item in limitations
-    ) + "</ul>"
+    return (
+        '<ul class="limitations">'
+        + "".join(f"<li>{_escape(item)}</li>" for item in limitations)
+        + "</ul>"
+    )
 
 
 def _headline_values(
@@ -1428,8 +1434,7 @@ def _headline_values(
         best_name, best_point = max(endpoints, key=lambda item: item[1]["mean"])
         best_value = f"{best_point['mean']:.1%}"
         best_label = (
-            f"Best endpoint · {labels[best_name]} at budget "
-            f"{_format_budget(best_point['budget'])}"
+            f"Best endpoint · {labels[best_name]} at budget {_format_budget(best_point['budget'])}"
         )
         max_budget = max(point["budget"] for points in methods.values() for point in points)
         budget_value = _format_budget(max_budget)
@@ -1438,21 +1443,35 @@ def _headline_values(
         best_value, best_label = _MISSING, "Best reported endpoint"
         budget_value, budget_label = _MISSING, "Largest target budget reported"
 
-    transfer = _method_by_role(summary, methods, "transfer")
-    cold = _method_by_role(summary, methods, "cold")
-    comparisons = _shared_comparison(methods, transfer, cold)
-    if comparisons:
-        comparison_budget, transfer_point, cold_point = comparisons[-1]
-        delta = (transfer_point["mean"] - cold_point["mean"]) * 100
-        transfer_value = f"{delta:+.1f} pp"
+    headline = _as_mapping(summary.get("headline"))
+    strongest_legacy = None if headline is None else headline.get("strongest_legacy_method")
+    auc_delta = None if headline is None else headline.get("auc_delta_vs_strongest_legacy")
+    if (
+        isinstance(strongest_legacy, str)
+        and strongest_legacy in labels
+        and isinstance(auc_delta, (int, float))
+    ):
+        transfer_value = f"{float(auc_delta) * 100:+.1f} pp AUC"
         transfer_label = (
-            f"{labels.get(transfer or '', 'Transfer')} − "
-            f"{labels.get(cold or '', 'cold start')} at shared budget "
-            f"{_format_budget(comparison_budget)}"
+            f"{labels.get('transfer_thompson', 'Transfer')} − "
+            f"{labels[strongest_legacy]} across the reported budget curve"
         )
     else:
-        transfer_value = _MISSING
-        transfer_label = "Transfer versus cold start at a shared target budget"
+        transfer = _method_by_role(summary, methods, "transfer")
+        cold = _method_by_role(summary, methods, "cold")
+        comparisons = _shared_comparison(methods, transfer, cold)
+        if comparisons:
+            comparison_budget, transfer_point, cold_point = comparisons[-1]
+            delta = (transfer_point["mean"] - cold_point["mean"]) * 100
+            transfer_value = f"{delta:+.1f} pp"
+            transfer_label = (
+                f"{labels.get(transfer or '', 'Transfer')} − "
+                f"{labels.get(cold or '', 'cold start')} at shared budget "
+                f"{_format_budget(comparison_budget)}"
+            )
+        else:
+            transfer_value = _MISSING
+            transfer_label = "Transfer versus cold start at a shared target budget"
 
     workload_count = _item_count(summary.get("workloads"))
     config_count = _item_count(summary.get("configs"))
@@ -1469,13 +1488,17 @@ def _headline_values(
 
 
 def _signal_band(values: Sequence[tuple[str, str]]) -> str:
-    return '<div class="result-strip" aria-label="Primary reported results">' + "".join(
-        '<div class="result">'
-        f'<span class="result-value">{_escape(value)}</span>'
-        f'<span class="result-label">{_escape(label)}</span>'
-        "</div>"
-        for value, label in values
-    ) + "</div>"
+    return (
+        '<div class="result-strip" aria-label="Primary reported results">'
+        + "".join(
+            '<div class="result">'
+            f'<span class="result-value">{_escape(value)}</span>'
+            f'<span class="result-label">{_escape(label)}</span>'
+            "</div>"
+            for value, label in values
+        )
+        + "</div>"
+    )
 
 
 def _section(index: str, title: str, copy: str, content: str) -> str:
@@ -1519,7 +1542,7 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
     data_label, data_copy = _data_status(summary)
     methodology = summary.get(
         "methodology",
-        "Methods are evaluated over a target-side configuration budget. Curves report the supplied mean fraction of oracle and 95% confidence interval; higher is better and 1.0 marks oracle parity.",
+        "Methods are evaluated over a target-side configuration budget. Curves report the supplied mean fraction of a held-out reference and 95% confidence interval; higher is better and 1.0 marks reference parity.",
     )
     if not isinstance(methodology, str):
         methodology = _format_value(methodology)
@@ -1532,10 +1555,8 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         if workload_count is not None and config_count is not None
         else _MISSING
     )
-    budget_unit = experiment.get(
-        "target_budget_unit", "Target-side configuration evaluations"
-    )
-    metric = experiment.get("aggregation", "Mean fraction of oracle")
+    budget_unit = experiment.get("target_budget_unit", "Target-side configuration evaluations")
+    metric = experiment.get("aggregation", "Mean fraction of held-out reference")
     curve_points = sum(len(points) for points in methods.values())
 
     chart = (
@@ -1589,7 +1610,7 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         "</div>"
         '<div class="identity-layout"><div>'
         '<p class="kicker">GPU kernel autotuning evidence record</p>'
-        '<h1>Autotuning transfer across GPU targets</h1>'
+        "<h1>Autotuning transfer across GPU targets</h1>"
         f'<div class="route" aria-label="Transfer direction from {_escape(source_name)} to {_escape(target_name)}">'
         '<div class="route-node"><span>Source context</span>'
         f"<strong>{_escape(source_name)}</strong></div>"
@@ -1602,27 +1623,27 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         f'<p class="method-copy">{_escape(methodology)}</p>'
         "</aside></div>"
         '<dl class="meta-strip">'
-        '<div><dt>Target metric</dt>'
+        "<div><dt>Target metric</dt>"
         f"<dd>{_escape(_format_value(metric))} · higher is better</dd></div>"
-        '<div><dt>Curve inventory</dt>'
+        "<div><dt>Curve inventory</dt>"
         f"<dd>{len(methods)} methods · {curve_points} points</dd></div>"
-        '<div><dt>Experiment surface</dt>'
+        "<div><dt>Experiment surface</dt>"
         f"<dd>{_escape(surface)}</dd></div>"
-        '<div><dt>Budget unit</dt>'
+        "<div><dt>Budget unit</dt>"
         f"<dd>{_escape(_format_value(budget_unit))}</dd></div>"
         "</dl>"
         f'<p class="status-copy"><strong>{_escape(data_label)}.</strong> {_escape(data_copy)}</p>'
         "</header>"
         f'<main id="main">{signals}'
-        f'{_section("01", "Budget-efficiency curves", "All supplied methods share the same target-budget and mean-fraction-of-oracle axes. The legend aligns each human-readable method label with its terminal value.", chart)}'
-        f'{_section("02", "Transfer versus cold start", "Only matching target budgets are compared. A positive percentage-point delta means the identified transfer method has the higher supplied mean.", _render_comparison(methods, labels, transfer, cold))}'
-        f'{_section("03", "Hardware context", "Source and target facts are separated and shown exactly as supplied. A synthetic report identifies simulated device context without presenting it as measured hardware.", _render_hardware(summary))}'
-        f'{_section("04", "Experiment scope", "The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.", _render_experiment_matrix(summary["workloads"], summary["configs"], summary.get("experiment")))}'
-        f'{_section("05", "Protocol and provenance", "Reported run metadata and experiment protocol are inventoried separately from facts that are absent from the summary.", _render_reproducibility(summary, methods))}'
-        f'{_section("06", "Source cost and limitations", "Target-budget efficiency is not end-to-end efficiency. Source acquisition and interpretation boundaries remain explicit.", cost_and_limits)}'
+        f"{_section('01', 'Budget-efficiency curves', 'All supplied methods share the same target-budget and held-out-reference axes. The legend aligns each human-readable method label with its terminal value.', chart)}"
+        f"{_section('02', 'Transfer versus cold start', 'Only matching target budgets are compared. A positive percentage-point delta means the identified transfer method has the higher supplied mean.', _render_comparison(methods, labels, transfer, cold))}"
+        f"{_section('03', 'Hardware context', 'Source and target facts are separated and shown exactly as supplied. A synthetic report identifies simulated device context without presenting it as measured hardware.', _render_hardware(summary))}"
+        f"{_section('04', 'Experiment scope', 'The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.', _render_experiment_matrix(summary['workloads'], summary['configs'], summary.get('experiment')))}"
+        f"{_section('05', 'Protocol and provenance', 'Reported run metadata and experiment protocol are inventoried separately from facts that are absent from the summary.', _render_reproducibility(summary, methods))}"
+        f"{_section('06', 'Source cost and limitations', 'Target-budget efficiency is not end-to-end efficiency. Source acquisition and interpretation boundaries remain explicit.', cost_and_limits)}"
         "</main>"
         '<footer class="footer"><span><strong>HeliosTune</strong> / GPU autotuning transfer report</span>'
-        '<span>Offline HTML · inline SVG · no network requests</span></footer></div>'
+        "<span>Offline HTML · inline SVG · no network requests</span></footer></div>"
         f'<script type="application/json" id="heliostune-chart-data">{data_blob}</script>'
         "</body></html>"
     )

@@ -115,9 +115,13 @@ def matmul(a: torch.Tensor, b: torch.Tensor, config: KernelConfig) -> torch.Tens
     return output
 
 
-def get_hardware_profile(gpu: str | None = None, device: torch.device | None = None) -> HardwareProfile:
+def get_hardware_profile(
+    gpu: str | None = None, device: torch.device | None = None
+) -> HardwareProfile:
     """Read the active CUDA device properties into the portable benchmark schema."""
-    selected_device = device if device is not None else torch.device("cuda", torch.cuda.current_device())
+    selected_device = (
+        device if device is not None else torch.device("cuda", torch.cuda.current_device())
+    )
     properties = torch.cuda.get_device_properties(selected_device)
     return HardwareProfile(
         gpu=gpu or properties.name,
@@ -256,7 +260,7 @@ def benchmark_measurements(
             torch.backends.cuda.matmul.allow_tf32 = previous_tf32
         torch_latency_ms = float(
             triton.testing.do_bench(
-                lambda: torch.matmul(a, b),
+                lambda left=a, right=b: torch.matmul(left, right),
                 warmup=warmup_ms,
                 rep=rep_ms,
                 quantiles=[0.5],

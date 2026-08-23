@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, TypeVar
 
 import numpy as np
@@ -68,9 +68,7 @@ class BenchmarkTable:
 
     def configs(self, gpu: str) -> tuple[KernelConfig, ...]:
         values = {
-            item.config.key: item.config
-            for item in self.measurements
-            if item.hardware.gpu == gpu
+            item.config.key: item.config for item in self.measurements if item.hardware.gpu == gpu
         }
         return tuple(values[key] for key in sorted(values))
 
@@ -136,9 +134,9 @@ class BenchmarkTable:
         """Evaluate a recommendation and the reference winner only on held-out bank 2."""
 
         reference = self.reference_config(gpu, workload)
-        return self._latency(
-            gpu, workload, reference, _EVALUATION_BANK
-        ) / self._latency(gpu, workload, recommendation, _EVALUATION_BANK)
+        return self._latency(gpu, workload, reference, _EVALUATION_BANK) / self._latency(
+            gpu, workload, recommendation, _EVALUATION_BANK
+        )
 
     def _latency(
         self,
@@ -271,8 +269,7 @@ def _static_source_best(
 ) -> KernelConfig:
     per_workload_best = {
         workload.key: min(
-            table._latency(source_gpu, workload, config, _OBSERVATION_BANK)
-            for config in configs
+            table._latency(source_gpu, workload, config, _OBSERVATION_BANK) for config in configs
         )
         for workload in workloads
     }
@@ -307,14 +304,10 @@ def _random_curve(
             available = [config for config in configs if config not in queried[workload.key]]
             queried[workload.key].append(available[int(rng.integers(len(available)))])
         recommendations = {
-            workload.key: _best_observed(
-                table, target_gpu, workload, queried[workload.key]
-            )
+            workload.key: _best_observed(table, target_gpu, workload, queried[workload.key])
             for workload in workloads
         }
-        curve.append(
-            _evaluate_recommendations(table, target_gpu, recommendations, workloads)
-        )
+        curve.append(_evaluate_recommendations(table, target_gpu, recommendations, workloads))
     return curve
 
 
@@ -331,14 +324,10 @@ def _ranked_curve(
         for workload in workloads:
             queried[workload.key].append(ranks[workload.key][budget_index])
         recommendations = {
-            workload.key: _best_observed(
-                table, target_gpu, workload, queried[workload.key]
-            )
+            workload.key: _best_observed(table, target_gpu, workload, queried[workload.key])
             for workload in workloads
         }
-        curve.append(
-            _evaluate_recommendations(table, target_gpu, recommendations, workloads)
-        )
+        curve.append(_evaluate_recommendations(table, target_gpu, recommendations, workloads))
     return curve
 
 
@@ -358,9 +347,7 @@ def _bandit_curve(
             available = [config for config in configs if config not in queried[workload.key]]
             selected = model.choose(
                 available,
-                lambda config, workload=workload: joint_features(
-                    workload, config, hardware
-                ),
+                lambda config, workload=workload: joint_features(workload, config, hardware),
             )
             queried[workload.key].append(selected)
             model.update(
@@ -371,9 +358,7 @@ def _bandit_curve(
             workload.key: _model_recommendation(model, workload, configs, hardware)
             for workload in workloads
         }
-        curve.append(
-            _evaluate_recommendations(table, target_gpu, recommendations, workloads)
-        )
+        curve.append(_evaluate_recommendations(table, target_gpu, recommendations, workloads))
     return curve
 
 
@@ -468,9 +453,7 @@ def compare_methods(
             prior_precision=prior_precision,
         )
 
-        static_config = _static_source_best(
-            table, source_gpu, source_workloads, configs
-        )
+        static_config = _static_source_best(table, source_gpu, source_workloads, configs)
         static_value = _evaluate_recommendations(
             table,
             target_gpu,
@@ -577,10 +560,7 @@ def compare_methods(
             }
         )
 
-    methods = {
-        method: _aggregate(method_runs, budgets)
-        for method, method_runs in runs.items()
-    }
+    methods = {method: _aggregate(method_runs, budgets) for method, method_runs in runs.items()}
     exhaustive_runs: list[list[float]] = []
     for heldout_model in models:
         target_workloads = tuple(
@@ -624,9 +604,7 @@ def compare_methods(
         "transfer_thompson",
     )
     auc = {
-        method: float(
-            np.mean([point["mean_fraction_oracle"] for point in methods[method]])
-        )
+        method: float(np.mean([point["mean_fraction_oracle"] for point in methods[method]]))
         for method in curve_methods
     }
     strongest_legacy = max(
@@ -670,17 +648,11 @@ def compare_methods(
             "transfer_fraction_oracle": methods["transfer_thompson"][point_index][
                 "mean_fraction_oracle"
             ],
-            "cold_fraction_oracle": methods["cold_thompson"][point_index][
-                "mean_fraction_oracle"
-            ],
-            "random_fraction_oracle": methods["random"][point_index][
-                "mean_fraction_oracle"
-            ],
+            "cold_fraction_oracle": methods["cold_thompson"][point_index]["mean_fraction_oracle"],
+            "random_fraction_oracle": methods["random"][point_index]["mean_fraction_oracle"],
             "transfer_auc": auc["transfer_thompson"],
             "strongest_legacy_method": strongest_legacy,
-            "auc_delta_vs_strongest_legacy": (
-                auc["transfer_thompson"] - auc[strongest_legacy]
-            ),
+            "auc_delta_vs_strongest_legacy": (auc["transfer_thompson"] - auc[strongest_legacy]),
             "trials_avoided_vs_exhaustive": len(configs) - headline_budget,
         },
         "primary_metrics": {
@@ -690,7 +662,9 @@ def compare_methods(
         },
         "source_cost": {
             "collected_measurements_per_gpu": measurements_per_gpu,
-            "visible_source_observations_per_fold": (len(all_workloads) - len(all_workloads) // len(models))
+            "visible_source_observations_per_fold": (
+                len(all_workloads) - len(all_workloads) // len(models)
+            )
             * len(configs),
             "disclosure": (
                 "The transfer prior sees bank-0 source measurements from non-held-out model "
