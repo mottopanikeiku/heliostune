@@ -1,0 +1,581 @@
+{
+  "configs": 36,
+  "data_kind": "measured",
+  "experiment": {
+    "aggregation": "geometric mean fraction of held-out exhaustive reference",
+    "bank_roles": {
+      "0": "policy-visible observations",
+      "1": "exhaustive-reference selection",
+      "2": "held-out final evaluation"
+    },
+    "confidence_interval": "normal 95% interval across grouped folds and policy seeds",
+    "config_keys": [
+      "m128n128k32-w8s3g8",
+      "m128n128k32-w8s4g4",
+      "m128n128k64-w8s2g8",
+      "m128n32k32-w4s3g8",
+      "m128n32k32-w4s4g4",
+      "m128n32k64-w4s2g8",
+      "m128n64k32-w8s3g8",
+      "m128n64k32-w8s4g4",
+      "m128n64k64-w8s2g8",
+      "m16n128k32-w4s3g8",
+      "m16n128k32-w4s4g4",
+      "m16n128k64-w4s2g8",
+      "m16n32k32-w4s3g8",
+      "m16n32k32-w4s4g4",
+      "m16n32k64-w4s2g8",
+      "m16n64k32-w4s3g8",
+      "m16n64k32-w4s4g4",
+      "m16n64k64-w4s2g8",
+      "m32n128k32-w4s3g8",
+      "m32n128k32-w4s4g4",
+      "m32n128k64-w4s2g8",
+      "m32n32k32-w4s3g8",
+      "m32n32k32-w4s4g4",
+      "m32n32k64-w4s2g8",
+      "m32n64k32-w4s3g8",
+      "m32n64k32-w4s4g4",
+      "m32n64k64-w4s2g8",
+      "m64n128k32-w8s3g8",
+      "m64n128k32-w8s4g4",
+      "m64n128k64-w8s2g8",
+      "m64n32k32-w4s3g8",
+      "m64n32k32-w4s4g4",
+      "m64n32k64-w4s2g8",
+      "m64n64k32-w4s3g8",
+      "m64n64k32-w4s4g4",
+      "m64n64k64-w4s2g8"
+    ],
+    "reward": "-log(selected configuration latency_ms)",
+    "target_budget_unit": "bank-0 configuration measurements per held-out workload",
+    "workload_keys": [
+      "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096",
+      "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096",
+      "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800",
+      "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800",
+      "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096",
+      "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096",
+      "mistral-7b-attention-out-decode-1-m1-n4096-k4096",
+      "mistral-7b-attention-out-decode-7-m7-n4096-k4096",
+      "mistral-7b-attention-out-mixed-31-m31-n4096-k4096",
+      "mistral-7b-attention-out-mixed-96-m96-n4096-k4096",
+      "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "mistral-7b-attention-out-prefill-257-m257-n4096-k4096",
+      "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+      "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "mistral-7b-ffn-down-decode-1-m1-n4096-k14336",
+      "mistral-7b-ffn-down-decode-7-m7-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336",
+      "mistral-7b-ffn-up-decode-1-m1-n14336-k4096",
+      "mistral-7b-ffn-up-decode-7-m7-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096",
+      "phi-3-mini-attention-out-decode-1-m1-n3072-k3072",
+      "phi-3-mini-attention-out-decode-7-m7-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072",
+      "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072",
+      "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072",
+      "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192",
+      "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192",
+      "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072",
+      "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072",
+      "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584",
+      "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584",
+      "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584",
+      "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944",
+      "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584",
+      "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584"
+    ]
+  },
+  "folds": [
+    {
+      "heldout_model": "granite-3.1-8b",
+      "source_workloads": 72,
+      "static_config": "m64n128k32-w8s4g4",
+      "target_workloads": 24
+    },
+    {
+      "heldout_model": "mistral-7b",
+      "source_workloads": 72,
+      "static_config": "m64n128k32-w8s4g4",
+      "target_workloads": 24
+    },
+    {
+      "heldout_model": "phi-3-mini",
+      "source_workloads": 72,
+      "static_config": "m64n128k32-w8s4g4",
+      "target_workloads": 24
+    },
+    {
+      "heldout_model": "qwen2.5-7b",
+      "source_workloads": 72,
+      "static_config": "m64n128k32-w8s4g4",
+      "target_workloads": 24
+    }
+  ],
+  "hardware": [
+    {
+      "compute_capability": [
+        8,
+        6
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA A10",
+      "gpu": "A10",
+      "multiprocessor_count": 72,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0582275390625,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        8,
+        9
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA L4",
+      "gpu": "L4",
+      "multiprocessor_count": 58,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0343017578125,
+      "triton_version": "3.4.0"
+    }
+  ],
+  "headline": {
+    "auc_delta_vs_strongest_legacy": -0.04135447223913902,
+    "budget": 8,
+    "cold_fraction_oracle": 0.9562455847231741,
+    "random_fraction_oracle": 0.9619730853373963,
+    "strongest_legacy_method": "nearest_shape",
+    "transfer_auc": 0.9482802639395235,
+    "transfer_fraction_oracle": 0.956900424788742,
+    "trials_avoided_vs_exhaustive": 28
+  },
+  "limitations": [
+    "The study demonstrates transfer between Modal L4 and A10, not arbitrary unseen GPUs.",
+    "Replay measures steady-state kernel probes, not compilation or end-to-end serving latency.",
+    "The 36-action manifest is curated rather than every legal Triton configuration.",
+    "Three independent timing banks reduce leakage but do not model production interference."
+  ],
+  "max_budget": 8,
+  "measurement_banks": 3,
+  "method_labels": {
+    "cold_thompson": "Cold Thompson sampling",
+    "exhaustive": "Exhaustive autotuning",
+    "heldout_reference": "Held-out exhaustive reference",
+    "nearest_shape": "Nearest-shape reuse",
+    "random": "Random search",
+    "static": "Static source-best",
+    "torch": "torch.matmul",
+    "transfer_thompson": "Helios transfer"
+  },
+  "methodology": "Grouped leave-one-model-family-out transfer. Policies see only timing bank 0; bank 1 selects the best-of-manifest reference and bank 2 evaluates every recommendation. Source acquisition is disclosed outside the target query budget.",
+  "methods": {
+    "cold_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.9176118057904797,
+        "ci95_low": 0.8937894791660234,
+        "mean_fraction_oracle": 0.9057006424782515
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9458024013377256,
+        "ci95_low": 0.9322094978156769,
+        "mean_fraction_oracle": 0.9390059495767012
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9567219301885915,
+        "ci95_low": 0.9453089029751583,
+        "mean_fraction_oracle": 0.9510154165818749
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9607244211247852,
+        "ci95_low": 0.9511968826261881,
+        "mean_fraction_oracle": 0.9559606518754866
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9620298719291749,
+        "ci95_low": 0.9528855707884702,
+        "mean_fraction_oracle": 0.9574577213588226
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.96076679059115,
+        "ci95_low": 0.9517298235390667,
+        "mean_fraction_oracle": 0.9562483070651083
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9600400246543593,
+        "ci95_low": 0.9511318236769476,
+        "mean_fraction_oracle": 0.9555859241656535
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9603285668376367,
+        "ci95_low": 0.9521626026087116,
+        "mean_fraction_oracle": 0.9562455847231741
+      }
+    ],
+    "exhaustive": [
+      {
+        "budget": 36,
+        "ci95_high": 1.0040511917164512,
+        "ci95_low": 0.9980417067650321,
+        "mean_fraction_oracle": 1.0010464492407416
+      }
+    ],
+    "heldout_reference": [
+      {
+        "budget": 36,
+        "ci95_high": 1.0,
+        "ci95_low": 1.0,
+        "mean_fraction_oracle": 1.0
+      }
+    ],
+    "nearest_shape": [
+      {
+        "budget": 1,
+        "ci95_high": 0.9819036949881484,
+        "ci95_low": 0.9704956414743483,
+        "mean_fraction_oracle": 0.9761996682312484
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.988428499712112,
+        "ci95_low": 0.9776737160498938,
+        "mean_fraction_oracle": 0.9830511078810029
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9903897164378608,
+        "ci95_low": 0.9855277745742406,
+        "mean_fraction_oracle": 0.9879587455060507
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9946033994453638,
+        "ci95_low": 0.9892805423630786,
+        "mean_fraction_oracle": 0.9919419709042212
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9959106972646673,
+        "ci95_low": 0.9901059871824108,
+        "mean_fraction_oracle": 0.9930083422235391
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9971710301091552,
+        "ci95_low": 0.9912133003488444,
+        "mean_fraction_oracle": 0.9941921652289998
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9981002071787456,
+        "ci95_low": 0.9913450387971906,
+        "mean_fraction_oracle": 0.9947226229879681
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.999862327345882,
+        "ci95_low": 0.9921442055866576,
+        "mean_fraction_oracle": 0.9960032664662698
+      }
+    ],
+    "random": [
+      {
+        "budget": 1,
+        "ci95_high": 0.7915349479736662,
+        "ci95_low": 0.7776434102331418,
+        "mean_fraction_oracle": 0.784589179103404
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8703953436369606,
+        "ci95_low": 0.8603681708222043,
+        "mean_fraction_oracle": 0.8653817572295824
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9095257221902672,
+        "ci95_low": 0.9016616349503913,
+        "mean_fraction_oracle": 0.9055936785703292
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9289807082120168,
+        "ci95_low": 0.9224994752723631,
+        "mean_fraction_oracle": 0.92574009174219
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.943674887308514,
+        "ci95_low": 0.9385053950760466,
+        "mean_fraction_oracle": 0.9410901411922803
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9526793248448987,
+        "ci95_low": 0.947996641648874,
+        "mean_fraction_oracle": 0.9503379832468863
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9584704584401816,
+        "ci95_low": 0.9537937191252145,
+        "mean_fraction_oracle": 0.9561320887826981
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9640998827627535,
+        "ci95_low": 0.9598462879120392,
+        "mean_fraction_oracle": 0.9619730853373963
+      }
+    ],
+    "static": [
+      {
+        "budget": 1,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9121241306739922,
+        "ci95_low": 0.9034397751352745,
+        "mean_fraction_oracle": 0.9077819529046334
+      }
+    ],
+    "torch": [
+      {
+        "budget": 1,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9954663130068219,
+        "ci95_low": 0.9769867472696875,
+        "mean_fraction_oracle": 0.9862265301382547
+      }
+    ],
+    "transfer_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.940154333225286,
+        "ci95_low": 0.9354910196298576,
+        "mean_fraction_oracle": 0.9378226764275718
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9437784099075045,
+        "ci95_low": 0.9403337165200706,
+        "mean_fraction_oracle": 0.9420560632137875
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9461473684412881,
+        "ci95_low": 0.942844603750978,
+        "mean_fraction_oracle": 0.9444959860961331
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9479307079051422,
+        "ci95_low": 0.9444157792098147,
+        "mean_fraction_oracle": 0.9461732435574784
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9515908359883393,
+        "ci95_low": 0.9471132428159653,
+        "mean_fraction_oracle": 0.9493520394021523
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9558368734950713,
+        "ci95_low": 0.9504112475341628,
+        "mean_fraction_oracle": 0.9531240605146171
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9590544041327945,
+        "ci95_low": 0.9535808308986157,
+        "mean_fraction_oracle": 0.9563176175157051
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9595646985867926,
+        "ci95_low": 0.9542361509906915,
+        "mean_fraction_oracle": 0.956900424788742
+      }
+    ]
+  },
+  "model_families": 4,
+  "primary_metrics": {
+    "fraction_reference_auc": {
+      "cold_thompson": 0.947152524728134,
+      "nearest_shape": 0.9896347361786625,
+      "random": 0.9113547506505958,
+      "static": 0.9077819529046334,
+      "transfer_thompson": 0.9482802639395235
+    },
+    "primary_budget": 8,
+    "queries_to_95_percent_reference": {
+      "cold_thompson": 3,
+      "nearest_shape": 1,
+      "random": 6,
+      "static": null,
+      "transfer_thompson": 6
+    }
+  },
+  "project": "HeliosTune",
+  "seeds": 30,
+  "source_cost": {
+    "collected_measurements_per_gpu": 10368,
+    "disclosure": "The transfer prior sees bank-0 source measurements from non-held-out model families. Source acquisition and all reference/evaluation banks are excluded from the target query budget and disclosed separately.",
+    "visible_source_observations_per_fold": 2592
+  },
+  "source_gpu": "A10",
+  "target_gpu": "L4",
+  "transfer_strength": 0.08,
+  "workloads": 96
+}

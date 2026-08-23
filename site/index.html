@@ -1,0 +1,575 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>HeliosTune transfer report · NVIDIA L4 → NVIDIA A10</title><style>
+:root {
+  color-scheme: light;
+  --canvas: #f1f3f0;
+  --paper: #fafbf9;
+  --paper-muted: #f5f7f4;
+  --ink: #18211c;
+  --ink-strong: #0d1711;
+  --muted: #55615a;
+  --subtle: #737f78;
+  --line: #d9dedb;
+  --line-strong: #b9c2bc;
+  --accent: #1f5d99;
+  --accent-soft: #e6eef6;
+  --note: #eef0ec;
+  --negative: #8f3f35;
+  --series-0: #1f5d99;
+  --series-1: #b85c2d;
+  --series-2: #287460;
+  --series-3: #6e5b9c;
+  --series-4: #85651c;
+  --series-5: #3f6f86;
+  --series-6: #a04658;
+  --series-7: #4c6a3d;
+  --series-8: #715047;
+  --series-9: #52657d;
+  --font-sans: "IBM Plex Sans", Aptos, "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-title: clamp(1.6rem, 2.5vw, 2.15rem);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --radius-sm: 0.2rem;
+  --radius-md: 0.35rem;
+  --page-max: 80rem;
+  --chart-min: 44rem;
+  --focus-ring: 0 0 0 0.1875rem rgba(31, 93, 153, 0.24);
+}
+
+* { box-sizing: border-box; }
+html { background: var(--canvas); }
+body {
+  margin: 0;
+  min-width: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+a {
+  color: var(--accent);
+  text-decoration-thickness: 0.0625rem;
+  text-underline-offset: var(--space-1);
+}
+a:focus-visible, summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.skip-link {
+  position: fixed;
+  inset: var(--space-3) auto auto var(--space-3);
+  z-index: 20;
+  padding: var(--space-2) var(--space-3);
+  background: var(--ink-strong);
+  color: var(--paper);
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: translateY(0); }
+.page {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: 0 var(--space-6) var(--space-7);
+}
+.report-header {
+  padding: var(--space-5) 0 var(--space-4);
+  border-top: var(--space-1) solid var(--accent);
+}
+.utility-rail {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.project-lockup { color: var(--ink-strong); font-weight: 700; }
+.data-flag {
+  color: var(--accent);
+  font-weight: 700;
+  text-align: right;
+}
+.identity-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+  gap: var(--space-6);
+  align-items: end;
+  padding: var(--space-5) 0 var(--space-4);
+}
+.identity-layout > * { min-width: 0; }
+.kicker, .micro-label, .section-number, .hardware-role {
+  margin: 0;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+h1, h2, h3 {
+  margin-top: 0;
+  color: var(--ink-strong);
+  letter-spacing: -0.015em;
+}
+h1 {
+  max-width: 34ch;
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--text-title);
+  font-weight: 680;
+  line-height: 1.12;
+}
+h2 {
+  margin-bottom: var(--space-2);
+  font-size: clamp(1.25rem, 2vw, 1.55rem);
+  font-weight: 680;
+  line-height: 1.2;
+}
+h3 {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 680;
+}
+.route {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+  max-width: 48rem;
+}
+.route-node {
+  min-width: 0;
+  padding: var(--space-2) 0;
+  border-block: 1px solid var(--line-strong);
+}
+.route-node span {
+  display: block;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.route-node strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+.route-arrow {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+.method-note {
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--accent);
+}
+.method-note p { margin: 0; }
+.method-note .method-copy {
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.meta-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border-block: 1px solid var(--line-strong);
+}
+.meta-strip div {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 1px solid var(--line);
+}
+.meta-strip div:first-child { border-left: 0; }
+.meta-strip dt {
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.meta-strip dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.status-copy {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.result-strip {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.35fr) repeat(3, minmax(0, 1fr));
+  margin: var(--space-5) 0 var(--space-6);
+  border-block: 1px solid var(--line-strong);
+}
+.result {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 1px solid var(--line);
+}
+.result:first-child {
+  border-left: var(--space-1) solid var(--accent);
+  background: var(--accent-soft);
+}
+.result-value {
+  display: block;
+  margin-bottom: var(--space-1);
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.result:first-child .result-value { color: var(--accent); font-size: 1.35rem; }
+.result-label { display: block; color: var(--muted); font-size: var(--text-xs); }
+.section {
+  min-width: 0;
+  padding: var(--space-6) 0;
+  border-top: 1px solid var(--line);
+}
+.section-head {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.section-head > * { min-width: 0; }
+.section-copy {
+  max-width: 78ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.panel {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--radius-md);
+}
+.panel + .panel { margin-top: var(--space-4); }
+.chart-frame {
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.chart-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding: var(--space-2) var(--space-2) 0;
+  scrollbar-color: var(--line-strong) var(--paper-muted);
+}
+.chart-scroll svg {
+  display: block;
+  width: 100%;
+  min-width: var(--chart-min);
+  height: auto;
+}
+.chart-grid {
+  stroke: var(--line);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.chart-axis {
+  stroke: var(--line-strong);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+.chart-text {
+  fill: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.chart-label {
+  fill: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 650;
+}
+.oracle-line {
+  stroke: var(--subtle);
+  stroke-dasharray: 3 6;
+  vector-effect: non-scaling-stroke;
+}
+.series-line {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.series-band { stroke: none; opacity: 0.11; }
+.series-point {
+  stroke: var(--paper);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.method-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+.method-legend li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.method-legend svg { flex: 0 0 auto; }
+.method-legend strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-weight: 650;
+}
+.legend-endpoint {
+  display: block;
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+figcaption {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  color: var(--subtle);
+  font-size: var(--text-xs);
+}
+.data-disclosure {
+  min-width: 0;
+  margin-top: var(--space-3);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.data-disclosure summary {
+  cursor: pointer;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+.data-disclosure[open] summary { border-bottom: 1px solid var(--line); }
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-color: var(--line-strong) var(--paper-muted);
+}
+.panel-table {
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+caption {
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: left;
+}
+th, td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: var(--paper-muted);
+  color: var(--ink-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+td { color: var(--muted); font-size: var(--text-xs); }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--accent-soft); color: var(--ink); }
+.numeric {
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.method-name { color: var(--ink); font-weight: 650; }
+.identifier {
+  min-width: 24rem;
+  max-width: 44rem;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+.provenance-value {
+  min-width: 18rem;
+  max-width: 48rem;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  white-space: normal;
+}
+.hardware-grid, .split-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.hardware-sheet { border-top: 2px solid var(--accent); }
+.hardware-sheet.target { border-top-color: var(--ink); }
+.hardware-name {
+  margin: var(--space-1) 0 var(--space-3);
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+.fact-list { margin: 0; }
+.fact-list div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.75fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+.fact-list dt { color: var(--subtle); font-size: var(--text-xs); }
+.fact-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.comparison-lead {
+  display: grid;
+  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border-left: var(--space-1) solid var(--accent);
+  background: var(--accent-soft);
+}
+.delta {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.delta.negative { color: var(--negative); }
+.delta-context { max-width: 62ch; color: var(--muted); font-size: var(--text-sm); }
+.comparison-lead + .table-wrap { margin-top: var(--space-3); border: 1px solid var(--line); }
+.disclosure {
+  padding: var(--space-4);
+  border-left: var(--space-1) solid var(--line-strong);
+  background: var(--note);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.disclosure strong { color: var(--ink-strong); }
+.disclosure p { margin: var(--space-2) 0 0; }
+.empty-state {
+  padding: var(--space-4);
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  background: var(--paper-muted);
+  font-size: var(--text-sm);
+}
+.matrix-stack { display: grid; gap: var(--space-3); }
+.limitations {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.limitations li + li { margin-top: var(--space-2); }
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--line-strong);
+  color: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+.footer strong { color: var(--ink); }
+
+@media (max-width: 62rem) {
+  .identity-layout { grid-template-columns: 1fr; gap: var(--space-4); }
+  .method-note { max-width: 52rem; }
+  .result-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .result:nth-child(odd) { border-left: 0; }
+  .result:first-child { border-left: var(--space-1) solid var(--accent); }
+  .result:nth-child(n + 3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 44rem) {
+  .page { padding-inline: var(--space-4); }
+  .report-header { padding-top: var(--space-4); }
+  .utility-rail { align-items: flex-start; }
+  .identity-layout { padding-block: var(--space-4); }
+  .meta-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .meta-strip div:nth-child(odd) { border-left: 0; }
+  .meta-strip div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .result-strip { grid-template-columns: 1fr; margin-bottom: var(--space-5); }
+  .result { border-left: 0; border-top: 1px solid var(--line); }
+  .result:first-child { grid-column: auto; border-top: 0; border-left: var(--space-1) solid var(--accent); }
+  .section { padding-block: var(--space-5); }
+  .section-head { grid-template-columns: 1fr; gap: var(--space-1); }
+  .hardware-grid, .split-grid { grid-template-columns: 1fr; }
+  .comparison-lead { grid-template-columns: 1fr; gap: var(--space-2); }
+  .footer { flex-direction: column; }
+}
+@media (max-width: 25rem) {
+  .utility-rail { flex-direction: column; gap: var(--space-2); }
+  .data-flag { text-align: left; }
+  .route { gap: var(--space-2); }
+  .meta-strip { grid-template-columns: 1fr; }
+  .meta-strip div, .meta-strip div:nth-child(odd) { border-left: 0; border-top: 1px solid var(--line); }
+  .meta-strip div:first-child { border-top: 0; }
+  .fact-list div { grid-template-columns: 1fr; gap: var(--space-1); }
+}
+@media print {
+  body, html { background: var(--paper); }
+  .page { max-width: none; padding: 0; }
+  .chart-scroll, .table-wrap { overflow: visible; }
+  .chart-scroll svg { min-width: 0; }
+  details:not([open]) > *:not(summary) { display: block; }
+  .section, .panel, .chart-frame, table { break-inside: avoid; }
+}
+</style></head><body><a class="skip-link" href="#main">Skip to results</a><div class="page"><header class="report-header"><div class="utility-rail"><span class="project-lockup">HeliosTune // transfer study</span><span class="data-flag">Measured benchmark data</span></div><div class="identity-layout"><div><p class="kicker">GPU kernel autotuning evidence record</p><h1>Autotuning transfer across GPU targets</h1><div class="route" aria-label="Transfer direction from NVIDIA L4 to NVIDIA A10"><div class="route-node"><span>Source context</span><strong>NVIDIA L4</strong></div><span class="route-arrow" aria-hidden="true">→</span><div class="route-node"><span>Target context</span><strong>NVIDIA A10</strong></div></div></div><aside class="method-note" aria-label="Methodology summary"><p class="micro-label">Methodology</p><p class="method-copy">Grouped leave-one-model-family-out transfer. Policies see only timing bank 0; bank 1 selects the best-of-manifest reference and bank 2 evaluates every recommendation. Source acquisition is disclosed outside the target query budget.</p></aside></div><dl class="meta-strip"><div><dt>Target metric</dt><dd>geometric mean fraction of held-out exhaustive reference · higher is better</dd></div><div><dt>Curve inventory</dt><dd>8 methods · 50 points</dd></div><div><dt>Experiment surface</dt><dd>96 workloads × 36 configurations</dd></div><div><dt>Budget unit</dt><dd>bank-0 configuration measurements per held-out workload</dd></div></dl><p class="status-copy"><strong>Measured benchmark data.</strong> Reported as hardware measurements; the hardware, timing protocol, source cost, and study boundaries below define their scope.</p></header><main id="main"><div class="result-strip" aria-label="Primary reported results"><div class="result"><span class="result-value">-4.3 pp AUC</span><span class="result-label">Helios transfer − Nearest-shape reuse across the reported budget curve</span></div><div class="result"><span class="result-value">102.1%</span><span class="result-label">Best endpoint · torch.matmul at budget 8</span></div><div class="result"><span class="result-value">36</span><span class="result-label">Largest target budget reported</span></div><div class="result"><span class="result-value">96 W / 36 C</span><span class="result-label">Reported workloads / launch configs</span></div></div><section class="section" aria-labelledby="section-01"><header class="section-head"><p class="section-number">01</p><div><h2 id="section-01">Budget-efficiency curves</h2><p class="section-copy">All supplied methods share the same target-budget and mean-fraction-of-oracle axes. The legend aligns each human-readable method label with its terminal value.</p></div></header><figure class="chart-frame"><div class="chart-scroll"><svg viewBox="0 0 960 410" role="img" aria-labelledby="curve-title curve-desc"><title id="curve-title">Budget efficiency by tuning method</title><desc id="curve-desc">Mean fraction of oracle by target evaluation budget. Shaded regions show supplied 95 percent confidence intervals.</desc><defs><clipPath id="plot-clip"><rect x="72" y="20" width="866" height="332" /></clipPath></defs><line class="chart-grid" x1="72" x2="938" y1="352.00" y2="352.00" /><text class="chart-text" x="60" y="356.00" text-anchor="end">0%</text><line class="chart-grid" x1="72" x2="938" y1="269.00" y2="269.00" /><text class="chart-text" x="60" y="273.00" text-anchor="end">31%</text><line class="chart-grid" x1="72" x2="938" y1="186.00" y2="186.00" /><text class="chart-text" x="60" y="190.00" text-anchor="end">62%</text><line class="chart-grid" x1="72" x2="938" y1="103.00" y2="103.00" /><text class="chart-text" x="60" y="107.00" text-anchor="end">94%</text><line class="chart-grid" x1="72" x2="938" y1="20.00" y2="20.00" /><text class="chart-text" x="60" y="24.00" text-anchor="end">125%</text><line class="chart-grid" x1="72.00" x2="72.00" y1="20" y2="352" /><text class="chart-text" x="72.00" y="377" text-anchor="middle">0</text><line class="chart-grid" x1="312.56" x2="312.56" y1="20" y2="352" /><text class="chart-text" x="312.56" y="377" text-anchor="middle">10</text><line class="chart-grid" x1="553.11" x2="553.11" y1="20" y2="352" /><text class="chart-text" x="553.11" y="377" text-anchor="middle">20</text><line class="chart-grid" x1="793.67" x2="793.67" y1="20" y2="352" /><text class="chart-text" x="793.67" y="377" text-anchor="middle">30</text><line class="chart-grid" x1="938.00" x2="938.00" y1="20" y2="352" /><text class="chart-text" x="938.00" y="377" text-anchor="middle">36</text><line class="oracle-line" x1="72" x2="938" y1="86.40" y2="86.40" /><text class="chart-text" x="934" y="78.40" text-anchor="end">oracle parity</text><line class="chart-axis" x1="72" x2="72" y1="20" y2="352" /><line class="chart-axis" x1="72" x2="938" y1="352" y2="352" /><text class="chart-label" x="505.00" y="392" text-anchor="middle">Target evaluation budget</text><text class="chart-label" x="22" y="186.00" text-anchor="middle" transform="rotate(-90 22 186.00)">Mean fraction of oracle</text><g clip-path="url(#plot-clip)"><path class="series-band" d="M 96.06 126.63 L 120.11 115.18 L 144.17 110.40 L 168.22 107.54 L 192.28 107.15 L 216.33 106.28 L 240.39 105.56 L 264.44 104.93 L 264.44 107.53 L 240.39 108.24 L 216.33 109.33 L 192.28 110.33 L 168.22 110.84 L 144.17 114.29 L 120.11 120.91 L 96.06 134.69 Z" fill="var(--series-0)" /><path class="series-line" d="M 96.06 130.66 L 120.11 118.05 L 144.17 112.35 L 168.22 109.19 L 192.28 108.74 L 216.33 107.80 L 240.39 106.90 L 264.44 106.23" stroke="var(--series-0)" /><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 1, mean 0.8334, 95% CI 0.8182 to 0.8485</title><circle cx="96.06" cy="130.66" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 2, mean 0.8808, 95% CI 0.87 to 0.8916</title><circle cx="120.11" cy="118.05" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 3, mean 0.9023, 95% CI 0.895 to 0.9096</title><circle cx="144.17" cy="112.35" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 4, mean 0.9142, 95% CI 0.908 to 0.9204</title><circle cx="168.22" cy="109.19" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 5, mean 0.9159, 95% CI 0.9099 to 0.9219</title><circle cx="192.28" cy="108.74" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 6, mean 0.9194, 95% CI 0.9137 to 0.9252</title><circle cx="216.33" cy="107.80" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 7, mean 0.9228, 95% CI 0.9178 to 0.9279</title><circle cx="240.39" cy="106.90" r="4.5" /></g><g class="series-point" fill="var(--series-0)"><title>Cold Thompson sampling: budget 8, mean 0.9253, 95% CI 0.9204 to 0.9302</title><circle cx="264.44" cy="106.23" r="4.5" /></g><path class="series-band" d="M 938.00 85.75 L 938.00 87.12 Z" fill="var(--series-1)" /><path class="series-line" d="M 938.00 86.44" stroke="var(--series-1)" stroke-dasharray="9 5" /><g class="series-point" fill="var(--series-1)"><title>Exhaustive autotuning: budget 36, mean 0.9999, 95% CI 0.9973 to 1.0024</title><polygon points="938.00,81.44 943.00,86.44 938.00,91.44 933.00,86.44" /></g><path class="series-band" d="M 938.00 86.40 L 938.00 86.40 Z" fill="var(--series-2)" /><path class="series-line" d="M 938.00 86.40" stroke="var(--series-2)" stroke-dasharray="3 5" /><g class="series-point" fill="var(--series-2)"><title>Held-out exhaustive reference: budget 36, mean 1, 95% CI 1 to 1</title><rect x="934.00" y="82.40" width="8" height="8" /></g><path class="series-band" d="M 96.06 105.02 L 120.11 98.64 L 144.17 92.60 L 168.22 90.60 L 192.28 89.22 L 216.33 87.71 L 240.39 87.38 L 264.44 86.75 L 264.44 88.48 L 240.39 89.57 L 216.33 89.62 L 192.28 89.88 L 168.22 93.40 L 144.17 105.09 L 120.11 112.75 L 96.06 116.44 Z" fill="var(--series-3)" /><path class="series-line" d="M 96.06 110.73 L 120.11 105.70 L 144.17 98.84 L 168.22 92.00 L 192.28 89.55 L 216.33 88.66 L 240.39 88.47 L 264.44 87.62" stroke="var(--series-3)" stroke-dasharray="12 4 3 4" /><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 1, mean 0.9084, 95% CI 0.8869 to 0.9299</title><circle cx="96.06" cy="110.73" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 2, mean 0.9273, 95% CI 0.9008 to 0.9539</title><circle cx="120.11" cy="105.70" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 3, mean 0.9532, 95% CI 0.9296 to 0.9767</title><circle cx="144.17" cy="98.84" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 4, mean 0.9789, 95% CI 0.9736 to 0.9842</title><circle cx="168.22" cy="92.00" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 5, mean 0.9882, 95% CI 0.9869 to 0.9894</title><circle cx="192.28" cy="89.55" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 6, mean 0.9915, 95% CI 0.9879 to 0.9951</title><circle cx="216.33" cy="88.66" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 7, mean 0.9922, 95% CI 0.9881 to 0.9963</title><circle cx="240.39" cy="88.47" r="4.5" /></g><g class="series-point" fill="var(--series-3)"><title>Nearest-shape reuse: budget 8, mean 0.9954, 95% CI 0.9922 to 0.9987</title><circle cx="264.44" cy="87.62" r="4.5" /></g><path class="series-band" d="M 96.06 158.61 L 120.11 132.93 L 144.17 119.75 L 168.22 112.54 L 192.28 107.65 L 216.33 104.26 L 240.39 101.93 L 264.44 99.98 L 264.44 101.44 L 240.39 103.53 L 216.33 105.95 L 192.28 109.57 L 168.22 114.98 L 144.17 122.64 L 120.11 136.43 L 96.06 162.82 Z" fill="var(--series-4)" /><path class="series-line" d="M 96.06 160.72 L 120.11 134.68 L 144.17 121.19 L 168.22 113.76 L 192.28 108.61 L 216.33 105.10 L 240.39 102.73 L 264.44 100.71" stroke="var(--series-4)" stroke-dasharray="6 4 2 4" /><g class="series-point" fill="var(--series-4)"><title>Random search: budget 1, mean 0.7202, 95% CI 0.7123 to 0.7281</title><polygon points="96.06,155.72 101.06,160.72 96.06,165.72 91.06,160.72" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 2, mean 0.8182, 95% CI 0.8116 to 0.8248</title><polygon points="120.11,129.68 125.11,134.68 120.11,139.68 115.11,134.68" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 3, mean 0.869, 95% CI 0.8636 to 0.8745</title><polygon points="144.17,116.19 149.17,121.19 144.17,126.19 139.17,121.19" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 4, mean 0.897, 95% CI 0.8924 to 0.9016</title><polygon points="168.22,108.76 173.22,113.76 168.22,118.76 163.22,113.76" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 5, mean 0.9164, 95% CI 0.9128 to 0.92</title><polygon points="192.28,103.61 197.28,108.61 192.28,113.61 187.28,108.61" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 6, mean 0.9296, 95% CI 0.9264 to 0.9328</title><polygon points="216.33,100.10 221.33,105.10 216.33,110.10 211.33,105.10" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 7, mean 0.9385, 95% CI 0.9355 to 0.9415</title><polygon points="240.39,97.73 245.39,102.73 240.39,107.73 235.39,102.73" /></g><g class="series-point" fill="var(--series-4)"><title>Random search: budget 8, mean 0.9461, 95% CI 0.9434 to 0.9489</title><polygon points="264.44,95.71 269.44,100.71 264.44,105.71 259.44,100.71" /></g><path class="series-band" d="M 96.06 119.95 L 120.11 119.95 L 144.17 119.95 L 168.22 119.95 L 192.28 119.95 L 216.33 119.95 L 240.39 119.95 L 264.44 119.95 L 264.44 142.89 L 240.39 142.89 L 216.33 142.89 L 192.28 142.89 L 168.22 142.89 L 144.17 142.89 L 120.11 142.89 L 96.06 142.89 Z" fill="var(--series-5)" /><path class="series-line" d="M 96.06 131.42 L 120.11 131.42 L 144.17 131.42 L 168.22 131.42 L 192.28 131.42 L 216.33 131.42 L 240.39 131.42 L 264.44 131.42" stroke="var(--series-5)" stroke-dasharray="2 3" /><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 1, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="92.06" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 2, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="116.11" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 3, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="140.17" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 4, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="164.22" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 5, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="188.28" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 6, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="212.33" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 7, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="236.39" y="127.42" width="8" height="8" /></g><g class="series-point" fill="var(--series-5)"><title>Static source-best: budget 8, mean 0.8305, 95% CI 0.7873 to 0.8737</title><rect x="260.44" y="127.42" width="8" height="8" /></g><path class="series-band" d="M 96.06 75.66 L 120.11 75.66 L 144.17 75.66 L 168.22 75.66 L 192.28 75.66 L 216.33 75.66 L 240.39 75.66 L 264.44 75.66 L 264.44 85.80 L 240.39 85.80 L 216.33 85.80 L 192.28 85.80 L 168.22 85.80 L 144.17 85.80 L 120.11 85.80 L 96.06 85.80 Z" fill="var(--series-6)" /><path class="series-line" d="M 96.06 80.73 L 120.11 80.73 L 144.17 80.73 L 168.22 80.73 L 192.28 80.73 L 216.33 80.73 L 240.39 80.73 L 264.44 80.73" stroke="var(--series-6)" /><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 1, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="96.06" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 2, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="120.11" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 3, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="144.17" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 4, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="168.22" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 5, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="192.28" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 6, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="216.33" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 7, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="240.39" cy="80.73" r="4.5" /></g><g class="series-point" fill="var(--series-6)"><title>torch.matmul: budget 8, mean 1.0213, 95% CI 1.0023 to 1.0404</title><circle cx="264.44" cy="80.73" r="4.5" /></g><path class="series-band" d="M 96.06 110.39 L 120.11 109.87 L 144.17 106.45 L 168.22 103.80 L 192.28 103.46 L 216.33 104.01 L 240.39 103.02 L 264.44 102.85 L 264.44 105.08 L 240.39 105.51 L 216.33 106.53 L 192.28 105.69 L 168.22 105.66 L 144.17 108.56 L 120.11 112.42 L 96.06 113.51 Z" fill="var(--series-7)" /><path class="series-line" d="M 96.06 111.95 L 120.11 111.15 L 144.17 107.51 L 168.22 104.73 L 192.28 104.58 L 216.33 105.27 L 240.39 104.27 L 264.44 103.97" stroke="var(--series-7)" stroke-dasharray="9 5" /><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 1, mean 0.9038, 95% CI 0.8979 to 0.9097</title><polygon points="96.06,106.95 101.06,111.95 96.06,116.95 91.06,111.95" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 2, mean 0.9068, 95% CI 0.902 to 0.9116</title><polygon points="120.11,106.15 125.11,111.15 120.11,116.15 115.11,111.15" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 3, mean 0.9205, 95% CI 0.9166 to 0.9245</title><polygon points="144.17,102.51 149.17,107.51 144.17,112.51 139.17,107.51" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 4, mean 0.931, 95% CI 0.9275 to 0.9345</title><polygon points="168.22,99.73 173.22,104.73 168.22,109.73 163.22,104.73" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 5, mean 0.9316, 95% CI 0.9274 to 0.9358</title><polygon points="192.28,99.58 197.28,104.58 192.28,109.58 187.28,104.58" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 6, mean 0.929, 95% CI 0.9242 to 0.9337</title><polygon points="216.33,100.27 221.33,105.27 216.33,110.27 211.33,105.27" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 7, mean 0.9327, 95% CI 0.9281 to 0.9374</title><polygon points="240.39,99.27 245.39,104.27 240.39,109.27 235.39,104.27" /></g><g class="series-point" fill="var(--series-7)"><title>Helios transfer: budget 8, mean 0.9339, 95% CI 0.9297 to 0.9381</title><polygon points="264.44,98.97 269.44,103.97 264.44,108.97 259.44,103.97" /></g></g></svg></div><ul class="method-legend"><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-0)" stroke-width="3" /><circle cx="21" cy="7" r="3.5" fill="var(--series-0)" /></svg><span><strong>Cold Thompson sampling</strong><span class="legend-endpoint">0.9253 at budget 8</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-1)" stroke-width="3" stroke-dasharray="9 5" /><circle cx="21" cy="7" r="3.5" fill="var(--series-1)" /></svg><span><strong>Exhaustive autotuning</strong><span class="legend-endpoint">0.9999 at budget 36</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-2)" stroke-width="3" stroke-dasharray="3 5" /><circle cx="21" cy="7" r="3.5" fill="var(--series-2)" /></svg><span><strong>Held-out exhaustive reference</strong><span class="legend-endpoint">1 at budget 36</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-3)" stroke-width="3" stroke-dasharray="12 4 3 4" /><circle cx="21" cy="7" r="3.5" fill="var(--series-3)" /></svg><span><strong>Nearest-shape reuse</strong><span class="legend-endpoint">0.9954 at budget 8</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-4)" stroke-width="3" stroke-dasharray="6 4 2 4" /><circle cx="21" cy="7" r="3.5" fill="var(--series-4)" /></svg><span><strong>Random search</strong><span class="legend-endpoint">0.9461 at budget 8</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-5)" stroke-width="3" stroke-dasharray="2 3" /><circle cx="21" cy="7" r="3.5" fill="var(--series-5)" /></svg><span><strong>Static source-best</strong><span class="legend-endpoint">0.8305 at budget 8</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-6)" stroke-width="3" /><circle cx="21" cy="7" r="3.5" fill="var(--series-6)" /></svg><span><strong>torch.matmul</strong><span class="legend-endpoint">1.0213 at budget 8</span></span></li><li><svg viewBox="0 0 42 14" width="42" height="14" aria-hidden="true"><line x1="1" x2="41" y1="7" y2="7" stroke="var(--series-7)" stroke-width="3" stroke-dasharray="9 5" /><circle cx="21" cy="7" r="3.5" fill="var(--series-7)" /></svg><span><strong>Helios transfer</strong><span class="legend-endpoint">0.9339 at budget 8</span></span></li></ul><figcaption>Lines connect reported means; bands encode the supplied 95% confidence bounds. Values are plotted as supplied and are not recomputed by this renderer.</figcaption></figure><details class="data-disclosure"><summary>Complete numeric results · 50 rows</summary><div class="table-wrap"><table><caption>Values used to draw the budget-efficiency figure</caption><thead><tr><th scope="col">Method</th><th scope="col">Budget</th><th scope="col">Mean fraction of oracle</th><th scope="col">CI95 low</th><th scope="col">CI95 high</th></tr></thead><tbody><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">1</td><td class="numeric">0.8334</td><td class="numeric">0.8182</td><td class="numeric">0.8485</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">2</td><td class="numeric">0.8808</td><td class="numeric">0.87</td><td class="numeric">0.8916</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">3</td><td class="numeric">0.9023</td><td class="numeric">0.895</td><td class="numeric">0.9096</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">4</td><td class="numeric">0.9142</td><td class="numeric">0.908</td><td class="numeric">0.9204</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">5</td><td class="numeric">0.9159</td><td class="numeric">0.9099</td><td class="numeric">0.9219</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">6</td><td class="numeric">0.9194</td><td class="numeric">0.9137</td><td class="numeric">0.9252</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">7</td><td class="numeric">0.9228</td><td class="numeric">0.9178</td><td class="numeric">0.9279</td></tr><tr><td class="method-name">Cold Thompson sampling</td><td class="numeric">8</td><td class="numeric">0.9253</td><td class="numeric">0.9204</td><td class="numeric">0.9302</td></tr><tr><td class="method-name">Exhaustive autotuning</td><td class="numeric">36</td><td class="numeric">0.9999</td><td class="numeric">0.9973</td><td class="numeric">1.0024</td></tr><tr><td class="method-name">Held-out exhaustive reference</td><td class="numeric">36</td><td class="numeric">1</td><td class="numeric">1</td><td class="numeric">1</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">1</td><td class="numeric">0.9084</td><td class="numeric">0.8869</td><td class="numeric">0.9299</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">2</td><td class="numeric">0.9273</td><td class="numeric">0.9008</td><td class="numeric">0.9539</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">3</td><td class="numeric">0.9532</td><td class="numeric">0.9296</td><td class="numeric">0.9767</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">4</td><td class="numeric">0.9789</td><td class="numeric">0.9736</td><td class="numeric">0.9842</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">5</td><td class="numeric">0.9882</td><td class="numeric">0.9869</td><td class="numeric">0.9894</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">6</td><td class="numeric">0.9915</td><td class="numeric">0.9879</td><td class="numeric">0.9951</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">7</td><td class="numeric">0.9922</td><td class="numeric">0.9881</td><td class="numeric">0.9963</td></tr><tr><td class="method-name">Nearest-shape reuse</td><td class="numeric">8</td><td class="numeric">0.9954</td><td class="numeric">0.9922</td><td class="numeric">0.9987</td></tr><tr><td class="method-name">Random search</td><td class="numeric">1</td><td class="numeric">0.7202</td><td class="numeric">0.7123</td><td class="numeric">0.7281</td></tr><tr><td class="method-name">Random search</td><td class="numeric">2</td><td class="numeric">0.8182</td><td class="numeric">0.8116</td><td class="numeric">0.8248</td></tr><tr><td class="method-name">Random search</td><td class="numeric">3</td><td class="numeric">0.869</td><td class="numeric">0.8636</td><td class="numeric">0.8745</td></tr><tr><td class="method-name">Random search</td><td class="numeric">4</td><td class="numeric">0.897</td><td class="numeric">0.8924</td><td class="numeric">0.9016</td></tr><tr><td class="method-name">Random search</td><td class="numeric">5</td><td class="numeric">0.9164</td><td class="numeric">0.9128</td><td class="numeric">0.92</td></tr><tr><td class="method-name">Random search</td><td class="numeric">6</td><td class="numeric">0.9296</td><td class="numeric">0.9264</td><td class="numeric">0.9328</td></tr><tr><td class="method-name">Random search</td><td class="numeric">7</td><td class="numeric">0.9385</td><td class="numeric">0.9355</td><td class="numeric">0.9415</td></tr><tr><td class="method-name">Random search</td><td class="numeric">8</td><td class="numeric">0.9461</td><td class="numeric">0.9434</td><td class="numeric">0.9489</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">1</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">2</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">3</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">4</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">5</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">6</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">7</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">Static source-best</td><td class="numeric">8</td><td class="numeric">0.8305</td><td class="numeric">0.7873</td><td class="numeric">0.8737</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">1</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">2</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">3</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">4</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">5</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">6</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">7</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">torch.matmul</td><td class="numeric">8</td><td class="numeric">1.0213</td><td class="numeric">1.0023</td><td class="numeric">1.0404</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">1</td><td class="numeric">0.9038</td><td class="numeric">0.8979</td><td class="numeric">0.9097</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">2</td><td class="numeric">0.9068</td><td class="numeric">0.902</td><td class="numeric">0.9116</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">3</td><td class="numeric">0.9205</td><td class="numeric">0.9166</td><td class="numeric">0.9245</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">4</td><td class="numeric">0.931</td><td class="numeric">0.9275</td><td class="numeric">0.9345</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">5</td><td class="numeric">0.9316</td><td class="numeric">0.9274</td><td class="numeric">0.9358</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">6</td><td class="numeric">0.929</td><td class="numeric">0.9242</td><td class="numeric">0.9337</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">7</td><td class="numeric">0.9327</td><td class="numeric">0.9281</td><td class="numeric">0.9374</td></tr><tr><td class="method-name">Helios transfer</td><td class="numeric">8</td><td class="numeric">0.9339</td><td class="numeric">0.9297</td><td class="numeric">0.9381</td></tr></tbody></table></div></details></section><section class="section" aria-labelledby="section-02"><header class="section-head"><p class="section-number">02</p><div><h2 id="section-02">Transfer versus cold start</h2><p class="section-copy">Only matching target budgets are compared. A positive percentage-point delta means the identified transfer method has the higher supplied mean.</p></div></header><div class="comparison-lead"><span class="delta">+0.9 pp</span><span class="delta-context"><strong>Helios transfer</strong> is higher than <strong>Cold Thompson sampling</strong> at their largest shared budget (8). Deltas compare supplied means only.</span></div><div class="table-wrap"><table><caption>Like-for-like transfer comparison at shared target budgets</caption><thead><tr><th scope="col">Budget</th><th scope="col">Helios transfer</th><th scope="col">Cold Thompson sampling</th><th scope="col">Transfer delta</th></tr></thead><tbody><tr><td class="numeric">1</td><td class="numeric">0.9038</td><td class="numeric">0.8334</td><td class="numeric">+7.04 pp</td></tr><tr><td class="numeric">2</td><td class="numeric">0.9068</td><td class="numeric">0.8808</td><td class="numeric">+2.60 pp</td></tr><tr><td class="numeric">3</td><td class="numeric">0.9205</td><td class="numeric">0.9023</td><td class="numeric">+1.82 pp</td></tr><tr><td class="numeric">4</td><td class="numeric">0.931</td><td class="numeric">0.9142</td><td class="numeric">+1.68 pp</td></tr><tr><td class="numeric">5</td><td class="numeric">0.9316</td><td class="numeric">0.9159</td><td class="numeric">+1.57 pp</td></tr><tr><td class="numeric">6</td><td class="numeric">0.929</td><td class="numeric">0.9194</td><td class="numeric">+0.95 pp</td></tr><tr><td class="numeric">7</td><td class="numeric">0.9327</td><td class="numeric">0.9228</td><td class="numeric">+0.99 pp</td></tr><tr><td class="numeric">8</td><td class="numeric">0.9339</td><td class="numeric">0.9253</td><td class="numeric">+0.85 pp</td></tr></tbody></table></div></section><section class="section" aria-labelledby="section-03"><header class="section-head"><p class="section-number">03</p><div><h2 id="section-03">Hardware context</h2><p class="section-copy">Source and target facts are separated and shown exactly as supplied. A synthetic report identifies simulated device context without presenting it as measured hardware.</p></div></header><div class="hardware-grid"><article class="panel hardware-sheet source"><span class="hardware-role">source hardware</span><h3 class="hardware-name">NVIDIA L4</h3><dl class="fact-list"><div><dt>Gpu</dt><dd>L4</dd></div><div><dt>Compute capability</dt><dd>8.9</dd></div><div><dt>Multiprocessor count</dt><dd>58</dd></div><div><dt>Total memory gb</dt><dd>22.0343 GB</dd></div><div><dt>Cuda version</dt><dd>12.8</dd></div><div><dt>Torch version</dt><dd>2.8.0+cu128</dd></div><div><dt>Triton version</dt><dd>3.4.0</dd></div></dl></article><article class="panel hardware-sheet target"><span class="hardware-role">target hardware</span><h3 class="hardware-name">NVIDIA A10</h3><dl class="fact-list"><div><dt>Gpu</dt><dd>A10</dd></div><div><dt>Compute capability</dt><dd>8.6</dd></div><div><dt>Multiprocessor count</dt><dd>72</dd></div><div><dt>Total memory gb</dt><dd>22.0582 GB</dd></div><div><dt>Cuda version</dt><dd>12.8</dd></div><div><dt>Torch version</dt><dd>2.8.0+cu128</dd></div><div><dt>Triton version</dt><dd>3.4.0</dd></div></dl></article></div></section><section class="section" aria-labelledby="section-04"><header class="section-head"><p class="section-number">04</p><div><h2 id="section-04">Experiment scope</h2><p class="section-copy">The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.</p></div></header><div class="matrix-stack"><details class="data-disclosure"><summary>Workload identifiers · 96 rows</summary><div class="table-wrap"><table><caption>Complete workload identifiers supplied by the experiment</caption><thead><tr><th scope="col">ID</th><th scope="col">Workload key</th></tr></thead><tbody><tr><td class="numeric">01</td><td class="identifier">granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096</td></tr><tr><td class="numeric">02</td><td class="identifier">granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096</td></tr><tr><td class="numeric">03</td><td class="identifier">granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096</td></tr><tr><td class="numeric">04</td><td class="identifier">granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096</td></tr><tr><td class="numeric">05</td><td class="identifier">granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096</td></tr><tr><td class="numeric">06</td><td class="identifier">granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096</td></tr><tr><td class="numeric">07</td><td class="identifier">granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096</td></tr><tr><td class="numeric">08</td><td class="identifier">granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096</td></tr><tr><td class="numeric">09</td><td class="identifier">granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096</td></tr><tr><td class="numeric">10</td><td class="identifier">granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096</td></tr><tr><td class="numeric">11</td><td class="identifier">granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096</td></tr><tr><td class="numeric">12</td><td class="identifier">granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096</td></tr><tr><td class="numeric">13</td><td class="identifier">granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800</td></tr><tr><td class="numeric">14</td><td class="identifier">granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800</td></tr><tr><td class="numeric">15</td><td class="identifier">granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800</td></tr><tr><td class="numeric">16</td><td class="identifier">granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800</td></tr><tr><td class="numeric">17</td><td class="identifier">granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800</td></tr><tr><td class="numeric">18</td><td class="identifier">granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800</td></tr><tr><td class="numeric">19</td><td class="identifier">granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096</td></tr><tr><td class="numeric">20</td><td class="identifier">granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096</td></tr><tr><td class="numeric">21</td><td class="identifier">granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096</td></tr><tr><td class="numeric">22</td><td class="identifier">granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096</td></tr><tr><td class="numeric">23</td><td class="identifier">granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096</td></tr><tr><td class="numeric">24</td><td class="identifier">granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096</td></tr><tr><td class="numeric">25</td><td class="identifier">mistral-7b-attention-out-decode-1-m1-n4096-k4096</td></tr><tr><td class="numeric">26</td><td class="identifier">mistral-7b-attention-out-decode-7-m7-n4096-k4096</td></tr><tr><td class="numeric">27</td><td class="identifier">mistral-7b-attention-out-mixed-31-m31-n4096-k4096</td></tr><tr><td class="numeric">28</td><td class="identifier">mistral-7b-attention-out-mixed-96-m96-n4096-k4096</td></tr><tr><td class="numeric">29</td><td class="identifier">mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096</td></tr><tr><td class="numeric">30</td><td class="identifier">mistral-7b-attention-out-prefill-257-m257-n4096-k4096</td></tr><tr><td class="numeric">31</td><td class="identifier">mistral-7b-attention-qkv-decode-1-m1-n6144-k4096</td></tr><tr><td class="numeric">32</td><td class="identifier">mistral-7b-attention-qkv-decode-7-m7-n6144-k4096</td></tr><tr><td class="numeric">33</td><td class="identifier">mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096</td></tr><tr><td class="numeric">34</td><td class="identifier">mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096</td></tr><tr><td class="numeric">35</td><td class="identifier">mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096</td></tr><tr><td class="numeric">36</td><td class="identifier">mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096</td></tr><tr><td class="numeric">37</td><td class="identifier">mistral-7b-ffn-down-decode-1-m1-n4096-k14336</td></tr><tr><td class="numeric">38</td><td class="identifier">mistral-7b-ffn-down-decode-7-m7-n4096-k14336</td></tr><tr><td class="numeric">39</td><td class="identifier">mistral-7b-ffn-down-mixed-31-m31-n4096-k14336</td></tr><tr><td class="numeric">40</td><td class="identifier">mistral-7b-ffn-down-mixed-96-m96-n4096-k14336</td></tr><tr><td class="numeric">41</td><td class="identifier">mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336</td></tr><tr><td class="numeric">42</td><td class="identifier">mistral-7b-ffn-down-prefill-257-m257-n4096-k14336</td></tr><tr><td class="numeric">43</td><td class="identifier">mistral-7b-ffn-up-decode-1-m1-n14336-k4096</td></tr><tr><td class="numeric">44</td><td class="identifier">mistral-7b-ffn-up-decode-7-m7-n14336-k4096</td></tr><tr><td class="numeric">45</td><td class="identifier">mistral-7b-ffn-up-mixed-31-m31-n14336-k4096</td></tr><tr><td class="numeric">46</td><td class="identifier">mistral-7b-ffn-up-mixed-96-m96-n14336-k4096</td></tr><tr><td class="numeric">47</td><td class="identifier">mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096</td></tr><tr><td class="numeric">48</td><td class="identifier">mistral-7b-ffn-up-prefill-257-m257-n14336-k4096</td></tr><tr><td class="numeric">49</td><td class="identifier">phi-3-mini-attention-out-decode-1-m1-n3072-k3072</td></tr><tr><td class="numeric">50</td><td class="identifier">phi-3-mini-attention-out-decode-7-m7-n3072-k3072</td></tr><tr><td class="numeric">51</td><td class="identifier">phi-3-mini-attention-out-mixed-31-m31-n3072-k3072</td></tr><tr><td class="numeric">52</td><td class="identifier">phi-3-mini-attention-out-mixed-96-m96-n3072-k3072</td></tr><tr><td class="numeric">53</td><td class="identifier">phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072</td></tr><tr><td class="numeric">54</td><td class="identifier">phi-3-mini-attention-out-prefill-257-m257-n3072-k3072</td></tr><tr><td class="numeric">55</td><td class="identifier">phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072</td></tr><tr><td class="numeric">56</td><td class="identifier">phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072</td></tr><tr><td class="numeric">57</td><td class="identifier">phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072</td></tr><tr><td class="numeric">58</td><td class="identifier">phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072</td></tr><tr><td class="numeric">59</td><td class="identifier">phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072</td></tr><tr><td class="numeric">60</td><td class="identifier">phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072</td></tr><tr><td class="numeric">61</td><td class="identifier">phi-3-mini-ffn-down-decode-1-m1-n3072-k8192</td></tr><tr><td class="numeric">62</td><td class="identifier">phi-3-mini-ffn-down-decode-7-m7-n3072-k8192</td></tr><tr><td class="numeric">63</td><td class="identifier">phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192</td></tr><tr><td class="numeric">64</td><td class="identifier">phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192</td></tr><tr><td class="numeric">65</td><td class="identifier">phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192</td></tr><tr><td class="numeric">66</td><td class="identifier">phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192</td></tr><tr><td class="numeric">67</td><td class="identifier">phi-3-mini-ffn-up-decode-1-m1-n8192-k3072</td></tr><tr><td class="numeric">68</td><td class="identifier">phi-3-mini-ffn-up-decode-7-m7-n8192-k3072</td></tr><tr><td class="numeric">69</td><td class="identifier">phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072</td></tr><tr><td class="numeric">70</td><td class="identifier">phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072</td></tr><tr><td class="numeric">71</td><td class="identifier">phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072</td></tr><tr><td class="numeric">72</td><td class="identifier">phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072</td></tr><tr><td class="numeric">73</td><td class="identifier">qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584</td></tr><tr><td class="numeric">74</td><td class="identifier">qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584</td></tr><tr><td class="numeric">75</td><td class="identifier">qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584</td></tr><tr><td class="numeric">76</td><td class="identifier">qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584</td></tr><tr><td class="numeric">77</td><td class="identifier">qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584</td></tr><tr><td class="numeric">78</td><td class="identifier">qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584</td></tr><tr><td class="numeric">79</td><td class="identifier">qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584</td></tr><tr><td class="numeric">80</td><td class="identifier">qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584</td></tr><tr><td class="numeric">81</td><td class="identifier">qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584</td></tr><tr><td class="numeric">82</td><td class="identifier">qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584</td></tr><tr><td class="numeric">83</td><td class="identifier">qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584</td></tr><tr><td class="numeric">84</td><td class="identifier">qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584</td></tr><tr><td class="numeric">85</td><td class="identifier">qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944</td></tr><tr><td class="numeric">86</td><td class="identifier">qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944</td></tr><tr><td class="numeric">87</td><td class="identifier">qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944</td></tr><tr><td class="numeric">88</td><td class="identifier">qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944</td></tr><tr><td class="numeric">89</td><td class="identifier">qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944</td></tr><tr><td class="numeric">90</td><td class="identifier">qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944</td></tr><tr><td class="numeric">91</td><td class="identifier">qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584</td></tr><tr><td class="numeric">92</td><td class="identifier">qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584</td></tr><tr><td class="numeric">93</td><td class="identifier">qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584</td></tr><tr><td class="numeric">94</td><td class="identifier">qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584</td></tr><tr><td class="numeric">95</td><td class="identifier">qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584</td></tr><tr><td class="numeric">96</td><td class="identifier">qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584</td></tr></tbody></table></div></details><details class="data-disclosure"><summary>Launch configuration identifiers · 36 rows</summary><div class="table-wrap"><table><caption>Complete launch-configuration identifiers supplied by the experiment</caption><thead><tr><th scope="col">ID</th><th scope="col">Configuration key</th></tr></thead><tbody><tr><td class="numeric">01</td><td class="identifier">m128n128k32-w8s3g8</td></tr><tr><td class="numeric">02</td><td class="identifier">m128n128k32-w8s4g4</td></tr><tr><td class="numeric">03</td><td class="identifier">m128n128k64-w8s2g8</td></tr><tr><td class="numeric">04</td><td class="identifier">m128n32k32-w4s3g8</td></tr><tr><td class="numeric">05</td><td class="identifier">m128n32k32-w4s4g4</td></tr><tr><td class="numeric">06</td><td class="identifier">m128n32k64-w4s2g8</td></tr><tr><td class="numeric">07</td><td class="identifier">m128n64k32-w8s3g8</td></tr><tr><td class="numeric">08</td><td class="identifier">m128n64k32-w8s4g4</td></tr><tr><td class="numeric">09</td><td class="identifier">m128n64k64-w8s2g8</td></tr><tr><td class="numeric">10</td><td class="identifier">m16n128k32-w4s3g8</td></tr><tr><td class="numeric">11</td><td class="identifier">m16n128k32-w4s4g4</td></tr><tr><td class="numeric">12</td><td class="identifier">m16n128k64-w4s2g8</td></tr><tr><td class="numeric">13</td><td class="identifier">m16n32k32-w4s3g8</td></tr><tr><td class="numeric">14</td><td class="identifier">m16n32k32-w4s4g4</td></tr><tr><td class="numeric">15</td><td class="identifier">m16n32k64-w4s2g8</td></tr><tr><td class="numeric">16</td><td class="identifier">m16n64k32-w4s3g8</td></tr><tr><td class="numeric">17</td><td class="identifier">m16n64k32-w4s4g4</td></tr><tr><td class="numeric">18</td><td class="identifier">m16n64k64-w4s2g8</td></tr><tr><td class="numeric">19</td><td class="identifier">m32n128k32-w4s3g8</td></tr><tr><td class="numeric">20</td><td class="identifier">m32n128k32-w4s4g4</td></tr><tr><td class="numeric">21</td><td class="identifier">m32n128k64-w4s2g8</td></tr><tr><td class="numeric">22</td><td class="identifier">m32n32k32-w4s3g8</td></tr><tr><td class="numeric">23</td><td class="identifier">m32n32k32-w4s4g4</td></tr><tr><td class="numeric">24</td><td class="identifier">m32n32k64-w4s2g8</td></tr><tr><td class="numeric">25</td><td class="identifier">m32n64k32-w4s3g8</td></tr><tr><td class="numeric">26</td><td class="identifier">m32n64k32-w4s4g4</td></tr><tr><td class="numeric">27</td><td class="identifier">m32n64k64-w4s2g8</td></tr><tr><td class="numeric">28</td><td class="identifier">m64n128k32-w8s3g8</td></tr><tr><td class="numeric">29</td><td class="identifier">m64n128k32-w8s4g4</td></tr><tr><td class="numeric">30</td><td class="identifier">m64n128k64-w8s2g8</td></tr><tr><td class="numeric">31</td><td class="identifier">m64n32k32-w4s3g8</td></tr><tr><td class="numeric">32</td><td class="identifier">m64n32k32-w4s4g4</td></tr><tr><td class="numeric">33</td><td class="identifier">m64n32k64-w4s2g8</td></tr><tr><td class="numeric">34</td><td class="identifier">m64n64k32-w4s3g8</td></tr><tr><td class="numeric">35</td><td class="identifier">m64n64k32-w4s4g4</td></tr><tr><td class="numeric">36</td><td class="identifier">m64n64k64-w4s2g8</td></tr></tbody></table></div></details></div></section><section class="section" aria-labelledby="section-05"><header class="section-head"><p class="section-number">05</p><div><h2 id="section-05">Protocol and provenance</h2><p class="section-copy">Reported run metadata and experiment protocol are inventoried separately from facts that are absent from the summary.</p></div></header><div class="table-wrap panel-table"><table><caption>Protocol, aggregation, and run metadata supplied with this report</caption><thead><tr><th scope="col">Field</th><th scope="col">Reported value</th></tr></thead><tbody><tr><td class="method-name">Data classification</td><td class="provenance-value">Measured benchmark data</td></tr><tr><td class="method-name">Reported metric</td><td class="provenance-value">mean_fraction_oracle with supplied 95% confidence bounds</td></tr><tr><td class="method-name">Method count</td><td class="provenance-value">8</td></tr><tr><td class="method-name">Reported curve points</td><td class="provenance-value">50</td></tr><tr><td class="method-name">Workloads</td><td class="provenance-value">96</td></tr><tr><td class="method-name">Configurations</td><td class="provenance-value">36</td></tr><tr><td class="method-name">Experiment / Aggregation</td><td class="provenance-value">geometric mean fraction of held-out exhaustive reference</td></tr><tr><td class="method-name">Experiment / Bank roles / 0</td><td class="provenance-value">policy-visible observations</td></tr><tr><td class="method-name">Experiment / Bank roles / 1</td><td class="provenance-value">exhaustive-reference selection</td></tr><tr><td class="method-name">Experiment / Bank roles / 2</td><td class="provenance-value">held-out final evaluation</td></tr><tr><td class="method-name">Experiment / Confidence interval</td><td class="provenance-value">normal 95% interval across grouped folds and policy seeds</td></tr><tr><td class="method-name">Experiment / Reward</td><td class="provenance-value">-log(selected configuration latency_ms)</td></tr><tr><td class="method-name">Experiment / Target budget unit</td><td class="provenance-value">bank-0 configuration measurements per held-out workload</td></tr><tr><td class="method-name">Seeds</td><td class="provenance-value">30</td></tr><tr><td class="method-name">Model families</td><td class="provenance-value">4</td></tr><tr><td class="method-name">Measurement banks</td><td class="provenance-value">3</td></tr><tr><td class="method-name">Max budget</td><td class="provenance-value">8</td></tr><tr><td class="method-name">Transfer strength</td><td class="provenance-value">0.08</td></tr></tbody></table></div></section><section class="section" aria-labelledby="section-06"><header class="section-head"><p class="section-number">06</p><div><h2 id="section-06">Source cost and limitations</h2><p class="section-copy">Target-budget efficiency is not end-to-end efficiency. Source acquisition and interpretation boundaries remain explicit.</p></div></header><div class="split-grid"><div class="disclosure"><strong>Reported source collection cost</strong><p>This cost is disclosed separately from the target evaluation budgets in the curves.</p><dl class="fact-list"><div><dt>Collected measurements per gpu</dt><dd>10368</dd></div><div><dt>Disclosure</dt><dd>The transfer prior sees bank-0 source measurements from non-held-out model families. Source acquisition and all reference/evaluation banks are excluded from the target query budget and disclosed separately.</dd></div><div><dt>Visible source observations per fold</dt><dd>2592</dd></div></dl></div><div class="panel"><h3>Interpretation boundaries</h3><ul class="limitations"><li>Fraction of oracle is an aggregate efficiency measure; without workload-level distributions, it can hide regressions on individual matrix shapes.</li><li>Confidence intervals communicate the supplied sampling uncertainty but do not by themselves establish independence, causal transfer benefit, or performance outside this matrix.</li><li>Conclusions are bounded to the reported GPUs, workloads, candidate launch configurations, and FP16 Triton matmul implementation.</li><li>The study demonstrates transfer between Modal L4 and A10, not arbitrary unseen GPUs.</li><li>Replay measures steady-state kernel probes, not compilation or end-to-end serving latency.</li><li>The 36-action manifest is curated rather than every legal Triton configuration.</li><li>Three independent timing banks reduce leakage but do not model production interference.</li></ul></div></div></section></main><footer class="footer"><span><strong>HeliosTune</strong> / GPU autotuning transfer report</span><span>Offline HTML · inline SVG · no network requests</span></footer></div><script type="application/json" id="heliostune-chart-data">{"cold_thompson":[{"budget":1.0,"mean_fraction_oracle":0.8333575102611341,"ci95_low":0.818192099060261,"ci95_high":0.8485229214620073},{"budget":2.0,"mean_fraction_oracle":0.8808428138645574,"ci95_low":0.8700495792142443,"ci95_high":0.8916360485148705},{"budget":3.0,"mean_fraction_oracle":0.9023120722304144,"ci95_low":0.8950007780226857,"ci95_high":0.9096233664381431},{"budget":4.0,"mean_fraction_oracle":0.9142072536994784,"ci95_low":0.9079922160068418,"ci95_high":0.9204222913921151},{"budget":5.0,"mean_fraction_oracle":0.9158888829665064,"ci95_low":0.9099129425001319,"ci95_high":0.9218648234328809},{"budget":6.0,"mean_fraction_oracle":0.9194181026636774,"ci95_low":0.9136810281278988,"ci95_high":0.9251551771994561},{"budget":7.0,"mean_fraction_oracle":0.9228146502906582,"ci95_low":0.9177769838733022,"ci95_high":0.9278523167080143},{"budget":8.0,"mean_fraction_oracle":0.9253251885413468,"ci95_low":0.9204266166853905,"ci95_high":0.9302237603973031}],"exhaustive":[{"budget":36.0,"mean_fraction_oracle":0.9998631141597187,"ci95_low":0.9972764406250196,"ci95_high":1.0024497876944178}],"heldout_reference":[{"budget":36.0,"mean_fraction_oracle":1.0,"ci95_low":1.0,"ci95_high":1.0}],"nearest_shape":[{"budget":1.0,"mean_fraction_oracle":0.908395885210509,"ci95_low":0.8869021191106478,"ci95_high":0.9298896513103702},{"budget":2.0,"mean_fraction_oracle":0.9273478230055141,"ci95_low":0.9007811644225494,"ci95_high":0.9539144815884788},{"budget":3.0,"mean_fraction_oracle":0.9531576881734469,"ci95_low":0.9296432901035889,"ci95_high":0.9766720862433049},{"budget":4.0,"mean_fraction_oracle":0.97891938274828,"ci95_low":0.9736470475671084,"ci95_high":0.9841917179294517},{"budget":5.0,"mean_fraction_oracle":0.9881511885010263,"ci95_low":0.9869153840991856,"ci95_high":0.9893869929028671},{"budget":6.0,"mean_fraction_oracle":0.9914777190016246,"ci95_low":0.9878892219862216,"ci95_high":0.9950662160170276},{"budget":7.0,"mean_fraction_oracle":0.9921920116783254,"ci95_low":0.9880825226748894,"ci95_high":0.9963015006817614},{"budget":8.0,"mean_fraction_oracle":0.9954156083661565,"ci95_low":0.9921621438195833,"ci95_high":0.9986690729127297}],"random":[{"budget":1.0,"mean_fraction_oracle":0.7201917486717104,"ci95_low":0.7122558007910065,"ci95_high":0.7281276965524144},{"budget":2.0,"mean_fraction_oracle":0.8182185733175413,"ci95_low":0.8116239947634583,"ci95_high":0.8248131518716244},{"budget":3.0,"mean_fraction_oracle":0.8690023788675784,"ci95_low":0.8635532646225067,"ci95_high":0.87445149311265},{"budget":4.0,"mean_fraction_oracle":0.8969944863726885,"ci95_low":0.8923988814403861,"ci95_high":0.9015900913049909},{"budget":5.0,"mean_fraction_oracle":0.9163706660451943,"ci95_low":0.9127569245443509,"ci95_high":0.9199844075460378},{"budget":6.0,"mean_fraction_oracle":0.9295789529547667,"ci95_low":0.9263969095275495,"ci95_high":0.9327609963819838},{"budget":7.0,"mean_fraction_oracle":0.9385175825068658,"ci95_low":0.9354963908826753,"ci95_high":0.9415387741310562},{"budget":8.0,"mean_fraction_oracle":0.946129478157315,"ci95_low":0.943372459762803,"ci95_high":0.9488864965518269}],"static":[{"budget":1.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":2.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":3.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":4.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":5.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":6.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":7.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645},{"budget":8.0,"mean_fraction_oracle":0.8305071332161266,"ci95_low":0.7873269328210887,"ci95_high":0.8736873336111645}],"torch":[{"budget":1.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":2.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":3.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":4.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":5.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":6.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":7.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794},{"budget":8.0,"mean_fraction_oracle":1.0213401770738975,"ci95_low":1.002257953329001,"ci95_high":1.040422400818794}],"transfer_thompson":[{"budget":1.0,"mean_fraction_oracle":0.9038020745051543,"ci95_low":0.8979424603557304,"ci95_high":0.9096616886545781},{"budget":2.0,"mean_fraction_oracle":0.9068326795320405,"ci95_low":0.9020465343320798,"ci95_high":0.9116188247320012},{"budget":3.0,"mean_fraction_oracle":0.9205371268262306,"ci95_low":0.91657009165194,"ci95_high":0.9245041620005211},{"budget":4.0,"mean_fraction_oracle":0.9309891054847161,"ci95_low":0.9275023389597413,"ci95_high":0.934475872009691},{"budget":5.0,"mean_fraction_oracle":0.9315565009072455,"ci95_low":0.9273536916222384,"ci95_high":0.9357593101922527},{"budget":6.0,"mean_fraction_oracle":0.9289554004307228,"ci95_low":0.9241957782709223,"ci95_high":0.9337150225905233},{"budget":7.0,"mean_fraction_oracle":0.932735821977283,"ci95_low":0.9280502305733214,"ci95_high":0.9374214133812446},{"budget":8.0,"mean_fraction_oracle":0.9338534726973636,"ci95_low":0.929655197875805,"ci95_high":0.9380517475189223}]}</script></body></html>
