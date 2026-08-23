@@ -56,6 +56,46 @@ def benchmark_a10(
     )
 
 
+@app.function(image=image, gpu="T4", timeout=60 * 60)
+def benchmark_t4(
+    replicate: int = 0,
+    warmup_ms: int = 25,
+    rep_ms: int = 100,
+    pilot: bool = False,
+) -> list[dict[str, Any]]:
+    from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
+    from heliostune.kernel import collect_benchmarks
+
+    return collect_benchmarks(
+        "T4",
+        replicate=replicate,
+        configs=DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS,
+        workloads=DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS,
+        warmup_ms=warmup_ms,
+        rep_ms=rep_ms,
+    )
+
+
+@app.function(image=image, gpu="H100!", timeout=60 * 60)
+def benchmark_h100(
+    replicate: int = 0,
+    warmup_ms: int = 25,
+    rep_ms: int = 100,
+    pilot: bool = False,
+) -> list[dict[str, Any]]:
+    from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
+    from heliostune.kernel import collect_benchmarks
+
+    return collect_benchmarks(
+        "H100",
+        replicate=replicate,
+        configs=DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS,
+        workloads=DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS,
+        warmup_ms=warmup_ms,
+        rep_ms=rep_ms,
+    )
+
+
 def _record_sort_key(record: dict[str, Any]) -> tuple[Any, ...]:
     hardware = record["hardware"]
     workload = record["workload"]
@@ -85,18 +125,38 @@ def main(
     rep_ms: int = 100,
     replicates: int = 3,
     pilot: bool = False,
+    gpus: str = "L4,A10",
 ) -> None:
     if replicates <= 0:
         raise ValueError("replicates must be positive")
+    gpu_names = [gpu.strip() for gpu in gpus.split(",")]
+    if any(not gpu for gpu in gpu_names):
+        raise ValueError("gpus must be a non-empty comma-separated list")
+    if len(set(gpu_names)) != len(gpu_names):
+        raise ValueError("gpus must not contain duplicate selectors")
+
+    benchmarks = {
+        "L4": benchmark_l4,
+        "A10": benchmark_a10,
+        "T4": benchmark_t4,
+        "H100": benchmark_h100,
+    }
+    unknown = [gpu for gpu in gpu_names if gpu not in benchmarks]
+    if unknown:
+        raise ValueError(
+            f"unknown GPU selector(s): {', '.join(unknown)}; "
+            f"choose from {', '.join(benchmarks)}"
+        )
+
     calls = [
-        benchmark.spawn(
+        benchmarks[gpu].spawn(
             replicate=replicate,
             warmup_ms=warmup_ms,
             rep_ms=rep_ms,
             pilot=pilot,
         )
         for replicate in range(replicates)
-        for benchmark in (benchmark_l4, benchmark_a10)
+        for gpu in gpu_names
     ]
     records = sorted(
         (record for call in calls for record in call.get()),
