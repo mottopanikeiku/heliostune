@@ -196,6 +196,7 @@ h3 {
   font-size: var(--text-sm);
   font-weight: 650;
 }
+.route-node.target { border-color: var(--ink); }
 .route-arrow {
   color: var(--accent);
   font-family: var(--font-mono);
@@ -517,6 +518,7 @@ tbody tr:hover td { background: var(--accent-soft); color: var(--ink); }
 .delta.negative { color: var(--negative); }
 .delta-context { max-width: 62ch; color: var(--muted); font-size: var(--text-sm); }
 .comparison-lead + .table-wrap { margin-top: var(--space-3); border: 1px solid var(--line); }
+.primary-evidence-note { margin-top: var(--space-3); }
 .disclosure {
   padding: var(--space-4);
   border-left: var(--space-1) solid var(--line-strong);
@@ -963,6 +965,164 @@ def _method_by_role(
     return None
 
 
+def _method_label(value: Any, labels: Mapping[str, str], fallback: str) -> str:
+    if value in (None, ""):
+        return fallback
+    key = str(value)
+    return labels.get(key, _human_label(key))
+
+
+def _paired_primary_metric(
+    summary: Mapping[str, Any],
+) -> tuple[bool, Mapping[str, Any] | None]:
+    primary_metrics = _as_mapping(summary.get("primary_metrics"))
+    metric_key = "paired_parhelion_vs_primary_auc_delta"
+    if primary_metrics is not None and metric_key in primary_metrics:
+        return True, _as_mapping(primary_metrics.get(metric_key))
+
+    headline = _as_mapping(summary.get("headline"))
+    headline_key = "paired_auc_delta_vs_primary"
+    if headline is not None and headline_key in headline:
+        return True, _as_mapping(headline.get(headline_key))
+    return False, None
+
+
+def _descriptive_strongest_legacy(summary: Mapping[str, Any]) -> Any:
+    for container_name in ("headline", "primary_metrics"):
+        container = _as_mapping(summary.get(container_name))
+        if container is not None and "descriptive_target_strongest_legacy_method" in container:
+            return container.get("descriptive_target_strongest_legacy_method")
+    return None
+
+
+def _supplied_number(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+def _format_auc_delta(value: Any) -> str:
+    number = _supplied_number(value)
+    if number is None:
+        return _format_value(value)
+    return f"{number:+.4f} AUC ({number * 100:+.2f} pp)"
+
+
+def _format_auc_interval(low: Any, high: Any) -> str:
+    low_number = _supplied_number(low)
+    high_number = _supplied_number(high)
+    if low_number is None or high_number is None:
+        return f"[{_format_value(low)}, {_format_value(high)}]"
+    return (
+        f"[{low_number:+.4f}, {high_number:+.4f}] AUC "
+        f"([{low_number * 100:+.2f}, {high_number * 100:+.2f}] pp)"
+    )
+
+
+def _render_primary_evidence(
+    summary: Mapping[str, Any],
+    labels: Mapping[str, str],
+    transfer: str | None,
+) -> str:
+    _, evidence = _paired_primary_metric(summary)
+    if evidence is None:
+        return (
+            '<div class="empty-state">A paired frozen primary-comparator endpoint was not supplied. '
+            "The target endpoint comparison is not substituted with a transfer-versus-cold claim.</div>"
+        )
+
+    comparator_key = evidence.get("comparator")
+    if comparator_key in (None, ""):
+        comparator_key = summary.get("primary_comparator")
+    transfer_key = summary.get("transfer_method", transfer)
+    transfer_label = _method_label(transfer_key, labels, "Transfer method")
+    comparator_label = _method_label(comparator_key, labels, _MISSING)
+
+    mean_delta = evidence.get("mean_auc_delta")
+    ci_low = evidence.get("ci95_low")
+    ci_high = evidence.get("ci95_high")
+    paired_seeds = evidence.get("paired_seeds")
+    degrees_of_freedom = evidence.get("degrees_of_freedom")
+    mean_number = _supplied_number(mean_delta)
+    delta_class = "delta negative" if mean_number is not None and mean_number < 0 else "delta"
+    supported_value = evidence.get("superiority_supported")
+    supported = supported_value is True
+    if supported:
+        claim = evidence.get("claim")
+        supplied_claim = (
+            str(claim).strip()
+            if claim not in (None, "") and str(claim).strip()
+            else "The supplied paired interval supports the frozen comparison."
+        )
+        evidence_status = (
+            "<strong>Superiority supported.</strong> "
+            f"{_escape(supplied_claim)}"
+        )
+    else:
+        evidence_status = (
+            "<strong>Superiority was not demonstrated.</strong> "
+            "The supplied two-sided 95% Student-t interval does not support a superiority claim."
+        )
+
+    if supported_value is True:
+        supported_display = "true"
+    elif supported_value is False:
+        supported_display = "false"
+    else:
+        supported_display = _format_value(supported_value)
+
+    rows = (
+        ("Transfer method", transfer_label),
+        ("Frozen primary comparator", comparator_label),
+        ("Paired mean fraction-reference AUC delta", _format_auc_delta(mean_delta)),
+        ("Two-sided 95% Student-t CI", _format_auc_interval(ci_low, ci_high)),
+        (
+            "Paired seed / df count",
+            f"{_format_value(paired_seeds)} paired seeds / "
+            f"{_format_value(degrees_of_freedom)} df",
+        ),
+        ("superiority_supported", supported_display),
+    )
+    table_rows = "".join(
+        "<tr>"
+        f'<td class="method-name">{_escape(label)}</td>'
+        f'<td class="provenance-value">{_escape(value)}</td>'
+        "</tr>"
+        for label, value in rows
+    )
+
+    descriptive_key = _descriptive_strongest_legacy(summary)
+    descriptive_note = ""
+    if descriptive_key not in (None, ""):
+        descriptive_label = _method_label(descriptive_key, labels, _MISSING)
+        descriptive_note = (
+            '<div class="disclosure primary-evidence-note">'
+            "<strong>Descriptive target-side strongest baseline only</strong>"
+            f"<p>{_escape(descriptive_label)} is reported as target-selected descriptive context. "
+            f"It does not replace the frozen primary comparator, {_escape(comparator_label)}, "
+            "in this evidence panel.</p></div>"
+        )
+
+    return (
+        '<div class="comparison-lead">'
+        f'<span class="{delta_class}">{_escape(_format_auc_delta(mean_delta))}</span>'
+        '<span class="delta-context">'
+        f"<strong>{_escape(transfer_label)}</strong> versus frozen primary comparator "
+        f"<strong>{_escape(comparator_label)}</strong>. {evidence_status}"
+        "</span></div>"
+        '<div class="table-wrap"><table>'
+        "<caption>Frozen paired primary endpoint; values and inference fields are rendered as supplied.</caption>"
+        '<thead><tr><th scope="col">Evidence field</th>'
+        '<th scope="col">Reported value</th></tr></thead>'
+        f"<tbody>{table_rows}</tbody></table></div>"
+        f"{descriptive_note}"
+    )
+
+
 def _shared_comparison(
     methods: Mapping[str, list[dict[str, float]]], transfer: str | None, cold: str | None
 ) -> list[tuple[float, dict[str, float], dict[str, float]]]:
@@ -1080,6 +1240,47 @@ def _hardware_facts(summary: Mapping[str, Any], role: str) -> tuple[str, Mapping
     return name, facts
 
 
+def _source_hardware_profiles(
+    summary: Mapping[str, Any],
+) -> list[tuple[str, Mapping[str, Any]]]:
+    source_hardware = _as_mapping(summary.get("source_hardware"))
+    declared_value = summary.get("source_gpus")
+    if declared_value is None and source_hardware is not None:
+        declared_value = source_hardware.get("gpus")
+
+    declared_names: list[str] = []
+    if isinstance(declared_value, Sequence) and not isinstance(declared_value, (str, bytes)):
+        declared_names = [
+            _gpu_name(value, f"Source {index}")
+            for index, value in enumerate(declared_value, start=1)
+        ]
+    elif declared_value not in (None, ""):
+        declared_names = [_gpu_name(declared_value, "Source 1")]
+
+    profiles_value = None if source_hardware is None else source_hardware.get("profiles")
+    profiles: list[tuple[str, Mapping[str, Any]]] = []
+    if isinstance(profiles_value, Sequence) and not isinstance(profiles_value, (str, bytes)):
+        for index, value in enumerate(profiles_value):
+            mapped = _as_mapping(value)
+            facts: Mapping[str, Any] = mapped if mapped is not None else {"profile": value}
+            fallback = (
+                declared_names[index] if index < len(declared_names) else f"Source {index + 1}"
+            )
+            profiles.append((_gpu_name(facts, fallback), facts))
+        for index in range(len(profiles), len(declared_names)):
+            profiles.append((declared_names[index], {}))
+    elif isinstance(profiles_value, Mapping):
+        for profile_name, value in profiles_value.items():
+            mapped = _as_mapping(value)
+            facts = mapped if mapped is not None else {"profile": value}
+            profiles.append((_gpu_name(facts, str(profile_name)), facts))
+    elif declared_names:
+        profiles.extend((name, {}) for name in declared_names)
+    return profiles
+
+
+
+
 def _render_fact_list(facts: Mapping[str, Any]) -> str:
     preferred = (
         "gpu",
@@ -1114,15 +1315,40 @@ def _render_fact_list(facts: Mapping[str, Any]) -> str:
 
 def _render_hardware(summary: Mapping[str, Any]) -> str:
     sheets = []
-    for role in ("source", "target"):
-        name, facts = _hardware_facts(summary, role)
+    source_profiles = _source_hardware_profiles(summary)
+    if source_profiles:
+        profile_count = len(source_profiles)
+        for index, (name, facts) in enumerate(source_profiles, start=1):
+            role_label = (
+                f"Source hardware · profile {index} of {profile_count}"
+                if profile_count > 1
+                else "Source hardware"
+            )
+            sheets.append(
+                '<article class="panel hardware-sheet source">'
+                f'<span class="hardware-role">{_escape(role_label)}</span>'
+                f'<h3 class="hardware-name">{_escape(name)}</h3>'
+                f"{_render_fact_list(facts)}"
+                "</article>"
+            )
+    else:
+        source_name, source_facts = _hardware_facts(summary, "source")
         sheets.append(
-            f'<article class="panel hardware-sheet {role}">'
-            f'<span class="hardware-role">{role} hardware</span>'
-            f'<h3 class="hardware-name">{_escape(name)}</h3>'
-            f"{_render_fact_list(facts)}"
+            '<article class="panel hardware-sheet source">'
+            '<span class="hardware-role">Source hardware</span>'
+            f'<h3 class="hardware-name">{_escape(source_name)}</h3>'
+            f"{_render_fact_list(source_facts)}"
             "</article>"
         )
+
+    target_name, target_facts = _hardware_facts(summary, "target")
+    sheets.append(
+        '<article class="panel hardware-sheet target">'
+        '<span class="hardware-role">Target hardware · evaluation domain</span>'
+        f'<h3 class="hardware-name">{_escape(target_name)}</h3>'
+        f"{_render_fact_list(target_facts)}"
+        "</article>"
+    )
     return f'<div class="hardware-grid">{"".join(sheets)}</div>'
 
 
@@ -1401,6 +1627,46 @@ def _render_cost_disclosure(summary: Mapping[str, Any]) -> str:
     )
 
 
+def _render_budget_disclosure(summary: Mapping[str, Any]) -> str:
+    details: dict[str, Any] = {}
+    experiment = _as_mapping(summary.get("experiment"))
+    if experiment is not None:
+        for key in (
+            "target_budget_unit",
+            "adaptation_scope",
+            "budget_disclosure",
+            "cross_workload_feedback",
+        ):
+            if experiment.get(key) not in (None, ""):
+                details[f"experiment_{key}"] = experiment[key]
+
+    target_cost_value = summary.get("target_collection_cost")
+    if target_cost_value is None:
+        costs = _as_mapping(summary.get("costs"))
+        if costs is not None:
+            target_cost_value = costs.get("target")
+    target_cost = _as_mapping(target_cost_value)
+    if target_cost is not None:
+        for key in (
+            "simulated_online_queries_per_live_method_per_workload",
+            "budget_b_formula",
+            "adaptation_scope",
+            "disclosure",
+        ):
+            if target_cost.get(key) not in (None, ""):
+                details[f"target_cost_{key}"] = target_cost[key]
+    elif target_cost_value not in (None, ""):
+        details["target_collection_cost"] = target_cost_value
+
+    if not details:
+        return ""
+    return (
+        '<div class="disclosure"><strong>Supplied target-budget and posterior scope</strong>'
+        "<p>These statements are reproduced from the experiment and cost metadata.</p>"
+        f"{_render_fact_list(details)}</div>"
+    )
+
+
 def _render_limitations(summary: Mapping[str, Any]) -> str:
     limitations = [
         "Fraction of the held-out reference is an aggregate efficiency measure; without workload-level distributions, it can hide regressions on individual matrix shapes.",
@@ -1444,34 +1710,70 @@ def _headline_values(
         budget_value, budget_label = _MISSING, "Largest target budget reported"
 
     headline = _as_mapping(summary.get("headline"))
-    strongest_legacy = None if headline is None else headline.get("strongest_legacy_method")
-    auc_delta = None if headline is None else headline.get("auc_delta_vs_strongest_legacy")
-    if (
-        isinstance(strongest_legacy, str)
-        and strongest_legacy in labels
-        and isinstance(auc_delta, (int, float))
-    ):
-        transfer_value = f"{float(auc_delta) * 100:+.1f} pp AUC"
-        transfer_label = (
-            f"{labels.get('transfer_thompson', 'Transfer')} − "
-            f"{labels[strongest_legacy]} across the reported budget curve"
+    transfer = _method_by_role(summary, methods, "transfer")
+    transfer_key = summary.get("transfer_method", transfer)
+    transfer_name = _method_label(transfer_key, labels, "Transfer")
+    paired_metric_present, paired_metric = _paired_primary_metric(summary)
+    if paired_metric is not None:
+        comparator_key = paired_metric.get("comparator")
+        if comparator_key in (None, ""):
+            comparator_key = summary.get("primary_comparator")
+        comparator_name = _method_label(comparator_key, labels, _MISSING)
+        paired_mean = _supplied_number(paired_metric.get("mean_auc_delta"))
+        paired_low = _supplied_number(paired_metric.get("ci95_low"))
+        paired_high = _supplied_number(paired_metric.get("ci95_high"))
+        transfer_value = (
+            f"{paired_mean * 100:+.1f} pp AUC" if paired_mean is not None else _MISSING
         )
-    else:
-        transfer = _method_by_role(summary, methods, "transfer")
-        cold = _method_by_role(summary, methods, "cold")
-        comparisons = _shared_comparison(methods, transfer, cold)
-        if comparisons:
-            comparison_budget, transfer_point, cold_point = comparisons[-1]
-            delta = (transfer_point["mean"] - cold_point["mean"]) * 100
-            transfer_value = f"{delta:+.1f} pp"
+        if paired_low is not None and paired_high is not None:
+            interval = (
+                f"[{paired_low * 100:+.1f}, {paired_high * 100:+.1f}] pp"
+            )
             transfer_label = (
-                f"{labels.get(transfer or '', 'Transfer')} − "
-                f"{labels.get(cold or '', 'cold start')} at shared budget "
-                f"{_format_budget(comparison_budget)}"
+                f"{transfer_name} − frozen {comparator_name}; "
+                f"two-sided 95% Student-t CI {interval}"
             )
         else:
-            transfer_value = _MISSING
-            transfer_label = "Transfer versus cold start at a shared target budget"
+            transfer_label = (
+                f"{transfer_name} − frozen {comparator_name}; paired primary AUC delta"
+            )
+    elif paired_metric_present:
+        transfer_value = _MISSING
+        transfer_label = (
+            f"{transfer_name}; frozen paired primary comparison not reported "
+            "(cold endpoint not substituted)"
+        )
+    else:
+        strongest_legacy = (
+            None if headline is None else headline.get("strongest_legacy_method")
+        )
+        auc_delta = (
+            None if headline is None else headline.get("auc_delta_vs_strongest_legacy")
+        )
+        if (
+            isinstance(strongest_legacy, str)
+            and strongest_legacy in labels
+            and isinstance(auc_delta, (int, float))
+        ):
+            transfer_value = f"{float(auc_delta) * 100:+.1f} pp AUC"
+            transfer_label = (
+                f"{transfer_name} − {labels[strongest_legacy]} "
+                "across the reported budget curve"
+            )
+        else:
+            cold = _method_by_role(summary, methods, "cold")
+            comparisons = _shared_comparison(methods, transfer, cold)
+            if comparisons:
+                comparison_budget, transfer_point, cold_point = comparisons[-1]
+                delta = (transfer_point["mean"] - cold_point["mean"]) * 100
+                transfer_value = f"{delta:+.1f} pp"
+                transfer_label = (
+                    f"{transfer_name} − {labels.get(cold or '', 'cold start')} "
+                    f"at shared budget {_format_budget(comparison_budget)}"
+                )
+            else:
+                transfer_value = _MISSING
+                transfer_label = "Transfer versus cold start at a shared target budget"
 
     workload_count = _item_count(summary.get("workloads"))
     config_count = _item_count(summary.get("configs"))
@@ -1535,7 +1837,17 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
 
     methods = _normalise_methods(summary["methods"])
     labels = _method_display_labels(summary, methods)
-    source_name, _ = _hardware_facts(summary, "source")
+    source_profiles = _source_hardware_profiles(summary)
+    if source_profiles:
+        source_name = " + ".join(name for name, _ in source_profiles)
+        source_role_label = (
+            f"Source contexts · {len(source_profiles)}"
+            if len(source_profiles) > 1
+            else "Source context"
+        )
+    else:
+        source_name, _ = _hardware_facts(summary, "source")
+        source_role_label = "Source context"
     target_name, _ = _hardware_facts(summary, "target")
     transfer = _method_by_role(summary, methods, "transfer")
     cold = _method_by_role(summary, methods, "cold")
@@ -1571,9 +1883,26 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         f'<details class="data-disclosure"><summary>Complete numeric results · {curve_points} rows</summary>'
         f"{_render_raw_table(methods, labels)}</details>"
     )
+    paired_metric_present, _ = _paired_primary_metric(summary)
+    if paired_metric_present:
+        comparison_title = "Frozen primary-comparison evidence"
+        comparison_copy = (
+            "The supplied paired AUC delta is tied to the frozen comparator. "
+            "The target-selected strongest legacy method remains descriptive only."
+        )
+        comparison_content = _render_primary_evidence(summary, labels, transfer)
+    else:
+        comparison_title = "Transfer versus cold start"
+        comparison_copy = (
+            "Only matching target budgets are compared. A positive percentage-point delta means "
+            "the identified transfer method has the higher supplied mean."
+        )
+        comparison_content = _render_comparison(methods, labels, transfer, cold)
+
     cost_and_limits = (
-        '<div class="split-grid">'
+        '<div class="split-grid"><div class="matrix-stack">'
         f"{_render_cost_disclosure(summary)}"
+        f"{_render_budget_disclosure(summary)}</div>"
         '<div class="panel"><h3>Interpretation boundaries</h3>'
         f"{_render_limitations(summary)}</div></div>"
     )
@@ -1612,10 +1941,10 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         '<p class="kicker">GPU kernel autotuning evidence record</p>'
         "<h1>Autotuning transfer across GPU targets</h1>"
         f'<div class="route" aria-label="Transfer direction from {_escape(source_name)} to {_escape(target_name)}">'
-        '<div class="route-node"><span>Source context</span>'
+        f'<div class="route-node"><span>{_escape(source_role_label)}</span>'
         f"<strong>{_escape(source_name)}</strong></div>"
         '<span class="route-arrow" aria-hidden="true">→</span>'
-        '<div class="route-node"><span>Target context</span>'
+        '<div class="route-node target"><span>Target context · evaluation domain</span>'
         f"<strong>{_escape(target_name)}</strong></div></div>"
         "</div>"
         '<aside class="method-note" aria-label="Methodology summary">'
@@ -1636,11 +1965,11 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         "</header>"
         f'<main id="main">{signals}'
         f"{_section('01', 'Budget-efficiency curves', 'All supplied methods share the same target-budget and held-out-reference axes. The legend aligns each human-readable method label with its terminal value.', chart)}"
-        f"{_section('02', 'Transfer versus cold start', 'Only matching target budgets are compared. A positive percentage-point delta means the identified transfer method has the higher supplied mean.', _render_comparison(methods, labels, transfer, cold))}"
-        f"{_section('03', 'Hardware context', 'Source and target facts are separated and shown exactly as supplied. A synthetic report identifies simulated device context without presenting it as measured hardware.', _render_hardware(summary))}"
+        f"{_section('02', comparison_title, comparison_copy, comparison_content)}"
+        f"{_section('03', 'Hardware context', 'Each supplied source profile is shown separately from the target evaluation domain. Facts are rendered exactly as supplied.', _render_hardware(summary))}"
         f"{_section('04', 'Experiment scope', 'The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.', _render_experiment_matrix(summary['workloads'], summary['configs'], summary.get('experiment')))}"
         f"{_section('05', 'Protocol and provenance', 'Reported run metadata and experiment protocol are inventoried separately from facts that are absent from the summary.', _render_reproducibility(summary, methods))}"
-        f"{_section('06', 'Source cost and limitations', 'Target-budget efficiency is not end-to-end efficiency. Source acquisition and interpretation boundaries remain explicit.', cost_and_limits)}"
+        f"{_section('06', 'Cost, budget scope, and limitations', 'Source acquisition, supplied target-budget accounting, posterior scope, and interpretation boundaries remain separate from the reported curves.', cost_and_limits)}"
         "</main>"
         '<footer class="footer"><span><strong>HeliosTune</strong> / GPU autotuning transfer report</span>'
         "<span>Offline HTML · inline SVG · no network requests</span></footer></div>"

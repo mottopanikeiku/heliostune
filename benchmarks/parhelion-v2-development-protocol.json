@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "protocol": "Parhelion v2 staged multi-source transfer evaluation",
+  "stage": "frozen before full T4 validation collection",
+  "algorithm": {
+    "name": "Parhelion",
+    "description": "Retrieval-anchored Bayesian Thompson tuning over existing joint features plus four source-only retrieval features",
+    "retrieval_features": [
+      "weighted source-action advantage mean",
+      "weighted source-action advantage variance",
+      "normalized nearest-neighbor log-shape distance",
+      "source-GPU sign agreement"
+    ],
+    "distance": "Euclidean distance over log2(M,N,K)/14",
+    "budget_1": "query the highest consensus retrieval action",
+    "later_budgets": "Thompson sampling with frozen retrieval features and observed bank-0 target feedback",
+    "recommendation": "best measured bank-0 incumbent only"
+  },
+  "leakage_controls": {
+    "source_archive_exclusions_per_fold": [
+      "all workloads from the held-out model family",
+      "every source workload with the exact target (M,N,K) shape"
+    ],
+    "target_bank_roles": {
+      "bank_0": "visible sequential tuning feedback",
+      "bank_1": "held-out reference selection",
+      "bank_2": "held-out evaluation"
+    },
+    "cross_workload_feedback": "One posterior is shared across the 24 target workloads in a held-out-family fold. Budget b is b target configuration measurements per workload; the fold uses 24*b target measurements and all four folds use 96*b. The protocol does not claim independent-workload tuning or b total target measurements."
+  },
+  "t4_validation": {
+    "source_gpus": [
+      "L4",
+      "A10"
+    ],
+    "target_gpu": "T4",
+    "parhelion_grid": {
+      "k": [
+        1,
+        3,
+        8,
+        16
+      ],
+      "temperature": [
+        0.2,
+        0.7,
+        2.0
+      ],
+      "transfer_strength": [
+        0.0,
+        0.02,
+        0.08,
+        0.2
+      ],
+      "candidate_count": 48
+    },
+    "baseline_selection": {
+      "single_source_nearest": {
+        "parameter_free": true,
+        "source_gpu": "L4",
+        "neighbors": 1
+      },
+      "multisource_retrieval": {
+        "grid": "independent 12-point Cartesian product of k and temperature",
+        "tie_break": "ascending (k, temperature)"
+      },
+      "pooled_source_thompson": {
+        "grid": "independent 4-point transfer_strength grid",
+        "tie_break": "ascending transfer_strength"
+      }
+    },
+    "selection_order": [
+      "select multi-source retrieval k and temperature over its independent 12-point grid",
+      "select pooled-source transfer strength over its independent 4-point grid",
+      "freeze both baseline winners, then select Parhelion over its 48-point grid",
+      "freeze the strongest eligible comparator after all method parameters are fixed"
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "budgets": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "selection_metric": "Mean fraction of held-out bank-1 reference, with equal weight for every held-out-family fold, seed, and budget",
+    "parhelion_tie_break": "ascending (k, temperature, transfer_strength)",
+    "primary_comparator_candidates": [
+      "static_multisource",
+      "torch",
+      "random",
+      "single_source_nearest",
+      "multisource_retrieval",
+      "cold_thompson",
+      "pooled_source_thompson"
+    ],
+    "primary_comparator_rule": "After all Parhelion and baseline hyperparameters are independently frozen, freeze the highest validation AUC; break exact ties by ascending method name",
+    "budget_one_invariant": "Parhelion and independently tuned multi-source retrieval query and recommend the identical frozen retrieval anchor at budget 1; both methods are charged for that query.",
+    "single_source_baseline_gpu": "L4",
+    "pilot": {
+      "status": "completed collector smoke test",
+      "records": 6,
+      "failures": 0,
+      "modal_run": "https://modal.com/apps/mottopanikeiku/main/ap-9umlzctOu0qAeQmMnihOvd",
+      "included_in_selection": false
+    }
+  },
+  "h100_final": {
+    "invoked": false,
+    "source_gpus": [
+      "L4",
+      "A10",
+      "T4"
+    ],
+    "target_gpu": "H100",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
+    ],
+    "invocation_limit": 1,
+    "freeze_rule": "Before the only H100 invocation, write and hash an immutable artifact containing every selected hyperparameter, the primary comparator, exact source archive, all protocol fields, and SHA-256 digests of the implementation files. Do not rerun, expand any grid, or change the method after observing H100.",
+    "primary_endpoint": "Paired per-seed Parhelion minus T4-frozen-comparator mean AUC over budgets 1 through 8 after equal model-family-fold averaging",
+    "uncertainty": "Two-sided 95% Student-t confidence interval over 30 paired seed deltas (29 degrees of freedom)",
+    "claim_threshold": "Use superiority wording only when the primary confidence-interval lower bound is greater than zero; otherwise report no demonstrated superiority.",
+    "failure_rule": "Fail closed if any expected H100 measurement cell is missing, unusable, incorrect, duplicated, or non-finite. Publish no H100 performance claim and do not rerun the H100 collection.",
+    "reporting": "Use the T4-frozen comparator for the primary paired claim. Any H100-selected strongest baseline is descriptive only."
+  },
+  "source_cost": {
+    "workloads_per_gpu": 96,
+    "configs_per_workload": 36,
+    "banks_per_gpu": 3,
+    "records_per_gpu": 10368,
+    "validation_source_records": 20736,
+    "final_source_records": 31104,
+    "disclosure": "Validation uses a two-GPU source archive; final evaluation adds T4 as a third source. This changes source collection cost, not the algorithm or frozen hyperparameters."
+  },
+  "claims": {
+    "novelty": "Describe Parhelion as a new retrieval-anchored combination; do not claim to be first without a systematic literature review.",
+    "stability": "Do not claim stability from 12 validation seeds or 30 replay seeds.",
+    "scope": "Claims are limited to the measured FP16 Triton matmul corpus, four named GPU instances, fixed candidate set, and staged protocol."
+  }
+}
