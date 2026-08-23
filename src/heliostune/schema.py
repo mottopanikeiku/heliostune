@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
-from typing import Any, Iterable, TextIO
+from typing import Any, TextIO
 
 from heliostune.configs import KernelConfig, Workload
 
@@ -127,18 +128,12 @@ class Measurement:
                 None if value.get("max_abs_error") is None else float(value["max_abs_error"])
             ),
             latency_p20_ms=(
-                None
-                if value.get("latency_p20_ms") is None
-                else float(value["latency_p20_ms"])
+                None if value.get("latency_p20_ms") is None else float(value["latency_p20_ms"])
             ),
             latency_p80_ms=(
-                None
-                if value.get("latency_p80_ms") is None
-                else float(value["latency_p80_ms"])
+                None if value.get("latency_p80_ms") is None else float(value["latency_p80_ms"])
             ),
-            compile_ms=(
-                None if value.get("compile_ms") is None else float(value["compile_ms"])
-            ),
+            compile_ms=(None if value.get("compile_ms") is None else float(value["compile_ms"])),
             error=(None if value.get("error") is None else str(value["error"])),
         )
 

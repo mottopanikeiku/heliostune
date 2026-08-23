@@ -59,10 +59,7 @@ class Workload:
 
     @property
     def key(self) -> str:
-        return (
-            f"{self.model}-{self.projection}-{self.regime}"
-            f"-m{self.m}-n{self.n}-k{self.k}"
-        )
+        return f"{self.model}-{self.projection}-{self.regime}-m{self.m}-n{self.n}-k{self.k}"
 
     @property
     def flops(self) -> int:
@@ -135,11 +132,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
 )
 
 
-_TILES = tuple(
-    (block_m, block_n)
-    for block_m in (16, 32, 64, 128)
-    for block_n in (32, 64, 128)
-)
+_TILES = tuple((block_m, block_n) for block_m in (16, 32, 64, 128) for block_n in (32, 64, 128))
 
 
 def _tile_warps(block_m: int, block_n: int) -> int:

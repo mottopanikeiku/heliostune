@@ -8,7 +8,6 @@ from typing import Any
 
 import modal
 
-
 app = modal.App("heliostune-bench")
 image = (
     modal.Image.debian_slim(python_version="3.11")
