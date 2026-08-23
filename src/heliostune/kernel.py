@@ -125,9 +125,9 @@ def get_hardware_profile(gpu: str | None = None, device: torch.device | None = N
         compute_capability=(properties.major, properties.minor),
         multiprocessor_count=properties.multi_processor_count,
         total_memory_gb=properties.total_memory / (1024**3),
-        cuda_version=torch.version.cuda,
-        torch_version=torch.__version__,
-        triton_version=triton.__version__,
+        cuda_version=(None if torch.version.cuda is None else str(torch.version.cuda)),
+        torch_version=str(torch.__version__),
+        triton_version=str(triton.__version__),
     )
 
 
@@ -260,7 +260,7 @@ def benchmark_measurements(
                 warmup=warmup_ms,
                 rep=rep_ms,
                 quantiles=[0.5],
-            )[0]
+            )
         )
         ordered_configs = list(configs)
         randomizer.shuffle(ordered_configs)

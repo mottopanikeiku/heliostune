@@ -12,7 +12,7 @@ import modal
 app = modal.App("heliostune-bench")
 image = (
     modal.Image.debian_slim(python_version="3.11")
-    .pip_install("torch==2.8.0", "triton==3.4.0")
+    .pip_install("numpy>=1.26,<3", "torch==2.8.0", "triton==3.4.0")
     .add_local_dir("src/heliostune", remote_path="/root/heliostune")
 )
 
@@ -22,12 +22,16 @@ def benchmark_l4(
     replicate: int = 0,
     warmup_ms: int = 25,
     rep_ms: int = 100,
+    pilot: bool = False,
 ) -> list[dict[str, Any]]:
+    from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
     from heliostune.kernel import collect_benchmarks
 
     return collect_benchmarks(
         "L4",
         replicate=replicate,
+        configs=DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS,
+        workloads=DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS,
         warmup_ms=warmup_ms,
         rep_ms=rep_ms,
     )
@@ -38,12 +42,16 @@ def benchmark_a10(
     replicate: int = 0,
     warmup_ms: int = 25,
     rep_ms: int = 100,
+    pilot: bool = False,
 ) -> list[dict[str, Any]]:
+    from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
     from heliostune.kernel import collect_benchmarks
 
     return collect_benchmarks(
         "A10",
         replicate=replicate,
+        configs=DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS,
+        workloads=DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS,
         warmup_ms=warmup_ms,
         rep_ms=rep_ms,
     )
@@ -77,6 +85,7 @@ def main(
     warmup_ms: int = 25,
     rep_ms: int = 100,
     replicates: int = 3,
+    pilot: bool = False,
 ) -> None:
     if replicates <= 0:
         raise ValueError("replicates must be positive")
@@ -85,6 +94,7 @@ def main(
             replicate=replicate,
             warmup_ms=warmup_ms,
             rep_ms=rep_ms,
+            pilot=pilot,
         )
         for replicate in range(replicates)
         for benchmark in (benchmark_l4, benchmark_a10)
