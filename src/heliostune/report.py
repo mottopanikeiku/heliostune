@@ -1145,10 +1145,7 @@ def _render_primary_evidence(
             if claim not in (None, "") and str(claim).strip()
             else "The supplied paired interval supports the frozen comparison."
         )
-        evidence_status = (
-            "<strong>Superiority supported.</strong> "
-            f"{_escape(supplied_claim)}"
-        )
+        evidence_status = f"<strong>Superiority supported.</strong> {_escape(supplied_claim)}"
     else:
         evidence_status = (
             "<strong>Superiority was not demonstrated.</strong> "
@@ -1169,8 +1166,7 @@ def _render_primary_evidence(
         ("Two-sided 95% Student-t CI", _format_auc_interval(ci_low, ci_high)),
         (
             "Paired seed / df count",
-            f"{_format_value(paired_seeds)} paired seeds / "
-            f"{_format_value(degrees_of_freedom)} df",
+            f"{_format_value(paired_seeds)} paired seeds / {_format_value(degrees_of_freedom)} df",
         ),
         ("superiority_supported", supported_display),
     )
@@ -1364,8 +1360,6 @@ def _source_hardware_profiles(
     elif declared_names:
         profiles.extend((name, {}) for name in declared_names)
     return profiles
-
-
 
 
 def _render_fact_list(facts: Mapping[str, Any]) -> str:
@@ -1597,9 +1591,7 @@ def _render_raw_table(
 def _render_fold_source_table(fold: Mapping[str, Any]) -> str:
     visible = _as_mapping(fold.get("visible_bank0_source_observations_by_gpu")) or {}
     excluded = _as_mapping(fold.get("excluded_exact_target_shapes_by_gpu")) or {}
-    sources = list(
-        dict.fromkeys([*(str(key) for key in visible), *(str(key) for key in excluded)])
-    )
+    sources = list(dict.fromkeys([*(str(key) for key in visible), *(str(key) for key in excluded)]))
     if not sources:
         return (
             '<div class="empty-state fold-source-table">'
@@ -1963,21 +1955,14 @@ def _headline_values(
         paired_mean = _supplied_number(paired_metric.get("mean_auc_delta"))
         paired_low = _supplied_number(paired_metric.get("ci95_low"))
         paired_high = _supplied_number(paired_metric.get("ci95_high"))
-        transfer_value = (
-            f"{paired_mean * 100:+.1f} pp AUC" if paired_mean is not None else _MISSING
-        )
+        transfer_value = f"{paired_mean * 100:+.1f} pp AUC" if paired_mean is not None else _MISSING
         if paired_low is not None and paired_high is not None:
-            interval = (
-                f"[{paired_low * 100:+.1f}, {paired_high * 100:+.1f}] pp"
-            )
+            interval = f"[{paired_low * 100:+.1f}, {paired_high * 100:+.1f}] pp"
             transfer_label = (
-                f"{transfer_name} − frozen {comparator_name}; "
-                f"two-sided 95% Student-t CI {interval}"
+                f"{transfer_name} − frozen {comparator_name}; two-sided 95% Student-t CI {interval}"
             )
         else:
-            transfer_label = (
-                f"{transfer_name} − frozen {comparator_name}; paired primary AUC delta"
-            )
+            transfer_label = f"{transfer_name} − frozen {comparator_name}; paired primary AUC delta"
     elif paired_metric_present:
         transfer_value = _MISSING
         transfer_label = (
@@ -1985,12 +1970,8 @@ def _headline_values(
             "(cold endpoint not substituted)"
         )
     else:
-        strongest_legacy = (
-            None if headline is None else headline.get("strongest_legacy_method")
-        )
-        auc_delta = (
-            None if headline is None else headline.get("auc_delta_vs_strongest_legacy")
-        )
+        strongest_legacy = None if headline is None else headline.get("strongest_legacy_method")
+        auc_delta = None if headline is None else headline.get("auc_delta_vs_strongest_legacy")
         if (
             isinstance(strongest_legacy, str)
             and strongest_legacy in labels
@@ -1998,8 +1979,7 @@ def _headline_values(
         ):
             transfer_value = f"{float(auc_delta) * 100:+.1f} pp AUC"
             transfer_label = (
-                f"{transfer_name} − {labels[strongest_legacy]} "
-                "across the reported budget curve"
+                f"{transfer_name} − {labels[strongest_legacy]} across the reported budget curve"
             )
         else:
             cold = _method_by_role(summary, methods, "cold")

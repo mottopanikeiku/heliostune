@@ -58,7 +58,9 @@ def _validate_chunk(
     counts = Counter(measurement.hardware.gpu for measurement in measurements)
     expected_counts = {gpu: _EXPECTED_RECORDS_PER_GPU for gpu in expected_gpus}
     if counts != expected_counts:
-        raise ValueError(f"{label} GPU record counts are {dict(counts)}, expected {expected_counts}")
+        raise ValueError(
+            f"{label} GPU record counts are {dict(counts)}, expected {expected_counts}"
+        )
 
     keys: set[tuple[str, str, str, int]] = set()
     for measurement in measurements:

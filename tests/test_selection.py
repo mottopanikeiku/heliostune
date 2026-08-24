@@ -17,8 +17,7 @@ EXPECTED_GRID = tuple(
 EXPECTED_BASELINE_GRID = tuple(
     candidate
     for candidate in EXPECTED_GRID
-    if candidate.transfer_strength == 0.0
-    or (candidate.k == 1 and candidate.temperature == 0.2)
+    if candidate.transfer_strength == 0.0 or (candidate.k == 1 and candidate.temperature == 0.2)
 )
 
 
@@ -72,9 +71,7 @@ def test_select_parhelion_freezes_validation_choice_and_discloses_final_archive(
             retrieval_temperature if retrieval_temperature is not None else temperature,
         )
         effective_pooled_strength = (
-            pooled_transfer_strength
-            if pooled_transfer_strength is not None
-            else transfer_strength
+            pooled_transfer_strength if pooled_transfer_strength is not None else transfer_strength
         )
         calls.append(
             {
@@ -209,13 +206,9 @@ def test_select_parhelion_freezes_validation_choice_and_discloses_final_archive(
             "k": candidate.k,
             "temperature": candidate.temperature,
             "transfer_strength": candidate.transfer_strength,
-            "parhelion_thompson": (
-                0.95 if candidate in tied_parhelion_candidates else 0.25
-            ),
+            "parhelion_thompson": (0.95 if candidate in tied_parhelion_candidates else 0.25),
             "multisource_retrieval": (
-                0.85
-                if (candidate.k, candidate.temperature) in tied_retrieval_candidates
-                else 0.20
+                0.85 if (candidate.k, candidate.temperature) in tied_retrieval_candidates else 0.20
             ),
             "pooled_source_thompson": (
                 0.80 if candidate.transfer_strength in tied_pooled_strengths else 0.15
@@ -228,9 +221,7 @@ def test_select_parhelion_freezes_validation_choice_and_discloses_final_archive(
             "k": candidate.k,
             "temperature": candidate.temperature,
             "transfer_strength": candidate.transfer_strength,
-            "parhelion_thompson": (
-                0.95 if candidate in tied_parhelion_candidates else 0.25
-            ),
+            "parhelion_thompson": (0.95 if candidate in tied_parhelion_candidates else 0.25),
             "multisource_retrieval": 0.85,
             "pooled_source_thompson": 0.80,
         }
@@ -247,8 +238,7 @@ def test_select_parhelion_freezes_validation_choice_and_discloses_final_archive(
         "fake_call": 64,
     }
     assert all(
-        set(summary["auc"])
-        == {"parhelion_thompson", *selection_module.LEGACY_COMPARATORS}
+        set(summary["auc"]) == {"parhelion_thompson", *selection_module.LEGACY_COMPARATORS}
         for summary in summaries
     )
 
@@ -296,8 +286,7 @@ def test_select_parhelion_freezes_validation_choice_and_discloses_final_archive(
     )
     assert (
         "The final archive adds T4 to the two-source validation archive, changing source cost "
-        "but not method logic."
-        in selection["disclosures"]
+        "but not method logic." in selection["disclosures"]
     )
 
 

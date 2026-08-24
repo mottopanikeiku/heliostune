@@ -279,12 +279,10 @@ def select_parhelion(
         },
         "comparator_candidates": list(LEGACY_COMPARATORS),
         "baseline_candidate_scores": [
-            {**asdict(candidate), **method_scores}
-            for candidate, method_scores in baseline_scores
+            {**asdict(candidate), **method_scores} for candidate, method_scores in baseline_scores
         ],
         "candidate_scores": [
-            {**asdict(candidate), **method_scores}
-            for candidate, method_scores in parhelion_scores
+            {**asdict(candidate), **method_scores} for candidate, method_scores in parhelion_scores
         ],
         "selected": {
             "parhelion": {
