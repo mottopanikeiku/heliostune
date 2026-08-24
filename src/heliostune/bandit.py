@@ -9,7 +9,7 @@ from typing import Self, TypeVar, cast
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-from heliostune.features import FEATURE_NAMES
+from heliostune.features import V2_FEATURE_NAMES
 
 ActionT = TypeVar("ActionT")
 
@@ -26,7 +26,7 @@ class BayesianLinearBandit:
 
     def __init__(
         self,
-        dimension: int = len(FEATURE_NAMES),
+        dimension: int = len(V2_FEATURE_NAMES),
         *,
         prior_precision: float = 1.0,
         noise_variance: float = 1.0,

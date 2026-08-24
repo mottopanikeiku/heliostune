@@ -186,6 +186,37 @@ DEFAULT_CONFIGS: tuple[KernelConfig, ...] = (
 )
 
 
+TRITON_TUTORIAL_COMMIT = "a77e7c793abc0d0c923a9afb275058e2fe57a198"
+TRITON_TUTORIAL_CONFIG_PATH = "python/tutorials/03-matrix-multiplication.py"
+PARHELION_V3_OFFICIAL_CONFIGS: tuple[KernelConfig, ...] = (
+    KernelConfig(128, 256, 64, 8, 3, 8),
+    KernelConfig(64, 256, 32, 4, 4, 8),
+    KernelConfig(128, 128, 32, 4, 4, 8),
+    KernelConfig(128, 64, 32, 4, 4, 8),
+    KernelConfig(64, 128, 32, 4, 4, 8),
+    KernelConfig(128, 32, 32, 4, 4, 8),
+    KernelConfig(64, 32, 32, 2, 5, 8),
+    KernelConfig(32, 64, 32, 2, 5, 8),
+    KernelConfig(128, 256, 128, 8, 3, 8),
+    KernelConfig(256, 128, 128, 8, 3, 8),
+    KernelConfig(256, 64, 128, 4, 4, 8),
+    KernelConfig(64, 256, 128, 4, 4, 8),
+    KernelConfig(128, 128, 128, 4, 4, 8),
+    KernelConfig(128, 64, 64, 4, 4, 8),
+    KernelConfig(64, 128, 64, 4, 4, 8),
+    KernelConfig(128, 32, 64, 4, 4, 8),
+)
+PARHELION_V3_OFFICIAL_CONFIG_KEYS = frozenset(
+    config.key for config in PARHELION_V3_OFFICIAL_CONFIGS
+)
+PARHELION_V3_CANDIDATE_CONFIGS: tuple[KernelConfig, ...] = tuple(
+    sorted(
+        {*DEFAULT_CONFIGS, *PARHELION_V3_OFFICIAL_CONFIGS},
+        key=lambda config: config.key,
+    )
+)
+
+
 _TOKEN_REGIMES: tuple[tuple[str, int], ...] = (
     ("decode-1", 1),
     ("decode-7", 7),

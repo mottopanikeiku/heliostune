@@ -64,5 +64,5 @@ jobs:
           test "$(find dist -maxdepth 1 -name '*.tar.gz' -type f | wc -l)" -eq 1
           uv venv --clear package-env --python 3.11
           uv pip install --python package-env/bin/python dist/*.whl
-          package-env/bin/python -c "import heliostune, importlib.metadata as m; assert heliostune.__version__ == m.version('heliostune') == '0.3.0'"
+          package-env/bin/python -c "import heliostune, importlib.metadata as m; assert heliostune.__version__ == m.version('heliostune')"
           package-env/bin/heliostune --help

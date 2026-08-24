@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import random
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from functools import partial
 from typing import Any, Literal
 
@@ -357,6 +357,9 @@ def benchmark_measurements(
     atol: int | float = 1e-2,
     rtol: int | float = 1e-2,
     hardware_profile: HardwareProfile | None = None,
+    workload_order_seed: int | None = None,
+    config_order_seeds: Mapping[str, int] | None = None,
+    tensor_seeds: Mapping[str, int] | None = None,
 ) -> list[Measurement]:
     """Benchmark all workload/config cells while containing per-config failures."""
     (
@@ -377,18 +380,38 @@ def benchmark_measurements(
         atol=atol,
         rtol=rtol,
     )
+    if workload_order_seed is not None:
+        workload_order_seed = exact_int(
+            workload_order_seed,
+            context="workload_order_seed",
+            minimum=0,
+        )
+    workload_keys = {workload.key for workload in workload_manifest}
+    for name, values in (
+        ("config_order_seeds", config_order_seeds),
+        ("tensor_seeds", tensor_seeds),
+    ):
+        if values is not None:
+            if set(values) != workload_keys:
+                raise ProtocolError(f"{name} keys must exactly match the workload manifest")
+            for workload_key, seed in values.items():
+                exact_int(seed, context=f"{name}[{workload_key!r}]", minimum=0)
     device = torch.device("cuda", torch.cuda.current_device())
     hardware = get_hardware_profile(gpu, device) if hardware_profile is None else hardware_profile
     if gpu is not None and hardware.gpu != gpu:
         raise ProtocolError(f"provided hardware profile is for {hardware.gpu!r}, expected {gpu!r}")
     measurements: list[Measurement] = []
-    randomizer = random.Random(bank)
+    randomizer = random.Random(bank if workload_order_seed is None else workload_order_seed)
     ordered_workloads = list(workload_manifest)
     randomizer.shuffle(ordered_workloads)
 
     for workload_index, workload in enumerate(ordered_workloads):
         try:
-            torch.manual_seed(bank * 10_000 + workload_index)
+            torch.manual_seed(
+                bank * 10_000 + workload_index
+                if tensor_seeds is None
+                else tensor_seeds[workload.key]
+            )
             a = torch.empty((workload.m, workload.k), device=device, dtype=torch.float16)
             b = torch.empty((workload.k, workload.n), device=device, dtype=torch.float16)
             a.uniform_(-1.0, 1.0)
@@ -412,7 +435,10 @@ def benchmark_measurements(
             ) from exc
 
         ordered_configs = list(config_manifest)
-        randomizer.shuffle(ordered_configs)
+        if config_order_seeds is None:
+            randomizer.shuffle(ordered_configs)
+        else:
+            random.Random(config_order_seeds[workload.key]).shuffle(ordered_configs)
         for config in ordered_configs:
             measurements.append(
                 _benchmark_config(
@@ -448,6 +474,9 @@ def collect_benchmarks(
     atol: int | float = 1e-2,
     rtol: int | float = 1e-2,
     hardware_profile: HardwareProfile | None = None,
+    workload_order_seed: int | None = None,
+    config_order_seeds: Mapping[str, int] | None = None,
+    tensor_seeds: Mapping[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     """Return benchmark measurements as strict schema-v2 records."""
     return [
@@ -462,5 +491,8 @@ def collect_benchmarks(
             atol=atol,
             rtol=rtol,
             hardware_profile=hardware_profile,
+            workload_order_seed=workload_order_seed,
+            config_order_seeds=config_order_seeds,
+            tensor_seeds=tensor_seeds,
         )
     ]
