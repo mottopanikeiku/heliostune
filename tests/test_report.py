@@ -202,10 +202,12 @@ def test_parhelion_report_does_not_claim_unsupported_superiority_or_use_cold_fal
     assert "at their largest shared budget" not in document
     assert "Cold &lt;endpoint&gt; at shared budget" not in document
     assert (
-        "versus frozen primary comparator "
-        "<strong>Frozen &lt;baseline&gt; &amp; fixed</strong>"
+        "versus frozen primary comparator <strong>Frozen &lt;baseline&gt; &amp; fixed</strong>"
     ) in document
-    assert "H100 &lt;descriptive winner&gt; is reported as target-selected descriptive context" in document
+    assert (
+        "H100 &lt;descriptive winner&gt; is reported as target-selected descriptive context"
+        in document
+    )
     assert "does not replace the frozen primary comparator" in document
     assert "<unsupported claim>" not in document
 
@@ -284,9 +286,7 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
     document = output.read_text(encoding="utf-8")
     assert document.count('class="panel fold-audit"') == 4
     assert document.count("Complete method-by-budget numeric table · 5 rows") == 4
-    assert document.count(
-        "Per-source fold visibility and exact-target-shape exclusion audit"
-    ) == 4
+    assert document.count("Per-source fold visibility and exact-target-shape exclusion audit") == 4
     assert "bert&lt;encoder&gt;" in document
     assert "gpt&amp;decoder" in document
     assert "llama&quot;family&quot;" in document
@@ -307,9 +307,7 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
         fold_end = document.index("</article>", fold_start)
         fold_document = document[fold_start:fold_end]
         assert family in fold_document
-        assert (
-            f'<strong>{20 + index}</strong><span>Target workloads</span>'
-        ) in fold_document
+        assert (f"<strong>{20 + index}</strong><span>Target workloads</span>") in fold_document
         assert (
             "L4&lt;visible&gt;</td>"
             f'<td class="numeric">{100 + index}</td>'
@@ -326,9 +324,7 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
         assert fold_document.count("Frozen &lt;baseline&gt; &amp; fixed</td>") == 2
         assert fold_document.count("Exhaustive &lt;reference&gt;</td>") == 1
         assert f'<td class="numeric">{mean:.4f}</td>' in fold_document
-        assert (
-            "Exhaustive &lt;reference&gt;</td><td class=\"numeric\">36</td>"
-        ) in fold_document
+        assert ('Exhaustive &lt;reference&gt;</td><td class="numeric">36</td>') in fold_document
 
     assert "Release chain of custody" in document
     assert "Sole H100 run" in document
@@ -340,10 +336,7 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
     assert "Post-run manifest path" in document
     assert document.index("01 · Freeze") < document.index("02 · Collection")
     assert document.index("02 · Collection") < document.index("03 · Release")
-    assert (
-        "https://modal.com/apps/&lt;owner&gt;/runs/&quot;sole&quot;&amp;1"
-        in document
-    )
+    assert "https://modal.com/apps/&lt;owner&gt;/runs/&quot;sole&quot;&amp;1" in document
     assert "algorithm&lt;commit&gt;" in document
     assert "freeze&amp;commit" in document
     assert "sha256:&lt;freeze&gt;" in document

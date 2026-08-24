@@ -142,16 +142,10 @@ def _fold_source_workloads(
 
     heldout_shapes = {_shape(workload) for workload in heldout_workloads}
     family_safe = tuple(
-        workload
-        for workload in table.workloads(source_gpu)
-        if workload.model != heldout_model
+        workload for workload in table.workloads(source_gpu) if workload.model != heldout_model
     )
-    eligible = tuple(
-        workload for workload in family_safe if _shape(workload) not in heldout_shapes
-    )
+    eligible = tuple(workload for workload in family_safe if _shape(workload) not in heldout_shapes)
     return eligible, len(family_safe) - len(eligible)
-
-
 
 
 def _static_multisource_best(
@@ -160,17 +154,12 @@ def _static_multisource_best(
     source_workloads: dict[str, tuple[Workload, ...]],
     configs: Sequence[KernelConfig],
 ) -> KernelConfig:
-    contexts = tuple(
-        (gpu, workload)
-        for gpu in source_gpus
-        for workload in source_workloads[gpu]
-    )
+    contexts = tuple((gpu, workload) for gpu in source_gpus for workload in source_workloads[gpu])
     if not contexts:
         raise ValueError("no leakage-safe source workload remains in this fold")
     per_context_best = {
         (gpu, workload.key): min(
-            _latency(table, gpu, workload, config, _OBSERVATION_BANK)
-            for config in configs
+            _latency(table, gpu, workload, config, _OBSERVATION_BANK) for config in configs
         )
         for gpu, workload in contexts
     }
@@ -258,11 +247,7 @@ def _parhelion_source_model(
         prior_precision=_PRIOR_PRECISION,
         seed=0,
     )
-    source_families = {
-        workload.model
-        for gpu in source_gpus
-        for workload in source_workloads[gpu]
-    }
+    source_families = {workload.model for gpu in source_gpus for workload in source_workloads[gpu]}
     # Retrieval features for an archive row are themselves cross-family. With a
     # single remaining source family there is no leakage-safe source posterior,
     # so Parhelion keeps its ridge prior and still uses target retrieval features.
@@ -292,9 +277,7 @@ def _random_curve(
     curve: list[float] = []
     for order in orders:
         for workload in order:
-            available = tuple(
-                config for config in configs if config not in queried[workload.key]
-            )
+            available = tuple(config for config in configs if config not in queried[workload.key])
             selected = available[int(rng.integers(len(available)))]
             queried[workload.key].append(selected)
         curve.append(_incumbent_value(table, target_gpu, workloads, queried))
@@ -330,9 +313,7 @@ def _thompson_curve(
     curve: list[float] = []
     for order in orders:
         for workload in order:
-            available = tuple(
-                config for config in configs if config not in queried[workload.key]
-            )
+            available = tuple(config for config in configs if config not in queried[workload.key])
             selected = model.choose(
                 available,
                 lambda config, workload=workload: feature_fn(workload, config),
@@ -416,14 +397,14 @@ def _aggregate(
 
 def _constant_curve(value: float, length: int) -> list[float]:
     return [value] * length
+
+
 def _student_t_critical_95(degrees_of_freedom: int) -> float:
     frozen_protocol_values = {
         11: 2.200985160,
         29: 2.045229642,
     }
     return frozen_protocol_values.get(degrees_of_freedom, 1.96)
-
-
 
 
 def _torch_value(
@@ -441,8 +422,7 @@ def _torch_value(
             raise ValueError(f"missing held-out torch latency for {target_gpu}/{workload.key}")
         reference = table.reference_config(target_gpu, workload)
         fractions.append(
-            _latency(table, target_gpu, workload, reference, _EVALUATION_BANK)
-            / torch_latency
+            _latency(table, target_gpu, workload, reference, _EVALUATION_BANK) / torch_latency
         )
     return _geometric_mean(fractions)
 
@@ -459,9 +439,13 @@ def _validate_frozen_matrix(
     expected_records = len(expected_workloads) * len(expected_configs) * 3
     for gpu in gpus:
         if {workload.key for workload in table.workloads(gpu)} != expected_workloads:
-            raise ValueError(f"{protocol_role} replay requires the frozen 96-workload corpus on {gpu}")
+            raise ValueError(
+                f"{protocol_role} replay requires the frozen 96-workload corpus on {gpu}"
+            )
         if {config.key for config in table.configs(gpu)} != expected_configs:
-            raise ValueError(f"{protocol_role} replay requires the frozen 36-config corpus on {gpu}")
+            raise ValueError(
+                f"{protocol_role} replay requires the frozen 36-config corpus on {gpu}"
+            )
         if table.replicates(gpu) != (0, 1, 2):
             raise ValueError(f"{protocol_role} replay requires exactly banks 0, 1, and 2 on {gpu}")
         gpu_measurements = tuple(
@@ -554,47 +538,30 @@ def compare_multisource(
     if not math.isfinite(transfer_strength) or not 0.0 <= transfer_strength <= 1.0:
         raise ValueError("transfer_strength must be finite and between zero and one")
     retrieval_k = k if retrieval_k is None else retrieval_k
-    retrieval_temperature = (
-        temperature if retrieval_temperature is None else retrieval_temperature
-    )
+    retrieval_temperature = temperature if retrieval_temperature is None else retrieval_temperature
     pooled_transfer_strength = (
-        transfer_strength
-        if pooled_transfer_strength is None
-        else pooled_transfer_strength
+        transfer_strength if pooled_transfer_strength is None else pooled_transfer_strength
     )
-    if (
-        isinstance(retrieval_k, bool)
-        or not isinstance(retrieval_k, int)
-        or retrieval_k <= 0
-    ):
+    if isinstance(retrieval_k, bool) or not isinstance(retrieval_k, int) or retrieval_k <= 0:
         raise ValueError("retrieval_k must be a positive integer")
     if not math.isfinite(retrieval_temperature) or retrieval_temperature <= 0.0:
         raise ValueError("retrieval_temperature must be finite and positive")
-    if (
-        not math.isfinite(pooled_transfer_strength)
-        or not 0.0 <= pooled_transfer_strength <= 1.0
-    ):
+    if not math.isfinite(pooled_transfer_strength) or not 0.0 <= pooled_transfer_strength <= 1.0:
         raise ValueError("pooled_transfer_strength must be between zero and one")
     if protocol_role not in {"development", "validation", "final"}:
         raise ValueError("protocol_role must be development, validation, or final")
     if protocol_role in {"validation", "final"} and not parhelion_parameters_supplied:
-        raise ValueError(f"{protocol_role} replay requires explicit frozen Parhelion hyperparameters")
+        raise ValueError(
+            f"{protocol_role} replay requires explicit frozen Parhelion hyperparameters"
+        )
     if protocol_role == "validation" and (
-        sources != ("L4", "A10")
-        or target_gpu != "T4"
-        or seeds != 12
-        or max_budget != 8
+        sources != ("L4", "A10") or target_gpu != "T4" or seeds != 12 or max_budget != 8
     ):
         raise ValueError(
             "validation replay requires L4+A10 sources, T4 target, 12 seeds, and budget 8"
         )
     if protocol_role == "final":
-        if (
-            sources != ("L4", "A10", "T4")
-            or target_gpu != "H100"
-            or seeds != 30
-            or max_budget != 8
-        ):
+        if sources != ("L4", "A10", "T4") or target_gpu != "H100" or seeds != 30 or max_budget != 8:
             raise ValueError(
                 "final replay requires L4+A10+T4 sources, H100 target, 30 seeds, and budget 8"
             )
@@ -684,9 +651,7 @@ def compare_multisource(
             table, sources, source_workloads, configs, parhelion_retrieval
         )
 
-        static_config = _static_multisource_best(
-            table, sources, source_workloads, configs
-        )
+        static_config = _static_multisource_best(table, sources, source_workloads, configs)
         static_value = _evaluate(
             table,
             target_gpu,
@@ -697,9 +662,7 @@ def compare_multisource(
             _constant_curve(static_value, max_budget)
         )
         deterministic_fold_curves["torch"].append(
-            _constant_curve(
-                _torch_value(table, target_gpu, target_workloads, configs), max_budget
-            )
+            _constant_curve(_torch_value(table, target_gpu, target_workloads, configs), max_budget)
         )
 
         nearest_ranks = {
@@ -707,23 +670,16 @@ def compare_multisource(
             for workload in target_workloads
         }
         deterministic_fold_curves["single_source_nearest"].append(
-            _ranked_curve(
-                table, target_gpu, target_workloads, nearest_ranks, max_budget
-            )
+            _ranked_curve(table, target_gpu, target_workloads, nearest_ranks, max_budget)
         )
 
         retrieval_ranks = {
             workload.key: baseline_retrieval.rank(workload, configs)
             for workload in target_workloads
         }
-        anchors = {
-            workload.key: retrieval_ranks[workload.key][0]
-            for workload in target_workloads
-        }
+        anchors = {workload.key: retrieval_ranks[workload.key][0] for workload in target_workloads}
         deterministic_fold_curves["multisource_retrieval"].append(
-            _ranked_curve(
-                table, target_gpu, target_workloads, retrieval_ranks, max_budget
-            )
+            _ranked_curve(table, target_gpu, target_workloads, retrieval_ranks, max_budget)
         )
 
         target_hardware = table.hardware(target_gpu)
@@ -775,9 +731,7 @@ def compare_multisource(
                     configs,
                     orders,
                     cold,
-                    lambda workload, config, cache=joint_cache: cache[
-                        (workload.key, config.key)
-                    ],
+                    lambda workload, config, cache=joint_cache: cache[(workload.key, config.key)],
                 )
             )
 
@@ -793,9 +747,7 @@ def compare_multisource(
                     configs,
                     orders,
                     pooled,
-                    lambda workload, config, cache=joint_cache: cache[
-                        (workload.key, config.key)
-                    ],
+                    lambda workload, config, cache=joint_cache: cache[(workload.key, config.key)],
                 )
             )
 
@@ -843,23 +795,18 @@ def compare_multisource(
             ]
         )
 
-        visible_rows = {
-            gpu: len(source_workloads[gpu]) * len(configs) for gpu in sources
-        }
+        visible_rows = {gpu: len(source_workloads[gpu]) * len(configs) for gpu in sources}
         fold_details.append(
             {
                 "heldout_model": heldout_model,
                 "target_workloads": len(target_workloads),
-                "source_workloads_by_gpu": {
-                    gpu: len(source_workloads[gpu]) for gpu in sources
-                },
+                "source_workloads_by_gpu": {gpu: len(source_workloads[gpu]) for gpu in sources},
                 "visible_bank0_source_observations_by_gpu": visible_rows,
                 "excluded_exact_target_shapes_by_gpu": exact_shape_exclusions,
                 "single_source_nearest_gpu": sources[0],
                 "static_config": static_config.key,
                 "parhelion_anchor_configs": {
-                    workload.key: anchors[workload.key].key
-                    for workload in target_workloads
+                    workload.key: anchors[workload.key].key for workload in target_workloads
                 },
                 "archive_excludes_heldout_family": True,
                 "archive_excludes_exact_target_shapes": True,
@@ -868,8 +815,7 @@ def compare_multisource(
         )
 
     runs: dict[str, list[list[float]]] = {
-        method: fold_curves
-        for method, fold_curves in deterministic_fold_curves.items()
+        method: fold_curves for method, fold_curves in deterministic_fold_curves.items()
     }
     for method, per_seed_folds in stochastic_fold_curves.items():
         runs[method] = [_mean_curves(fold_curves) for fold_curves in per_seed_folds]
@@ -905,15 +851,10 @@ def compare_multisource(
         }
         for method, per_seed_folds in stochastic_fold_curves.items():
             fold_methods[method] = _aggregate(
-                [
-                    seed_fold_curves[fold_index]
-                    for seed_fold_curves in per_seed_folds
-                ],
+                [seed_fold_curves[fold_index] for seed_fold_curves in per_seed_folds],
                 budgets,
             )
-        fold_methods["exhaustive"] = _aggregate(
-            [exhaustive_folds[fold_index]], [len(configs)]
-        )
+        fold_methods["exhaustive"] = _aggregate([exhaustive_folds[fold_index]], [len(configs)])
         fold_methods["heldout_reference"] = [
             {
                 "budget": len(configs),
@@ -929,26 +870,18 @@ def compare_multisource(
                 "visible_bank0_source_observations_by_gpu": fold[
                     "visible_bank0_source_observations_by_gpu"
                 ],
-                "excluded_exact_target_shapes_by_gpu": fold[
-                    "excluded_exact_target_shapes_by_gpu"
-                ],
+                "excluded_exact_target_shapes_by_gpu": fold["excluded_exact_target_shapes_by_gpu"],
                 "methods": fold_methods,
             }
         )
 
     auc = {
-        method: float(
-            np.mean([point["mean_fraction_oracle"] for point in points])
-        )
+        method: float(np.mean([point["mean_fraction_oracle"] for point in points]))
         for method, points in methods.items()
     }
     queries_to_95 = {
         method: next(
-            (
-                int(point["budget"])
-                for point in points
-                if point["mean_fraction_oracle"] >= 0.95
-            ),
+            (int(point["budget"]) for point in points if point["mean_fraction_oracle"] >= 0.95),
             None,
         )
         for method, points in methods.items()
@@ -960,17 +893,11 @@ def compare_multisource(
     for method, method_runs in runs.items():
         if method in stochastic_methods:
             paired_seed_auc[method] = [
-                float(np.mean(seed_curve[:headline_budget]))
-                for seed_curve in method_runs
+                float(np.mean(seed_curve[:headline_budget])) for seed_curve in method_runs
             ]
         else:
             fold_mean_auc = float(
-                np.mean(
-                    [
-                        np.mean(fold_curve[:headline_budget])
-                        for fold_curve in method_runs
-                    ]
-                )
+                np.mean([np.mean(fold_curve[:headline_budget]) for fold_curve in method_runs])
             )
             paired_seed_auc[method] = [fold_mean_auc] * seeds
 
@@ -990,8 +917,7 @@ def compare_multisource(
     if primary_comparator is not None and primary_comparator not in paired_seed_auc:
         valid_comparators = ", ".join(sorted(paired_seed_auc))
         raise ValueError(
-            f"primary_comparator must be one of {valid_comparators}, not "
-            f"{primary_comparator!r}"
+            f"primary_comparator must be one of {valid_comparators}, not {primary_comparator!r}"
         )
     paired_delta: dict[str, Any] | None = None
     if primary_comparator is not None:
@@ -1021,8 +947,7 @@ def compare_multisource(
         }
     measurements_per_gpu = len(all_workloads) * len(configs) * 3
     visible_source_by_fold = [
-        sum(fold["visible_bank0_source_observations_by_gpu"].values())
-        for fold in fold_details
+        sum(fold["visible_bank0_source_observations_by_gpu"].values()) for fold in fold_details
     ]
 
     return {
@@ -1154,9 +1079,7 @@ def compare_multisource(
             "simulated_online_queries_per_live_method_by_fold": [
                 int(fold["target_workloads"]) * max_budget for fold in fold_details
             ],
-            "simulated_online_queries_per_live_method_all_folds": (
-                len(all_workloads) * max_budget
-            ),
+            "simulated_online_queries_per_live_method_all_folds": (len(all_workloads) * max_budget),
             "simulated_online_queries_all_live_methods_all_folds": (
                 len(_LIVE_METHODS) * len(all_workloads) * max_budget
             ),
@@ -1186,9 +1109,7 @@ def compare_multisource(
             "retrieval_action_score": (
                 "distance-weighted, per-workload-centered log-TFLOP/s advantage"
             ),
-            "retrieval_distance": (
-                "frozen normalized Euclidean distance over log2(M, N, K)"
-            ),
+            "retrieval_distance": ("frozen normalized Euclidean distance over log2(M, N, K)"),
             "parhelion_features": [*FEATURE_NAMES, *RETRIEVAL_FEATURE_NAMES],
             "bank_roles": {
                 "0": "policy-visible observations and source archive",

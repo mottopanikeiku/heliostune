@@ -171,9 +171,7 @@ def test_development_replay_schema_and_parhelion_paid_anchor_contract() -> None:
         fold_anchor_scores.append(math.prod(fractions) ** (1.0 / len(fractions)))
 
     budget_one = result["methods"]["parhelion_thompson"][0]
-    assert budget_one["mean_fraction_oracle"] == pytest.approx(
-        statistics.fmean(fold_anchor_scores)
-    )
+    assert budget_one["mean_fraction_oracle"] == pytest.approx(statistics.fmean(fold_anchor_scores))
     assert budget_one["mean_fraction_oracle"] == pytest.approx(
         result["methods"]["multisource_retrieval"][0]["mean_fraction_oracle"]
     )
@@ -236,14 +234,10 @@ def test_fold_results_serialize_complete_curves_without_changing_aggregates() ->
             assert [point["budget"] for point in fold_methods[method]] == [1, 2]
         for method in deterministic_methods:
             assert all(
-                point["ci95_low"]
-                == point["mean_fraction_oracle"]
-                == point["ci95_high"]
+                point["ci95_low"] == point["mean_fraction_oracle"] == point["ci95_high"]
                 for point in fold_methods[method]
             )
-        assert [point["budget"] for point in fold_methods["exhaustive"]] == [
-            len(_CONFIGS)
-        ]
+        assert [point["budget"] for point in fold_methods["exhaustive"]] == [len(_CONFIGS)]
         assert fold_methods["heldout_reference"] == [
             {
                 "budget": len(_CONFIGS),
@@ -273,13 +267,9 @@ def test_fold_results_serialize_complete_curves_without_changing_aggregates() ->
                 fold["methods"][method][point_index]["mean_fraction_oracle"]
                 for fold in fold_results
             ]
-            half_width = (
-                1.96 * statistics.stdev(fold_means) / math.sqrt(len(fold_means))
-            )
+            half_width = 1.96 * statistics.stdev(fold_means) / math.sqrt(len(fold_means))
             mean = statistics.fmean(fold_means)
-            assert aggregate_point["ci95_low"] == pytest.approx(
-                max(0.0, mean - half_width)
-            )
+            assert aggregate_point["ci95_low"] == pytest.approx(max(0.0, mean - half_width))
             assert aggregate_point["ci95_high"] == pytest.approx(mean + half_width)
 
 
@@ -306,9 +296,7 @@ def test_baseline_parameters_are_independent_and_nearest_is_bound_to_first_sourc
         "k": 1,
         "temperature": 0.9,
     }
-    assert low_transfer["hyperparameters"]["pooled_source_thompson"] == {
-        "transfer_strength": 0.35
-    }
+    assert low_transfer["hyperparameters"]["pooled_source_thompson"] == {"transfer_strength": 0.35}
     assert high_transfer["hyperparameters"]["parhelion"] == {
         "k": 2,
         "temperature": 1.7,
@@ -332,8 +320,7 @@ def test_baseline_parameters_are_independent_and_nearest_is_bound_to_first_sourc
         "contract": "parameter-free one-nearest-workload retrieval",
     }
     assert all(
-        fold["single_source_nearest_gpu"] == "source-b"
-        for fold in reversed_sources["folds"]
+        fold["single_source_nearest_gpu"] == "source-b" for fold in reversed_sources["folds"]
     )
     assert reversed_sources["provenance"]["single_source_nearest"] == (
         "parameter-free k=1 retrieval bound to first declared source source-b"

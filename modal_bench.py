@@ -144,8 +144,7 @@ def main(
     unknown = [gpu for gpu in gpu_names if gpu not in benchmarks]
     if unknown:
         raise ValueError(
-            f"unknown GPU selector(s): {', '.join(unknown)}; "
-            f"choose from {', '.join(benchmarks)}"
+            f"unknown GPU selector(s): {', '.join(unknown)}; choose from {', '.join(benchmarks)}"
         )
 
     calls = [

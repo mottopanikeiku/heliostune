@@ -188,9 +188,7 @@ class RetrievalIndex:
                 action_rewards[config]
                 for config in sorted(action_rewards, key=lambda action: action.key)
             ) / len(action_rewards)
-            advantages = {
-                config: reward - row_mean for config, reward in action_rewards.items()
-            }
+            advantages = {config: reward - row_mean for config, reward in action_rewards.items()}
             rows_by_workload[workload].append(
                 _SourceRow(
                     workload=workload,
@@ -284,10 +282,7 @@ class RetrievalIndex:
             / total_weight
         )
         variance = (
-            math.fsum(
-                weight * (advantage - mean) ** 2
-                for weight, advantage in weighted_advantages
-            )
+            math.fsum(weight * (advantage - mean) ** 2 for weight, advantage in weighted_advantages)
             / total_weight
         )
         distance_weight = math.fsum(neighbor.weight for neighbor in neighbors)
@@ -296,9 +291,7 @@ class RetrievalIndex:
             / distance_weight
         )
 
-        gpu_means = tuple(
-            gpu_weighted_sums[gpu] / gpu_weights[gpu] for gpu in sorted(gpu_weights)
-        )
+        gpu_means = tuple(gpu_weighted_sums[gpu] / gpu_weights[gpu] for gpu in sorted(gpu_weights))
         signs = tuple((value > 0.0) - (value < 0.0) for value in gpu_means)
         agreement = 1.0 if not any(signs) else abs(math.fsum(signs)) / len(signs)
 
