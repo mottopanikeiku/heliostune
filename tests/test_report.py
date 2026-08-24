@@ -338,6 +338,8 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
     assert "Raw H100 SHA-256" in document
     assert "Final archive SHA-256" in document
     assert "Post-run manifest path" in document
+    assert document.index("01 · Freeze") < document.index("02 · Collection")
+    assert document.index("02 · Collection") < document.index("03 · Release")
     assert (
         "https://modal.com/apps/&lt;owner&gt;/runs/&quot;sole&quot;&amp;1"
         in document

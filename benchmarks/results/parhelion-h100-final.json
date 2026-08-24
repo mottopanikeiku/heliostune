@@ -1,0 +1,3109 @@
+{
+  "auc": {
+    "cold_thompson": 0.9584336131554305,
+    "exhaustive": 1.0001583784240387,
+    "heldout_reference": 1.0,
+    "multisource_retrieval": 0.9031911649231901,
+    "parhelion_thompson": 0.9502592348438624,
+    "pooled_source_thompson": 0.9584336131554305,
+    "random": 0.8418992261912367,
+    "single_source_nearest": 0.9034805641052097,
+    "static_multisource": 0.6340234085927968,
+    "torch": 1.6102594324032378
+  },
+  "cold_method": "cold_thompson",
+  "configs": 36,
+  "data_kind": "measured",
+  "experiment": {
+    "adaptation_scope": "one shared posterior with paired batched workload updates per method and seed",
+    "aggregation": "geometric mean fraction of held-out exhaustive reference",
+    "bank_roles": {
+      "0": "policy-visible observations and source archive",
+      "1": "exhaustive-reference selection",
+      "2": "held-out recommendation evaluation"
+    },
+    "budget_one_invariant": "Parhelion and multi-source retrieval query and recommend the identical retrieval anchor at budget 1, charged once to each method.",
+    "confidence_interval": "Stochastic curves use normal 95% seed intervals after equal-fold averaging; the paired primary AUC1..8 endpoint uses a two-sided 95% Student-t interval; deterministic curves use fold variation.",
+    "config_keys": [
+      "m128n128k32-w8s3g8",
+      "m128n128k32-w8s4g4",
+      "m128n128k64-w8s2g8",
+      "m128n32k32-w4s3g8",
+      "m128n32k32-w4s4g4",
+      "m128n32k64-w4s2g8",
+      "m128n64k32-w8s3g8",
+      "m128n64k32-w8s4g4",
+      "m128n64k64-w8s2g8",
+      "m16n128k32-w4s3g8",
+      "m16n128k32-w4s4g4",
+      "m16n128k64-w4s2g8",
+      "m16n32k32-w4s3g8",
+      "m16n32k32-w4s4g4",
+      "m16n32k64-w4s2g8",
+      "m16n64k32-w4s3g8",
+      "m16n64k32-w4s4g4",
+      "m16n64k64-w4s2g8",
+      "m32n128k32-w4s3g8",
+      "m32n128k32-w4s4g4",
+      "m32n128k64-w4s2g8",
+      "m32n32k32-w4s3g8",
+      "m32n32k32-w4s4g4",
+      "m32n32k64-w4s2g8",
+      "m32n64k32-w4s3g8",
+      "m32n64k32-w4s4g4",
+      "m32n64k64-w4s2g8",
+      "m64n128k32-w8s3g8",
+      "m64n128k32-w8s4g4",
+      "m64n128k64-w8s2g8",
+      "m64n32k32-w4s3g8",
+      "m64n32k32-w4s4g4",
+      "m64n32k64-w4s2g8",
+      "m64n64k32-w4s3g8",
+      "m64n64k32-w4s4g4",
+      "m64n64k64-w4s2g8"
+    ],
+    "live_methods": [
+      "random",
+      "single_source_nearest",
+      "multisource_retrieval",
+      "cold_thompson",
+      "pooled_source_thompson",
+      "parhelion_thompson"
+    ],
+    "parhelion_features": [
+      "bias",
+      "log_m",
+      "log_n",
+      "log_k",
+      "log_m_over_n",
+      "log_k_over_n",
+      "log_flops",
+      "block_m",
+      "block_n",
+      "block_k",
+      "warps",
+      "stages",
+      "group_m",
+      "m_tile_coverage",
+      "m_divisible",
+      "n_divisible",
+      "k_divisible",
+      "multiprocessors",
+      "memory_gb",
+      "compute_capability",
+      "m_x_block_m",
+      "n_x_block_n",
+      "k_x_block_k",
+      "sm_x_warps",
+      "memory_x_tile_area",
+      "weighted_advantage_mean",
+      "weighted_variance",
+      "normalized_neighbor_distance",
+      "source_gpu_agreement"
+    ],
+    "recommendation": "best measured bank-0 incumbent for every live adaptive method",
+    "retrieval_action_score": "distance-weighted, per-workload-centered log-TFLOP/s advantage",
+    "retrieval_distance": "frozen normalized Euclidean distance over log2(M, N, K)",
+    "reward": "log-TFLOP/s from the bank-0 selected-configuration latency",
+    "target_budget_unit": "distinct bank-0 configuration probes per held-out workload",
+    "workload_keys": [
+      "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096",
+      "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096",
+      "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800",
+      "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800",
+      "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096",
+      "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096",
+      "mistral-7b-attention-out-decode-1-m1-n4096-k4096",
+      "mistral-7b-attention-out-decode-7-m7-n4096-k4096",
+      "mistral-7b-attention-out-mixed-31-m31-n4096-k4096",
+      "mistral-7b-attention-out-mixed-96-m96-n4096-k4096",
+      "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "mistral-7b-attention-out-prefill-257-m257-n4096-k4096",
+      "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+      "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "mistral-7b-ffn-down-decode-1-m1-n4096-k14336",
+      "mistral-7b-ffn-down-decode-7-m7-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336",
+      "mistral-7b-ffn-up-decode-1-m1-n14336-k4096",
+      "mistral-7b-ffn-up-decode-7-m7-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096",
+      "phi-3-mini-attention-out-decode-1-m1-n3072-k3072",
+      "phi-3-mini-attention-out-decode-7-m7-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072",
+      "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072",
+      "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072",
+      "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192",
+      "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192",
+      "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072",
+      "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072",
+      "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584",
+      "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584",
+      "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584",
+      "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944",
+      "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584",
+      "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584"
+    ]
+  },
+  "fold_results": [
+    {
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12,
+        "T4": 12
+      },
+      "heldout_model": "granite-3.1-8b",
+      "methods": {
+        "cold_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8094051385529156,
+            "ci95_low": 0.7594660431211079,
+            "mean_fraction_oracle": 0.7844355908370118
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9466476742901857,
+            "ci95_low": 0.9183304806897619,
+            "mean_fraction_oracle": 0.9324890774899738
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9748416395403902,
+            "ci95_low": 0.9610390848024207,
+            "mean_fraction_oracle": 0.9679403621714054
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9850523721419133,
+            "ci95_low": 0.9805330797876501,
+            "mean_fraction_oracle": 0.9827927259647817
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9907124971997571,
+            "ci95_low": 0.9876730245315858,
+            "mean_fraction_oracle": 0.9891927608656714
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9935351989119471,
+            "ci95_low": 0.9905936252499564,
+            "mean_fraction_oracle": 0.9920644120809518
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9957164466753513,
+            "ci95_low": 0.9928851693968869,
+            "mean_fraction_oracle": 0.9943008080361191
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9968811124636013,
+            "ci95_low": 0.9951291910087626,
+            "mean_fraction_oracle": 0.996005151736182
+          }
+        ],
+        "exhaustive": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0000698124472671,
+            "ci95_low": 1.0000698124472671,
+            "mean_fraction_oracle": 1.0000698124472671
+          }
+        ],
+        "heldout_reference": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0,
+            "ci95_low": 1.0,
+            "mean_fraction_oracle": 1.0
+          }
+        ],
+        "multisource_retrieval": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8196095766361885,
+            "ci95_low": 0.8196095766361885,
+            "mean_fraction_oracle": 0.8196095766361885
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8467794770579495,
+            "ci95_low": 0.8467794770579495,
+            "mean_fraction_oracle": 0.8467794770579495
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9105269666666433,
+            "ci95_low": 0.9105269666666433,
+            "mean_fraction_oracle": 0.9105269666666433
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9118748540633721,
+            "ci95_low": 0.9118748540633721,
+            "mean_fraction_oracle": 0.9118748540633721
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9225121015807208,
+            "ci95_low": 0.9225121015807208,
+            "mean_fraction_oracle": 0.9225121015807208
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9240064367367878,
+            "ci95_low": 0.9240064367367878,
+            "mean_fraction_oracle": 0.9240064367367878
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9358883241778683,
+            "ci95_low": 0.9358883241778683,
+            "mean_fraction_oracle": 0.9358883241778683
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9452995964512467,
+            "ci95_low": 0.9452995964512467,
+            "mean_fraction_oracle": 0.9452995964512467
+          }
+        ],
+        "parhelion_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8196095766361888,
+            "ci95_low": 0.8196095766361886,
+            "mean_fraction_oracle": 0.8196095766361887
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8927854794325099,
+            "ci95_low": 0.8788191807707857,
+            "mean_fraction_oracle": 0.8858023301016478
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9558660281933076,
+            "ci95_low": 0.9426471355298396,
+            "mean_fraction_oracle": 0.9492565818615736
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9767139089554774,
+            "ci95_low": 0.9656849951908487,
+            "mean_fraction_oracle": 0.971199452073163
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9868852835765741,
+            "ci95_low": 0.9781129671176886,
+            "mean_fraction_oracle": 0.9824991253471314
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9919068238283472,
+            "ci95_low": 0.9863332551281448,
+            "mean_fraction_oracle": 0.989120039478246
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.994112614699828,
+            "ci95_low": 0.9919242853923937,
+            "mean_fraction_oracle": 0.9930184500461109
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9963994509692143,
+            "ci95_low": 0.994429648923402,
+            "mean_fraction_oracle": 0.9954145499463082
+          }
+        ],
+        "pooled_source_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8094051385529156,
+            "ci95_low": 0.7594660431211079,
+            "mean_fraction_oracle": 0.7844355908370118
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9466476742901857,
+            "ci95_low": 0.9183304806897619,
+            "mean_fraction_oracle": 0.9324890774899738
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9748416395403902,
+            "ci95_low": 0.9610390848024207,
+            "mean_fraction_oracle": 0.9679403621714054
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9850523721419133,
+            "ci95_low": 0.9805330797876501,
+            "mean_fraction_oracle": 0.9827927259647817
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9907124971997571,
+            "ci95_low": 0.9876730245315858,
+            "mean_fraction_oracle": 0.9891927608656714
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9935351989119471,
+            "ci95_low": 0.9905936252499564,
+            "mean_fraction_oracle": 0.9920644120809518
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9957164466753513,
+            "ci95_low": 0.9928851693968869,
+            "mean_fraction_oracle": 0.9943008080361191
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9968811124636013,
+            "ci95_low": 0.9951291910087626,
+            "mean_fraction_oracle": 0.996005151736182
+          }
+        ],
+        "random": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6674361671421855,
+            "ci95_low": 0.6352424452721214,
+            "mean_fraction_oracle": 0.6513393062071534
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.7586429940844593,
+            "ci95_low": 0.7304745239834624,
+            "mean_fraction_oracle": 0.7445587590339608
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8210441328557578,
+            "ci95_low": 0.7961243572031362,
+            "mean_fraction_oracle": 0.808584245029447
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.8594287031321229,
+            "ci95_low": 0.838982853430812,
+            "mean_fraction_oracle": 0.8492057782814675
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.8832002456578887,
+            "ci95_low": 0.8663181223949501,
+            "mean_fraction_oracle": 0.8747591840264194
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9021517440491803,
+            "ci95_low": 0.886889188455953,
+            "mean_fraction_oracle": 0.8945204662525666
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9177500398391145,
+            "ci95_low": 0.9031494227875627,
+            "mean_fraction_oracle": 0.9104497313133386
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9279066479197978,
+            "ci95_low": 0.9157430391207292,
+            "mean_fraction_oracle": 0.9218248435202635
+          }
+        ],
+        "single_source_nearest": [
+          {
+            "budget": 1,
+            "ci95_high": 0.7792145280334101,
+            "ci95_low": 0.7792145280334101,
+            "mean_fraction_oracle": 0.7792145280334101
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8107778858626278,
+            "ci95_low": 0.8107778858626278,
+            "mean_fraction_oracle": 0.8107778858626278
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.848528008492217,
+            "ci95_low": 0.848528008492217,
+            "mean_fraction_oracle": 0.848528008492217
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.8878638595717169,
+            "ci95_low": 0.8878638595717169,
+            "mean_fraction_oracle": 0.8878638595717169
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9532263124973421,
+            "ci95_low": 0.9532263124973421,
+            "mean_fraction_oracle": 0.9532263124973421
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9565282673447847,
+            "ci95_low": 0.9565282673447847,
+            "mean_fraction_oracle": 0.9565282673447847
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9617290865137073,
+            "ci95_low": 0.9617290865137073,
+            "mean_fraction_oracle": 0.9617290865137073
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9666973275789518,
+            "ci95_low": 0.9666973275789518,
+            "mean_fraction_oracle": 0.9666973275789518
+          }
+        ],
+        "static_multisource": [
+          {
+            "budget": 1,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.628512434446576,
+            "ci95_low": 0.628512434446576,
+            "mean_fraction_oracle": 0.628512434446576
+          }
+        ],
+        "torch": [
+          {
+            "budget": 1,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 2,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 3,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 4,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 5,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 6,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 7,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          },
+          {
+            "budget": 8,
+            "ci95_high": 1.5854790552307396,
+            "ci95_low": 1.5854790552307396,
+            "mean_fraction_oracle": 1.5854790552307396
+          }
+        ]
+      },
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160,
+        "T4": 2160
+      }
+    },
+    {
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12,
+        "T4": 12
+      },
+      "heldout_model": "mistral-7b",
+      "methods": {
+        "cold_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8153847900830877,
+            "ci95_low": 0.7795326200419956,
+            "mean_fraction_oracle": 0.7974587050625417
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9506781295253274,
+            "ci95_low": 0.933588167855706,
+            "mean_fraction_oracle": 0.9421331486905167
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9783036299250739,
+            "ci95_low": 0.9701341931834012,
+            "mean_fraction_oracle": 0.9742189115542376
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9876608728502428,
+            "ci95_low": 0.982936374548801,
+            "mean_fraction_oracle": 0.9852986236995219
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9931878434519339,
+            "ci95_low": 0.9893288380704084,
+            "mean_fraction_oracle": 0.9912583407611711
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9960932305401741,
+            "ci95_low": 0.9931268181349736,
+            "mean_fraction_oracle": 0.9946100243375738
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9974677388845761,
+            "ci95_low": 0.995084528286647,
+            "mean_fraction_oracle": 0.9962761335856115
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9979325255621614,
+            "ci95_low": 0.9967551624129913,
+            "mean_fraction_oracle": 0.9973438439875764
+          }
+        ],
+        "exhaustive": [
+          {
+            "budget": 36,
+            "ci95_high": 0.9999176742451674,
+            "ci95_low": 0.9999176742451674,
+            "mean_fraction_oracle": 0.9999176742451674
+          }
+        ],
+        "heldout_reference": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0,
+            "ci95_low": 1.0,
+            "mean_fraction_oracle": 1.0
+          }
+        ],
+        "multisource_retrieval": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8163308902436528,
+            "ci95_low": 0.8163308902436528,
+            "mean_fraction_oracle": 0.8163308902436528
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8467558384580162,
+            "ci95_low": 0.8467558384580162,
+            "mean_fraction_oracle": 0.8467558384580162
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8973314560320811,
+            "ci95_low": 0.8973314560320811,
+            "mean_fraction_oracle": 0.8973314560320811
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9009326519266243,
+            "ci95_low": 0.9009326519266243,
+            "mean_fraction_oracle": 0.9009326519266243
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9022437977695807,
+            "ci95_low": 0.9022437977695807,
+            "mean_fraction_oracle": 0.9022437977695807
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9147534660614687,
+            "ci95_low": 0.9147534660614687,
+            "mean_fraction_oracle": 0.9147534660614687
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9261982692825799,
+            "ci95_low": 0.9261982692825799,
+            "mean_fraction_oracle": 0.9261982692825799
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.935668746635236,
+            "ci95_low": 0.935668746635236,
+            "mean_fraction_oracle": 0.935668746635236
+          }
+        ],
+        "parhelion_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8163308902436527,
+            "ci95_low": 0.8163308902436525,
+            "mean_fraction_oracle": 0.8163308902436526
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8864654791674081,
+            "ci95_low": 0.8732973209589007,
+            "mean_fraction_oracle": 0.8798814000631544
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9521675682594273,
+            "ci95_low": 0.9378113266394281,
+            "mean_fraction_oracle": 0.9449894474494277
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.977446036018736,
+            "ci95_low": 0.9660137732185714,
+            "mean_fraction_oracle": 0.9717299046186537
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9887658845460289,
+            "ci95_low": 0.9842712603145908,
+            "mean_fraction_oracle": 0.9865185724303098
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9945405809737278,
+            "ci95_low": 0.9925384781768791,
+            "mean_fraction_oracle": 0.9935395295753034
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9963166408276771,
+            "ci95_low": 0.9948566627926831,
+            "mean_fraction_oracle": 0.9955866518101801
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9974115021380144,
+            "ci95_low": 0.9961901229355999,
+            "mean_fraction_oracle": 0.9968008125368072
+          }
+        ],
+        "pooled_source_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8153847900830877,
+            "ci95_low": 0.7795326200419956,
+            "mean_fraction_oracle": 0.7974587050625417
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9506781295253274,
+            "ci95_low": 0.933588167855706,
+            "mean_fraction_oracle": 0.9421331486905167
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9783036299250739,
+            "ci95_low": 0.9701341931834012,
+            "mean_fraction_oracle": 0.9742189115542376
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9876608728502428,
+            "ci95_low": 0.982936374548801,
+            "mean_fraction_oracle": 0.9852986236995219
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9931878434519339,
+            "ci95_low": 0.9893288380704084,
+            "mean_fraction_oracle": 0.9912583407611711
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9960932305401741,
+            "ci95_low": 0.9931268181349736,
+            "mean_fraction_oracle": 0.9946100243375738
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9974677388845761,
+            "ci95_low": 0.995084528286647,
+            "mean_fraction_oracle": 0.9962761335856115
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9979325255621614,
+            "ci95_low": 0.9967551624129913,
+            "mean_fraction_oracle": 0.9973438439875764
+          }
+        ],
+        "random": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6702687847163895,
+            "ci95_low": 0.6401991135732039,
+            "mean_fraction_oracle": 0.6552339491447967
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.7775858193732338,
+            "ci95_low": 0.7520892048451545,
+            "mean_fraction_oracle": 0.7648375121091942
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8384621502298198,
+            "ci95_low": 0.8108850620835949,
+            "mean_fraction_oracle": 0.8246736061567074
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.8728095653275174,
+            "ci95_low": 0.8475912785138073,
+            "mean_fraction_oracle": 0.8602004219206624
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.8992103405775785,
+            "ci95_low": 0.8818125809443617,
+            "mean_fraction_oracle": 0.8905114607609701
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9157492000569136,
+            "ci95_low": 0.897927540564917,
+            "mean_fraction_oracle": 0.9068383703109153
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9292280849003784,
+            "ci95_low": 0.9117409693858005,
+            "mean_fraction_oracle": 0.9204845271430895
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9390213475070333,
+            "ci95_low": 0.9218517195899938,
+            "mean_fraction_oracle": 0.9304365335485135
+          }
+        ],
+        "single_source_nearest": [
+          {
+            "budget": 1,
+            "ci95_high": 0.7777551181624641,
+            "ci95_low": 0.7777551181624641,
+            "mean_fraction_oracle": 0.7777551181624641
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8143419465672,
+            "ci95_low": 0.8143419465672,
+            "mean_fraction_oracle": 0.8143419465672
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8514456694610684,
+            "ci95_low": 0.8514456694610684,
+            "mean_fraction_oracle": 0.8514456694610684
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.8974181197544667,
+            "ci95_low": 0.8974181197544667,
+            "mean_fraction_oracle": 0.8974181197544667
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9537353440475874,
+            "ci95_low": 0.9537353440475874,
+            "mean_fraction_oracle": 0.9537353440475874
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9558700243722169,
+            "ci95_low": 0.9558700243722169,
+            "mean_fraction_oracle": 0.9558700243722169
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.961159997256295,
+            "ci95_low": 0.961159997256295,
+            "mean_fraction_oracle": 0.961159997256295
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9647827467630044,
+            "ci95_low": 0.9647827467630044,
+            "mean_fraction_oracle": 0.9647827467630044
+          }
+        ],
+        "static_multisource": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.6285064761411943,
+            "ci95_low": 0.6285064761411943,
+            "mean_fraction_oracle": 0.6285064761411943
+          }
+        ],
+        "torch": [
+          {
+            "budget": 1,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 2,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 3,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 4,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 5,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 6,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 7,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          },
+          {
+            "budget": 8,
+            "ci95_high": 1.5922247432518684,
+            "ci95_low": 1.5922247432518684,
+            "mean_fraction_oracle": 1.5922247432518684
+          }
+        ]
+      },
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160,
+        "T4": 2160
+      }
+    },
+    {
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0,
+        "T4": 0
+      },
+      "heldout_model": "phi-3-mini",
+      "methods": {
+        "cold_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8361077155015338,
+            "ci95_low": 0.796716844178104,
+            "mean_fraction_oracle": 0.8164122798398189
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9554122576508369,
+            "ci95_low": 0.9336328833536461,
+            "mean_fraction_oracle": 0.9445225705022415
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.98260582240899,
+            "ci95_low": 0.9764438243436075,
+            "mean_fraction_oracle": 0.9795248233762988
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9906767208101745,
+            "ci95_low": 0.98695793412102,
+            "mean_fraction_oracle": 0.9888173274655973
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9949602825085972,
+            "ci95_low": 0.9928368315670462,
+            "mean_fraction_oracle": 0.9938985570378217
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9968142614328063,
+            "ci95_low": 0.9954686646024907,
+            "mean_fraction_oracle": 0.9961414630176485
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9976317427427138,
+            "ci95_low": 0.9964983207714108,
+            "mean_fraction_oracle": 0.9970650317570623
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9979664119219199,
+            "ci95_low": 0.9971352885465073,
+            "mean_fraction_oracle": 0.9975508502342136
+          }
+        ],
+        "exhaustive": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0001339320883709,
+            "ci95_low": 1.0001339320883709,
+            "mean_fraction_oracle": 1.0001339320883709
+          }
+        ],
+        "heldout_reference": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0,
+            "ci95_low": 1.0,
+            "mean_fraction_oracle": 1.0
+          }
+        ],
+        "multisource_retrieval": [
+          {
+            "budget": 1,
+            "ci95_high": 0.834968786096105,
+            "ci95_low": 0.834968786096105,
+            "mean_fraction_oracle": 0.834968786096105
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8861425694586622,
+            "ci95_low": 0.8861425694586622,
+            "mean_fraction_oracle": 0.8861425694586622
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9243985263136987,
+            "ci95_low": 0.9243985263136987,
+            "mean_fraction_oracle": 0.9243985263136987
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9353523575849995,
+            "ci95_low": 0.9353523575849995,
+            "mean_fraction_oracle": 0.9353523575849995
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9415665823449589,
+            "ci95_low": 0.9415665823449589,
+            "mean_fraction_oracle": 0.9415665823449589
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9447508613913472,
+            "ci95_low": 0.9447508613913472,
+            "mean_fraction_oracle": 0.9447508613913472
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9500618095547985,
+            "ci95_low": 0.9500618095547985,
+            "mean_fraction_oracle": 0.9500618095547985
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9500618095547985,
+            "ci95_low": 0.9500618095547985,
+            "mean_fraction_oracle": 0.9500618095547985
+          }
+        ],
+        "parhelion_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8349687860961051,
+            "ci95_low": 0.8349687860961051,
+            "mean_fraction_oracle": 0.8349687860961051
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9250904253402145,
+            "ci95_low": 0.9096314465244123,
+            "mean_fraction_oracle": 0.9173609359323134
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.969028130647318,
+            "ci95_low": 0.9566641410836035,
+            "mean_fraction_oracle": 0.9628461358654608
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9831671308947529,
+            "ci95_low": 0.9766914080177107,
+            "mean_fraction_oracle": 0.9799292694562318
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9907880068742089,
+            "ci95_low": 0.9853290261986073,
+            "mean_fraction_oracle": 0.9880585165364081
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9950526851516034,
+            "ci95_low": 0.9906073781795227,
+            "mean_fraction_oracle": 0.992830031665563
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9969233281948011,
+            "ci95_low": 0.9958706189369422,
+            "mean_fraction_oracle": 0.9963969735658716
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9977932230300948,
+            "ci95_low": 0.9968530128469415,
+            "mean_fraction_oracle": 0.9973231179385181
+          }
+        ],
+        "pooled_source_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8361077155015338,
+            "ci95_low": 0.796716844178104,
+            "mean_fraction_oracle": 0.8164122798398189
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9554122576508369,
+            "ci95_low": 0.9336328833536461,
+            "mean_fraction_oracle": 0.9445225705022415
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.98260582240899,
+            "ci95_low": 0.9764438243436075,
+            "mean_fraction_oracle": 0.9795248233762988
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9906767208101745,
+            "ci95_low": 0.98695793412102,
+            "mean_fraction_oracle": 0.9888173274655973
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9949602825085972,
+            "ci95_low": 0.9928368315670462,
+            "mean_fraction_oracle": 0.9938985570378217
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9968142614328063,
+            "ci95_low": 0.9954686646024907,
+            "mean_fraction_oracle": 0.9961414630176485
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9976317427427138,
+            "ci95_low": 0.9964983207714108,
+            "mean_fraction_oracle": 0.9970650317570623
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9979664119219199,
+            "ci95_low": 0.9971352885465073,
+            "mean_fraction_oracle": 0.9975508502342136
+          }
+        ],
+        "random": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6889071666337998,
+            "ci95_low": 0.6596255486774338,
+            "mean_fraction_oracle": 0.6742663576556168
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.7814371299847622,
+            "ci95_low": 0.7539673193288439,
+            "mean_fraction_oracle": 0.767702224656803
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8399907127792563,
+            "ci95_low": 0.8201097754730458,
+            "mean_fraction_oracle": 0.830050244126151
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.8779914284682843,
+            "ci95_low": 0.8574101519276466,
+            "mean_fraction_oracle": 0.8677007901979654
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.8998986924000032,
+            "ci95_low": 0.8813740109959327,
+            "mean_fraction_oracle": 0.890636351697968
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9190646498763941,
+            "ci95_low": 0.9014227916360786,
+            "mean_fraction_oracle": 0.9102437207562364
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9320619647330793,
+            "ci95_low": 0.9171664460103411,
+            "mean_fraction_oracle": 0.9246142053717102
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9423901119021539,
+            "ci95_low": 0.9305816476164285,
+            "mean_fraction_oracle": 0.9364858797592912
+          }
+        ],
+        "single_source_nearest": [
+          {
+            "budget": 1,
+            "ci95_high": 0.790232736536143,
+            "ci95_low": 0.790232736536143,
+            "mean_fraction_oracle": 0.790232736536143
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8304400496956009,
+            "ci95_low": 0.8304400496956009,
+            "mean_fraction_oracle": 0.8304400496956009
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8963689586564858,
+            "ci95_low": 0.8963689586564858,
+            "mean_fraction_oracle": 0.8963689586564858
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9338777271713052,
+            "ci95_low": 0.9338777271713052,
+            "mean_fraction_oracle": 0.9338777271713052
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9618645623563227,
+            "ci95_low": 0.9618645623563227,
+            "mean_fraction_oracle": 0.9618645623563227
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9642671178725674,
+            "ci95_low": 0.9642671178725674,
+            "mean_fraction_oracle": 0.9642671178725674
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9661489163347684,
+            "ci95_low": 0.9661489163347684,
+            "mean_fraction_oracle": 0.9661489163347684
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9688454928627777,
+            "ci95_low": 0.9688454928627777,
+            "mean_fraction_oracle": 0.9688454928627777
+          }
+        ],
+        "static_multisource": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.6379022930820184,
+            "ci95_low": 0.6379022930820184,
+            "mean_fraction_oracle": 0.6379022930820184
+          }
+        ],
+        "torch": [
+          {
+            "budget": 1,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 2,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 3,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 4,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 5,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 6,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 7,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          },
+          {
+            "budget": 8,
+            "ci95_high": 1.6059991310650228,
+            "ci95_low": 1.6059991310650228,
+            "mean_fraction_oracle": 1.6059991310650228
+          }
+        ]
+      },
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592,
+        "T4": 2592
+      }
+    },
+    {
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0,
+        "T4": 0
+      },
+      "heldout_model": "qwen2.5-7b",
+      "methods": {
+        "cold_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8111311545909006,
+            "ci95_low": 0.7560513570452767,
+            "mean_fraction_oracle": 0.7835912558180886
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9473849849550597,
+            "ci95_low": 0.9163548159057773,
+            "mean_fraction_oracle": 0.9318699004304185
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9776096742093177,
+            "ci95_low": 0.9651540765518889,
+            "mean_fraction_oracle": 0.9713818753806033
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9858012135920898,
+            "ci95_low": 0.9774961790650415,
+            "mean_fraction_oracle": 0.9816486963285657
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9905335593786273,
+            "ci95_low": 0.9842062713490183,
+            "mean_fraction_oracle": 0.9873699153638228
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9937413534180499,
+            "ci95_low": 0.9895590209127818,
+            "mean_fraction_oracle": 0.9916501871654159
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9962199541986533,
+            "ci95_low": 0.9926133113022456,
+            "mean_fraction_oracle": 0.9944166327504494
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9975910004024724,
+            "ci95_low": 0.9948002668872555,
+            "mean_fraction_oracle": 0.996195633644864
+          }
+        ],
+        "exhaustive": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0005120949153488,
+            "ci95_low": 1.0005120949153488,
+            "mean_fraction_oracle": 1.0005120949153488
+          }
+        ],
+        "heldout_reference": [
+          {
+            "budget": 36,
+            "ci95_high": 1.0,
+            "ci95_low": 1.0,
+            "mean_fraction_oracle": 1.0
+          }
+        ],
+        "multisource_retrieval": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8202061481171451,
+            "ci95_low": 0.8202061481171451,
+            "mean_fraction_oracle": 0.8202061481171451
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8579622313289659,
+            "ci95_low": 0.8579622313289659,
+            "mean_fraction_oracle": 0.8579622313289659
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.905215603854853,
+            "ci95_low": 0.905215603854853,
+            "mean_fraction_oracle": 0.905215603854853
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9070946701143975,
+            "ci95_low": 0.9070946701143975,
+            "mean_fraction_oracle": 0.9070946701143975
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9152797495373931,
+            "ci95_low": 0.9152797495373931,
+            "mean_fraction_oracle": 0.9152797495373931
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9196192510828024,
+            "ci95_low": 0.9196192510828024,
+            "mean_fraction_oracle": 0.9196192510828024
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9207674774273845,
+            "ci95_low": 0.9207674774273845,
+            "mean_fraction_oracle": 0.9207674774273845
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9319563939997589,
+            "ci95_low": 0.9319563939997589,
+            "mean_fraction_oracle": 0.9319563939997589
+          }
+        ],
+        "parhelion_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.820206148117145,
+            "ci95_low": 0.8202061481171448,
+            "mean_fraction_oracle": 0.8202061481171449
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8775499889876762,
+            "ci95_low": 0.8635166752130786,
+            "mean_fraction_oracle": 0.8705333321003774
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9452933160229429,
+            "ci95_low": 0.926964176932785,
+            "mean_fraction_oracle": 0.9361287464778639
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9787932231135787,
+            "ci95_low": 0.9637277124745771,
+            "mean_fraction_oracle": 0.9712604677940779
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9904814672604929,
+            "ci95_low": 0.9825434017455401,
+            "mean_fraction_oracle": 0.9865124345030165
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9941743140899393,
+            "ci95_low": 0.9891745742926106,
+            "mean_fraction_oracle": 0.9916744441912749
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9958230776652164,
+            "ci95_low": 0.9930113376384515,
+            "mean_fraction_oracle": 0.994417207651834
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9972313532847429,
+            "ci95_low": 0.9958719525026144,
+            "mean_fraction_oracle": 0.9965516528936786
+          }
+        ],
+        "pooled_source_thompson": [
+          {
+            "budget": 1,
+            "ci95_high": 0.8111311545909006,
+            "ci95_low": 0.7560513570452767,
+            "mean_fraction_oracle": 0.7835912558180886
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.9473849849550597,
+            "ci95_low": 0.9163548159057773,
+            "mean_fraction_oracle": 0.9318699004304185
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.9776096742093177,
+            "ci95_low": 0.9651540765518889,
+            "mean_fraction_oracle": 0.9713818753806033
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9858012135920898,
+            "ci95_low": 0.9774961790650415,
+            "mean_fraction_oracle": 0.9816486963285657
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9905335593786273,
+            "ci95_low": 0.9842062713490183,
+            "mean_fraction_oracle": 0.9873699153638228
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9937413534180499,
+            "ci95_low": 0.9895590209127818,
+            "mean_fraction_oracle": 0.9916501871654159
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9962199541986533,
+            "ci95_low": 0.9926133113022456,
+            "mean_fraction_oracle": 0.9944166327504494
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9975910004024724,
+            "ci95_low": 0.9948002668872555,
+            "mean_fraction_oracle": 0.996195633644864
+          }
+        ],
+        "random": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6754614223831296,
+            "ci95_low": 0.652495413020605,
+            "mean_fraction_oracle": 0.6639784177018673
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.7797853806731845,
+            "ci95_low": 0.7551542347987674,
+            "mean_fraction_oracle": 0.767469807735976
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.835416773238824,
+            "ci95_low": 0.8158147399666758,
+            "mean_fraction_oracle": 0.8256157566027499
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.864730072834306,
+            "ci95_low": 0.8460730574737446,
+            "mean_fraction_oracle": 0.8554015651540253
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.8870949229001649,
+            "ci95_low": 0.8713868618959414,
+            "mean_fraction_oracle": 0.8792408923980531
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9079622489396085,
+            "ci95_low": 0.8927084480406408,
+            "mean_fraction_oracle": 0.9003353484901246
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.920565590767376,
+            "ci95_low": 0.9082759494023902,
+            "mean_fraction_oracle": 0.9144207700848831
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9298107696260705,
+            "ci95_low": 0.918497652315301,
+            "mean_fraction_oracle": 0.9241542109706857
+          }
+        ],
+        "single_source_nearest": [
+          {
+            "budget": 1,
+            "ci95_high": 0.7755354326669689,
+            "ci95_low": 0.7755354326669689,
+            "mean_fraction_oracle": 0.7755354326669689
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.8491931044634929,
+            "ci95_low": 0.8491931044634929,
+            "mean_fraction_oracle": 0.8491931044634929
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.8800835207630575,
+            "ci95_low": 0.8800835207630575,
+            "mean_fraction_oracle": 0.8800835207630575
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.9180754377959889,
+            "ci95_low": 0.9180754377959889,
+            "mean_fraction_oracle": 0.9180754377959889
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.9487056987859753,
+            "ci95_low": 0.9487056987859753,
+            "mean_fraction_oracle": 0.9487056987859753
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.9582659699723021,
+            "ci95_low": 0.9582659699723021,
+            "mean_fraction_oracle": 0.9582659699723021
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.9606760704439602,
+            "ci95_low": 0.9606760704439602,
+            "mean_fraction_oracle": 0.9606760704439602
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.9677230127099331,
+            "ci95_low": 0.9677230127099331,
+            "mean_fraction_oracle": 0.9677230127099331
+          }
+        ],
+        "static_multisource": [
+          {
+            "budget": 1,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 2,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 3,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 4,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 5,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 6,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 7,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          },
+          {
+            "budget": 8,
+            "ci95_high": 0.6411724307013987,
+            "ci95_low": 0.6411724307013987,
+            "mean_fraction_oracle": 0.6411724307013987
+          }
+        ],
+        "torch": [
+          {
+            "budget": 1,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 2,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 3,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 4,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 5,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 6,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 7,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          },
+          {
+            "budget": 8,
+            "ci95_high": 1.65733480006532,
+            "ci95_low": 1.65733480006532,
+            "mean_fraction_oracle": 1.65733480006532
+          }
+        ]
+      },
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592,
+        "T4": 2592
+      }
+    }
+  ],
+  "folds": [
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12,
+        "T4": 12
+      },
+      "heldout_model": "granite-3.1-8b",
+      "parhelion_anchor_configs": {
+        "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096": "m32n64k32-w4s3g8",
+        "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096": "m32n64k32-w4s3g8",
+        "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096": "m32n64k32-w4s3g8",
+        "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800": "m32n64k32-w4s3g8",
+        "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096": "m16n128k32-w4s3g8",
+        "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096": "m32n64k32-w4s4g4",
+        "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096": "m32n64k32-w4s3g8",
+        "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096": "m32n64k32-w4s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 60,
+        "L4": 60,
+        "T4": 60
+      },
+      "static_config": "m32n64k32-w4s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160,
+        "T4": 2160
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12,
+        "T4": 12
+      },
+      "heldout_model": "mistral-7b",
+      "parhelion_anchor_configs": {
+        "mistral-7b-attention-out-decode-1-m1-n4096-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-out-decode-7-m7-n4096-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-out-mixed-31-m31-n4096-k4096": "m32n64k32-w4s4g4",
+        "mistral-7b-attention-out-mixed-96-m96-n4096-k4096": "m32n64k32-w4s3g8",
+        "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-attention-out-prefill-257-m257-n4096-k4096": "m32n64k32-w4s3g8",
+        "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096": "m32n64k32-w4s4g4",
+        "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096": "m32n64k32-w4s4g4",
+        "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096": "m32n64k32-w4s3g8",
+        "mistral-7b-ffn-down-decode-1-m1-n4096-k14336": "m16n128k32-w4s4g4",
+        "mistral-7b-ffn-down-decode-7-m7-n4096-k14336": "m16n128k32-w4s4g4",
+        "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336": "m32n64k32-w4s4g4",
+        "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336": "m32n64k32-w4s4g4",
+        "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336": "m32n64k32-w4s3g8",
+        "mistral-7b-ffn-up-decode-1-m1-n14336-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-ffn-up-decode-7-m7-n14336-k4096": "m16n128k32-w4s3g8",
+        "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096": "m32n64k32-w4s3g8",
+        "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096": "m32n64k32-w4s3g8",
+        "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096": "m32n64k32-w4s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 60,
+        "L4": 60,
+        "T4": 60
+      },
+      "static_config": "m32n64k32-w4s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160,
+        "T4": 2160
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0,
+        "T4": 0
+      },
+      "heldout_model": "phi-3-mini",
+      "parhelion_anchor_configs": {
+        "phi-3-mini-attention-out-decode-1-m1-n3072-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-out-decode-7-m7-n3072-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072": "m32n64k32-w4s4g4",
+        "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072": "m32n64k32-w4s3g8",
+        "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072": "m64n128k32-w8s3g8",
+        "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072": "m32n64k32-w4s3g8",
+        "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072": "m16n128k32-w4s3g8",
+        "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072": "m32n64k32-w4s4g4",
+        "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072": "m64n128k32-w8s3g8",
+        "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072": "m32n64k32-w4s3g8",
+        "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192": "m32n64k32-w4s4g4",
+        "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192": "m32n64k32-w4s4g4",
+        "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192": "m64n128k32-w8s3g8",
+        "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192": "m32n64k32-w4s3g8",
+        "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072": "m32n64k32-w4s4g4",
+        "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072": "m32n64k32-w4s4g4",
+        "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072": "m64n128k32-w8s3g8",
+        "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072": "m32n64k32-w4s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 72,
+        "L4": 72,
+        "T4": 72
+      },
+      "static_config": "m32n64k32-w4s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592,
+        "T4": 2592
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0,
+        "T4": 0
+      },
+      "heldout_model": "qwen2.5-7b",
+      "parhelion_anchor_configs": {
+        "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584": "m32n64k32-w4s4g4",
+        "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584": "m32n64k32-w4s4g4",
+        "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584": "m32n64k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584": "m32n64k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944": "m32n64k32-w4s4g4",
+        "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584": "m16n128k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584": "m32n64k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584": "m32n64k32-w4s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 72,
+        "L4": 72,
+        "T4": 72
+      },
+      "static_config": "m32n64k32-w4s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592,
+        "T4": 2592
+      }
+    }
+  ],
+  "hardware": [
+    {
+      "compute_capability": [
+        8,
+        9
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA L4",
+      "gpu": "L4",
+      "multiprocessor_count": 58,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0343017578125,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        8,
+        6
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA A10",
+      "gpu": "A10",
+      "multiprocessor_count": 72,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0582275390625,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        7,
+        5
+      ],
+      "cuda_version": "12.8",
+      "device_name": "Tesla T4",
+      "gpu": "T4",
+      "multiprocessor_count": 40,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 14.56317138671875,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        9,
+        0
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA H100 80GB HBM3",
+      "gpu": "H100",
+      "multiprocessor_count": 132,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 79.1788330078125,
+      "triton_version": "3.4.0"
+    }
+  ],
+  "headline": {
+    "budget": 8,
+    "cold_fraction_oracle": 0.996773869900709,
+    "descriptive_target_strongest_legacy_method": "torch",
+    "paired_auc_delta_vs_primary": {
+      "ci95_high": -0.6585761824559181,
+      "ci95_low": -0.6614242126628326,
+      "claim": null,
+      "comparator": "torch",
+      "degrees_of_freedom": 29,
+      "mean_auc_delta": -0.6600001975593753,
+      "paired_seeds": 30,
+      "superiority_supported": false
+    },
+    "parhelion_auc": 0.9502592348438624,
+    "parhelion_fraction_oracle": 0.9965225333288278,
+    "primary_comparator": "torch",
+    "retrieval_fraction_oracle": 0.94074663666026,
+    "trials_avoided_vs_exhaustive": 28
+  },
+  "hyperparameters": {
+    "multisource_retrieval": {
+      "k": 8,
+      "temperature": 0.2
+    },
+    "parhelion": {
+      "k": 16,
+      "temperature": 2.0,
+      "transfer_strength": 0.0
+    },
+    "pooled_source_thompson": {
+      "transfer_strength": 0.0
+    },
+    "selection_provenance": "Caller-supplied frozen choices selected externally; this replay performs no hyperparameter or baseline selection.",
+    "single_source_nearest": {
+      "contract": "parameter-free one-nearest-workload retrieval",
+      "k": 1,
+      "source_gpu": "L4",
+      "temperature": 1.0
+    }
+  },
+  "limitations": [
+    "The source archive cost is paid before target tuning and is not included in target probes.",
+    "Replay reports simulated online query efficiency from a physically exhaustive target matrix.",
+    "The curated 36-action manifest is not the full space of legal Triton configurations.",
+    "Steady-state kernel timings omit compilation and end-to-end serving overhead.",
+    "Final-domain status is caller-declared; replay cannot independently prove that the target was untouched before this call.",
+    "Hyperparameters and the primary comparator are selected externally; this function never selects them or branches on a GPU name.",
+    "Three independent timing banks reduce leakage but do not model production interference.",
+    "The shape-disjoint L4 nearest baseline is v1-inspired and not an exact reproduction of the published v1 family-only replay."
+  ],
+  "max_budget": 8,
+  "measurement_banks": 3,
+  "method_labels": {
+    "cold_thompson": "Cold Thompson sampling",
+    "exhaustive": "Exhaustive autotuning",
+    "heldout_reference": "Held-out exhaustive reference",
+    "multisource_retrieval": "Multi-source retrieval",
+    "parhelion_thompson": "Parhelion retrieval-anchored Thompson sampling",
+    "pooled_source_thompson": "Pooled-source Thompson sampling",
+    "random": "Random search",
+    "single_source_nearest": "Single-source nearest-shape reuse",
+    "static_multisource": "Static multi-source best",
+    "torch": "torch.matmul"
+  },
+  "methodology": "Grouped leave-one-model-family-out multi-source replay. Every source archive, normalization, and posterior excludes the held-out family and exact target shapes. Policies see only bank 0; bank 1 selects the reference and bank 2 evaluates recommendations. Parhelion pays for its consensus retrieval anchor as query one, then adapts a retrieval-augmented Thompson posterior and returns a measured incumbent.",
+  "methods": {
+    "cold_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.8066940264901036,
+        "ci95_low": 0.7842548892886269,
+        "mean_fraction_oracle": 0.7954744578893652
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9436424408854176,
+        "ci95_low": 0.9318649076711576,
+        "mean_fraction_oracle": 0.9377536742782876
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9765182971633476,
+        "ci95_low": 0.9700146890779245,
+        "mean_fraction_oracle": 0.9732664931206361
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9861946839891617,
+        "ci95_low": 0.9830840027400712,
+        "mean_fraction_oracle": 0.9846393433646164
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9915425465721919,
+        "ci95_low": 0.9893172404420516,
+        "mean_fraction_oracle": 0.9904298935071217
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9944333860699968,
+        "ci95_low": 0.9927996572307984,
+        "mean_fraction_oracle": 0.9936165216503976
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9962339956609755,
+        "ci95_low": 0.9947953074036461,
+        "mean_fraction_oracle": 0.9955146515323108
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9972426084376509,
+        "ci95_low": 0.9963051313637672,
+        "mean_fraction_oracle": 0.996773869900709
+      }
+    ],
+    "exhaustive": [
+      {
+        "budget": 36,
+        "ci95_high": 1.0004059750012528,
+        "ci95_low": 0.9999107818468245,
+        "mean_fraction_oracle": 1.0001583784240387
+      }
+    ],
+    "heldout_reference": [
+      {
+        "budget": 36,
+        "ci95_high": 1.0,
+        "ci95_low": 1.0,
+        "mean_fraction_oracle": 1.0
+      }
+    ],
+    "multisource_retrieval": [
+      {
+        "budget": 1,
+        "ci95_high": 0.8309160733167587,
+        "ci95_low": 0.814641627229787,
+        "mean_fraction_oracle": 0.8227788502732728
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8776248893376647,
+        "ci95_low": 0.8411951688141323,
+        "mean_fraction_oracle": 0.8594100290758985
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9205329823457784,
+        "ci95_low": 0.8982032940878595,
+        "mean_fraction_oracle": 0.9093681382168189
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9285542978781933,
+        "ci95_low": 0.8990729689665033,
+        "mean_fraction_oracle": 0.9138136334223483
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9364871896412559,
+        "ci95_low": 0.9043139259750708,
+        "mean_fraction_oracle": 0.9204005578081633
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9387167511007745,
+        "ci95_low": 0.9128482565354287,
+        "mean_fraction_oracle": 0.9257825038181016
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9458190297907321,
+        "ci95_low": 0.9206389104305834,
+        "mean_fraction_oracle": 0.9332289701106578
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9489567368475705,
+        "ci95_low": 0.9325365364729495,
+        "mean_fraction_oracle": 0.94074663666026
+      }
+    ],
+    "parhelion_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.8227788502732731,
+        "ci95_low": 0.8227788502732729,
+        "mean_fraction_oracle": 0.822778850273273
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8917268467862579,
+        "ci95_low": 0.8850621523124892,
+        "mean_fraction_oracle": 0.8883944995493736
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9516977608941823,
+        "ci95_low": 0.9449126949329805,
+        "mean_fraction_oracle": 0.9483052279135814
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9763262906889111,
+        "ci95_low": 0.9707332562821526,
+        "mean_fraction_oracle": 0.9735297734855318
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9876880571480814,
+        "ci95_low": 0.9841062672603512,
+        "mean_fraction_oracle": 0.9858971622042163
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.99299046515171,
+        "ci95_low": 0.9905915573034839,
+        "mean_fraction_oracle": 0.9917910112275969
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9953935725477685,
+        "ci95_low": 0.9943160689892296,
+        "mean_fraction_oracle": 0.9948548207684991
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.996852264136433,
+        "ci95_low": 0.9961928025212226,
+        "mean_fraction_oracle": 0.9965225333288278
+      }
+    ],
+    "pooled_source_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.8066940264901036,
+        "ci95_low": 0.7842548892886269,
+        "mean_fraction_oracle": 0.7954744578893652
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.9436424408854176,
+        "ci95_low": 0.9318649076711576,
+        "mean_fraction_oracle": 0.9377536742782876
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9765182971633476,
+        "ci95_low": 0.9700146890779245,
+        "mean_fraction_oracle": 0.9732664931206361
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9861946839891617,
+        "ci95_low": 0.9830840027400712,
+        "mean_fraction_oracle": 0.9846393433646164
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9915425465721919,
+        "ci95_low": 0.9893172404420516,
+        "mean_fraction_oracle": 0.9904298935071217
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9944333860699968,
+        "ci95_low": 0.9927996572307984,
+        "mean_fraction_oracle": 0.9936165216503976
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9962339956609755,
+        "ci95_low": 0.9947953074036461,
+        "mean_fraction_oracle": 0.9955146515323108
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9972426084376509,
+        "ci95_low": 0.9963051313637672,
+        "mean_fraction_oracle": 0.996773869900709
+      }
+    ],
+    "random": [
+      {
+        "budget": 1,
+        "ci95_high": 0.668497449460821,
+        "ci95_low": 0.6539115658938964,
+        "mean_fraction_oracle": 0.6612045076773587
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.7666561334045408,
+        "ci95_low": 0.7556280183634259,
+        "mean_fraction_oracle": 0.7611420758839833
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.8274065568403101,
+        "ci95_low": 0.8170553691172177,
+        "mean_fraction_oracle": 0.8222309629787639
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.8630121285992218,
+        "ci95_low": 0.8532421491778388,
+        "mean_fraction_oracle": 0.8581271388885303
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.8877155579079478,
+        "ci95_low": 0.8798583865337574,
+        "mean_fraction_oracle": 0.8837869722208526
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9063554319276386,
+        "ci95_low": 0.8996135209772831,
+        "mean_fraction_oracle": 0.9029844764524608
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9207543043477878,
+        "ci95_low": 0.9142303126087229,
+        "mean_fraction_oracle": 0.9174923084782554
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.931286805645718,
+        "ci95_low": 0.925163928253659,
+        "mean_fraction_oracle": 0.9282253669496885
+      }
+    ],
+    "single_source_nearest": [
+      {
+        "budget": 1,
+        "ci95_high": 0.7870963757655667,
+        "ci95_low": 0.7742725319339263,
+        "mean_fraction_oracle": 0.7806844538497465
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8433975541023359,
+        "ci95_low": 0.808978939192125,
+        "mean_fraction_oracle": 0.8261882466472305
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.8917324160911725,
+        "ci95_low": 0.8464806625952418,
+        "mean_fraction_oracle": 0.8691065393432071
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9295654901202152,
+        "ci95_low": 0.8890520820265236,
+        "mean_fraction_oracle": 0.9093087860733694
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9597495542884079,
+        "ci95_low": 0.9490164045552058,
+        "mean_fraction_oracle": 0.9543829794218068
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9624817794858486,
+        "ci95_low": 0.9549839102950869,
+        "mean_fraction_oracle": 0.9587328448904677
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9648954967873412,
+        "ci95_low": 0.9599615384870243,
+        "mean_fraction_oracle": 0.9624285176371827
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9687034920919093,
+        "ci95_low": 0.9653207978654241,
+        "mean_fraction_oracle": 0.9670121449786667
+      }
+    ],
+    "static_multisource": [
+      {
+        "budget": 1,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.6403987245508314,
+        "ci95_low": 0.6276480926347623,
+        "mean_fraction_oracle": 0.6340234085927968
+      }
+    ],
+    "torch": [
+      {
+        "budget": 1,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 2,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 3,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 4,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 5,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 6,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 7,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      },
+      {
+        "budget": 8,
+        "ci95_high": 1.642133584083826,
+        "ci95_low": 1.5783852807226495,
+        "mean_fraction_oracle": 1.6102594324032378
+      }
+    ]
+  },
+  "model_families": 4,
+  "primary_comparator": "torch",
+  "primary_metrics": {
+    "comparator_selection": "External and frozen before final-domain evaluation; target-side strongest legacy is descriptive only and never becomes the primary comparator.",
+    "descriptive_target_strongest_legacy_method": "torch",
+    "fold_aggregation": "Stochastic curves average model-family folds within each paired seed before the primary AUC1..8 Student-t interval. Deterministic curve intervals reflect variation across equal-weight folds.",
+    "fraction_reference_auc": {
+      "cold_thompson": 0.9584336131554305,
+      "exhaustive": 1.0001583784240387,
+      "heldout_reference": 1.0,
+      "multisource_retrieval": 0.9031911649231901,
+      "parhelion_thompson": 0.9502592348438624,
+      "pooled_source_thompson": 0.9584336131554305,
+      "random": 0.8418992261912367,
+      "single_source_nearest": 0.9034805641052097,
+      "static_multisource": 0.6340234085927968,
+      "torch": 1.6102594324032378
+    },
+    "paired_parhelion_vs_primary_auc_delta": {
+      "ci95_high": -0.6585761824559181,
+      "ci95_low": -0.6614242126628326,
+      "claim": null,
+      "comparator": "torch",
+      "degrees_of_freedom": 29,
+      "mean_auc_delta": -0.6600001975593753,
+      "paired_seeds": 30,
+      "superiority_supported": false
+    },
+    "paired_seed_fraction_reference_auc_1_to_8": {
+      "cold_thompson": [
+        0.9520206811317486,
+        0.9578335243118319,
+        0.9689194904743665,
+        0.9611643250601863,
+        0.9567890589065982,
+        0.9605282625664233,
+        0.9606333868462715,
+        0.9524561712079668,
+        0.9683853460070084,
+        0.9553825161806923,
+        0.9470015042984877,
+        0.9623283322055189,
+        0.9676399438004305,
+        0.9587688845549289,
+        0.9695718124665613,
+        0.9531176507141563,
+        0.9593601843096368,
+        0.9554541369916515,
+        0.9713128081121344,
+        0.9589289826149112,
+        0.9543733983909745,
+        0.9504715779643316,
+        0.9500279763042745,
+        0.9552206454989262,
+        0.9630606664514991,
+        0.9626346962421826,
+        0.951759327909667,
+        0.9595246342260562,
+        0.9419749233092851,
+        0.9663635456042095
+      ],
+      "multisource_retrieval": [
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902,
+        0.9031911649231902
+      ],
+      "parhelion_thompson": [
+        0.9474093026027,
+        0.9544324500504975,
+        0.9395737685647071,
+        0.9530376318224452,
+        0.9500916172774148,
+        0.9499127342694812,
+        0.9492475584021385,
+        0.9497058174967546,
+        0.9503296490962638,
+        0.9470066029488213,
+        0.9533555083823487,
+        0.9410365756475145,
+        0.9491832568882281,
+        0.9520750773270812,
+        0.944676569140472,
+        0.9503825128582699,
+        0.9528190493149535,
+        0.9536546145083589,
+        0.9501587985412119,
+        0.9499787055860424,
+        0.95130284885435,
+        0.9571707641442054,
+        0.9478144254976134,
+        0.9505401697645461,
+        0.9497519152834857,
+        0.9563167606358886,
+        0.9530297128548874,
+        0.949859361126981,
+        0.9499230220406806,
+        0.9540002643875305
+      ],
+      "pooled_source_thompson": [
+        0.9520206811317486,
+        0.9578335243118319,
+        0.9689194904743665,
+        0.9611643250601863,
+        0.9567890589065982,
+        0.9605282625664233,
+        0.9606333868462715,
+        0.9524561712079668,
+        0.9683853460070084,
+        0.9553825161806923,
+        0.9470015042984877,
+        0.9623283322055189,
+        0.9676399438004305,
+        0.9587688845549289,
+        0.9695718124665613,
+        0.9531176507141563,
+        0.9593601843096368,
+        0.9554541369916515,
+        0.9713128081121344,
+        0.9589289826149112,
+        0.9543733983909745,
+        0.9504715779643316,
+        0.9500279763042745,
+        0.9552206454989262,
+        0.9630606664514991,
+        0.9626346962421826,
+        0.951759327909667,
+        0.9595246342260562,
+        0.9419749233092851,
+        0.9663635456042095
+      ],
+      "random": [
+        0.854530030299403,
+        0.8292774655228422,
+        0.8324254756889493,
+        0.8441776319577265,
+        0.8507150327925135,
+        0.8369214591727456,
+        0.857066527669545,
+        0.8374019516855002,
+        0.8461521429176857,
+        0.829276754644458,
+        0.8577508374965241,
+        0.847726567417348,
+        0.8506670648547667,
+        0.8404328841266215,
+        0.8419933307575614,
+        0.8334676788967186,
+        0.8473330711355936,
+        0.8476050985378519,
+        0.8429365752453881,
+        0.8516129804638475,
+        0.828477662593022,
+        0.8510524608915648,
+        0.8250402784371629,
+        0.8297353416706789,
+        0.8461625496225836,
+        0.837089687084182,
+        0.8409133008921873,
+        0.8247327288312525,
+        0.850574728256998,
+        0.8437274861738762
+      ],
+      "single_source_nearest": [
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097,
+        0.9034805641052097
+      ],
+      "static_multisource": [
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968,
+        0.6340234085927968
+      ],
+      "torch": [
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378,
+        1.6102594324032378
+      ]
+    },
+    "primary_budget": 8,
+    "queries_to_95_percent_reference": {
+      "cold_thompson": 3,
+      "exhaustive": 36,
+      "heldout_reference": 36,
+      "multisource_retrieval": null,
+      "parhelion_thompson": 4,
+      "pooled_source_thompson": 3,
+      "random": null,
+      "single_source_nearest": 5,
+      "static_multisource": null,
+      "torch": 1
+    }
+  },
+  "project": "HeliosTune v2",
+  "protocol_role": "final",
+  "provenance": {
+    "budget_one_anchor": "Parhelion and multi-source retrieval use the same independently frozen retrieval rank-one action",
+    "gpu_name_special_casing": "none",
+    "hyperparameters": "externally selected and frozen before this replay",
+    "primary_comparator": "caller-supplied and frozen before target evaluation",
+    "protocol_role": "caller-declared",
+    "reward": "log-TFLOP/s for every source and target posterior observation",
+    "single_source_nearest": "parameter-free k=1 retrieval bound to first declared source L4"
+  },
+  "queries_to_95_percent_reference": {
+    "cold_thompson": 3,
+    "exhaustive": 36,
+    "heldout_reference": 36,
+    "multisource_retrieval": null,
+    "parhelion_thompson": 4,
+    "pooled_source_thompson": 3,
+    "random": null,
+    "single_source_nearest": 5,
+    "static_multisource": null,
+    "torch": 1
+  },
+  "release_provenance": {
+    "algorithm_commit": "811b05bb65bc978e44ca8fa32ceeeab315acf391",
+    "final_archive_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d",
+    "freeze_commit": "c395630b9bcb4ef6a501d9a34696783620381c3c",
+    "freeze_sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+    "post_run_manifest_path": "benchmarks/parhelion-v2-post-run-manifest.json",
+    "raw_h100_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8",
+    "sole_h100_run": "https://modal.com/apps/mottopanikeiku/main/ap-y68ldw4RUmTotSEIxGdqPz"
+  },
+  "seeds": 30,
+  "source_cost": {
+    "collected_measurements_all_source_gpus": 31104,
+    "collected_measurements_per_source_gpu": 10368,
+    "disclosure": "Policies use only bank-0 source observations from leakage-safe rows. All physical source acquisition and source reference/evaluation banks are outside the target online-query budget.",
+    "visible_bank0_source_observations_by_fold": [
+      6480,
+      6480,
+      7776,
+      7776
+    ]
+  },
+  "source_gpu": "L4 + A10 + T4",
+  "source_gpus": [
+    "L4",
+    "A10",
+    "T4"
+  ],
+  "source_hardware": {
+    "gpus": [
+      "L4",
+      "A10",
+      "T4"
+    ],
+    "profiles": [
+      {
+        "compute_capability": [
+          8,
+          9
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA L4",
+        "gpu": "L4",
+        "multiprocessor_count": 58,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 22.0343017578125,
+        "triton_version": "3.4.0"
+      },
+      {
+        "compute_capability": [
+          8,
+          6
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA A10",
+        "gpu": "A10",
+        "multiprocessor_count": 72,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 22.0582275390625,
+        "triton_version": "3.4.0"
+      },
+      {
+        "compute_capability": [
+          7,
+          5
+        ],
+        "cuda_version": "12.8",
+        "device_name": "Tesla T4",
+        "gpu": "T4",
+        "multiprocessor_count": 40,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 14.56317138671875,
+        "triton_version": "3.4.0"
+      }
+    ]
+  },
+  "target_collection_cost": {
+    "adaptation_scope": "Each adaptive method uses one shared posterior and a paired, batched workload order per budget round; workloads are not tuned as independent posteriors.",
+    "budget_b_formula": "Per live method: target workloads in one fold times b (24*b for each frozen four-family corpus fold), and all workloads times b (96*b across four folds).",
+    "disclosure": "Replay simulates online selection from an already collected exhaustive target matrix. Physical collection includes all three banks and is not reduced by the reported online query budget.",
+    "exhaustive_bank0_queries_per_workload": 36,
+    "physically_collected_measurements": 10368,
+    "simulated_online_queries_all_live_methods_all_folds": 4608,
+    "simulated_online_queries_per_live_method_all_folds": 768,
+    "simulated_online_queries_per_live_method_by_fold": [
+      192,
+      192,
+      192,
+      192
+    ],
+    "simulated_online_queries_per_live_method_per_workload": 8
+  },
+  "target_gpu": "H100",
+  "target_hardware": {
+    "compute_capability": [
+      9,
+      0
+    ],
+    "cuda_version": "12.8",
+    "device_name": "NVIDIA H100 80GB HBM3",
+    "gpu": "H100",
+    "multiprocessor_count": 132,
+    "torch_version": "2.8.0+cu128",
+    "total_memory_gb": 79.1788330078125,
+    "triton_version": "3.4.0"
+  },
+  "transfer_method": "parhelion_thompson",
+  "transfer_strength": 0.0,
+  "workloads": 96
+}

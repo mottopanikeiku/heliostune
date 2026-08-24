@@ -1686,18 +1686,18 @@ def _render_release_provenance(value: Any) -> str:
 
     stages = (
         (
-            "01 · Collection",
-            (
-                ("Sole H100 run", "sole_h100_run"),
-                ("Raw H100 SHA-256", "raw_h100_sha256"),
-            ),
-        ),
-        (
-            "02 · Freeze",
+            "01 · Freeze",
             (
                 ("Algorithm commit", "algorithm_commit"),
                 ("Freeze commit", "freeze_commit"),
                 ("Freeze SHA-256", "freeze_sha256"),
+            ),
+        ),
+        (
+            "02 · Collection",
+            (
+                ("Sole H100 run", "sole_h100_run"),
+                ("Raw H100 SHA-256", "raw_h100_sha256"),
             ),
         ),
         (
