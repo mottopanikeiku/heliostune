@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "protocol": "Parhelion v2 untouched H100 final evaluation freeze",
+  "frozen_at_utc": "2026-08-24T02:09:00Z",
+  "h100_invoked_at_freeze": false,
+  "implementation_commit": "811b05bb65bc978e44ca8fa32ceeeab315acf391",
+  "collector_commit": "fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd",
+  "development_protocol": {
+    "path": "parhelion-v2-development-protocol.json",
+    "sha256": "ae544f798284528ed888a4c46d79b7419d5790cc8c967ad2897e9030f22374c8"
+  },
+  "validation": {
+    "source_gpus": [
+      "L4",
+      "A10"
+    ],
+    "target_gpu": "T4",
+    "persisted_collection_run": "https://modal.com/apps/mottopanikeiku/main/ap-qxI4D2xUvtPfuhtgiSfVgm",
+    "records": 10368,
+    "failures": 0,
+    "selection_seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "budgets": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "selection_stages": {
+      "baseline_union_candidates": 15,
+      "multisource_retrieval_candidates": 12,
+      "pooled_source_thompson_candidates": 4,
+      "parhelion_candidates_after_baseline_freeze": 48
+    },
+    "selection_artifact": {
+      "path": "artifacts/parhelion-selection.json",
+      "sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca"
+    },
+    "selected_summary": {
+      "path": "artifacts/t4-final-summary.json",
+      "sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4"
+    },
+    "excluded_collection_attempts": [
+      {
+        "run": "workstation-interrupted pre-recovery attempt",
+        "reason": "No local artifact or performance result survived the workstation restart; it was not used for selection."
+      },
+      {
+        "run": "https://modal.com/apps/mottopanikeiku/main/ap-jwQYSxSVet5ioKZAFp8bTE",
+        "reason": "Remote calls completed but the local entrypoint could not persist the payload because the ignored artifacts directory did not yet exist; no result was used."
+      }
+    ]
+  },
+  "selected": {
+    "parhelion": {
+      "k": 16,
+      "temperature": 2.0,
+      "transfer_strength": 0.0,
+      "validation_auc": 0.8518046329737359
+    },
+    "multisource_retrieval": {
+      "k": 8,
+      "temperature": 0.2,
+      "validation_auc": 0.5051330338086797
+    },
+    "pooled_source_thompson": {
+      "transfer_strength": 0.0,
+      "validation_auc": 0.8825630694927448
+    },
+    "single_source_nearest": {
+      "source_gpu": "L4",
+      "neighbors": 1
+    },
+    "primary_comparator": "torch",
+    "primary_comparator_validation_auc": 3.8407842597701083,
+    "budget_one_invariant_verified": {
+      "parhelion_fraction_reference": 0.29358546582348494,
+      "multisource_retrieval_fraction_reference": 0.29358546582348494
+    }
+  },
+  "final_evaluation": {
+    "source_gpus": [
+      "L4",
+      "A10",
+      "T4"
+    ],
+    "target_gpu": "H100",
+    "modal_selector": "H100!",
+    "invocation_limit": 1,
+    "replicates": 3,
+    "warmup_ms": 25,
+    "repetition_ms": 100,
+    "expected_target_records": 10368,
+    "expected_source_records": 31104,
+    "workloads": 96,
+    "launch_configurations": 36,
+    "banks": [
+      0,
+      1,
+      2
+    ],
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29
+    ],
+    "budgets": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "simulated_online_queries_per_method_at_budget_8": 768,
+    "command": "modal run modal_bench.py --gpus H100 --replicates 3 --warmup-ms 25 --rep-ms 100 --output artifacts/h100-measurements.jsonl",
+    "replay_command": "uv run heliostune compare-multisource artifacts/parhelion-final.jsonl --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 --k 16 --temperature 2.0 --transfer-strength 0.0 --retrieval-k 8 --retrieval-temperature 0.2 --pooled-transfer-strength 0.0 --primary-comparator torch --protocol-role final --output artifacts/h100-final-summary.json",
+    "primary_endpoint": "Paired per-seed Parhelion minus T4-frozen torch comparator mean fraction-reference AUC over budgets 1 through 8 after equal model-family-fold averaging",
+    "uncertainty": "Two-sided 95% Student-t confidence interval over 30 paired seed deltas with 29 degrees of freedom",
+    "superiority_rule": "Use superiority wording only if the confidence-interval lower bound is greater than zero.",
+    "failure_rule": "If any expected H100 cell is missing, unusable, incorrect, duplicated, non-finite, or has a non-H100 runtime identity, publish no H100 performance claim and do not rerun collection.",
+    "no_rerun_rule": "No H100 pilot, fallback, repeated collection, hyperparameter change, comparator change, tie-break change, normalization change, plot filtering, or method change is permitted after this freeze."
+  },
+  "data_digests": {
+    "l4_a10_compressed_jsonl": {
+      "path": "data/measurements.jsonl.zst",
+      "sha256": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72",
+      "records": 20736
+    },
+    "t4_jsonl": {
+      "path": "artifacts/t4-measurements.jsonl",
+      "sha256": "f3910e73aec68d48015b0fb9d0469ff2be8c3210d5777dab61e4a9cdd660d217",
+      "records": 10368
+    },
+    "v1_manifest": {
+      "path": "manifest.json",
+      "sha256": "15f5c8636a18750cfbfe2dda8f6fdb3fbfc14b8947e96fc487d230ca85b35abf"
+    }
+  },
+  "implementation_digests": {
+    "modal_bench.py": "f42900e879fdbf637f4bebbdc040239d3ad471f7baf89db28f6a6b254d9aeebd",
+    "src/heliostune/multisource.py": "271f0c5983830ab1a6ae1802ab825c0e303bc8317eb1900f1dfc8fd26b2f8dc7",
+    "src/heliostune/retrieval.py": "0eb8334e246fc29b24dd7b2e4356335adc77e7bfab852136286456f93bc4b2f9",
+    "src/heliostune/selection.py": "e7a6a6948ee40eefd47d644d0f06504bdd616af99874c4019f23cf49e660bcc0",
+    "src/heliostune/bandit.py": "a44a0f31ffa21a4b509404fbcf92cfb9311338f31a320177ae861ba4742c471f",
+    "src/heliostune/features.py": "1a0253cc2e1bd52679e8322aebab275b26cdef498268f041f6b900b24c98be4f",
+    "src/heliostune/configs.py": "de4e6379d77bc7283afd332b5629ef47a0d0c26dd542ebe04a6702097fba060f",
+    "src/heliostune/replay.py": "6ded6c64ce8bb257750bcadda4b759533a9149e1aa47e3622982df2ed4eaa540",
+    "src/heliostune/schema.py": "1993209125b199fdc060cf89415eb88df022fa2f522b8039f09ecb5de26b8b55",
+    "src/heliostune/kernel.py": "5b13e468d78dab17e435799dbe7bc7ec2f5c7cea2d93e779c116f2a1b3e57af9",
+    "src/heliostune/report.py": "b4004d31a7875de19f7072e78742c36b904f63d03b3da35ca492666bbcc8956c"
+  },
+  "runtime_identity_gate": {
+    "device_name_must_contain": "H100",
+    "device_name_must_not_contain": "H200",
+    "compute_capability": [
+      9,
+      0
+    ],
+    "total_memory_gb_inclusive": [
+      75.0,
+      85.0
+    ]
+  },
+  "pricing_snapshot": {
+    "checked_at_utc": "2026-08-23",
+    "source": "https://modal.com/pricing",
+    "t4_gpu_usd_per_second": 0.000164,
+    "h100_sxm5_gpu_usd_per_second": 0.001097,
+    "note": "GPU line items only; CPU and memory are billed separately and live prices may change."
+  }
+}
