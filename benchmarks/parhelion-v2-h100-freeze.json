@@ -159,6 +159,8 @@
     ],
     "simulated_online_queries_per_method_at_budget_8": 768,
     "command": "modal run modal_bench.py --gpus H100 --replicates 3 --warmup-ms 25 --rep-ms 100 --output artifacts/h100-measurements.jsonl",
+    "assembly_command": "uv run python scripts/assemble_parhelion_final.py",
+    "assembly_contract": "The committed assembler verifies the frozen L4+A10 compressed checksum and T4 checksum, decompresses the source archive, requires exactly 10,368 unique usable finite rows for each of L4, A10, T4, and H100 across banks 0, 1, and 2, then writes the sole replay input and reports H100/final SHA-256 digests.",
     "replay_command": "uv run heliostune compare-multisource artifacts/parhelion-final.jsonl --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 --k 16 --temperature 2.0 --transfer-strength 0.0 --retrieval-k 8 --retrieval-temperature 0.2 --pooled-transfer-strength 0.0 --primary-comparator torch --protocol-role final --output artifacts/h100-final-summary.json",
     "primary_endpoint": "Paired per-seed Parhelion minus T4-frozen torch comparator mean fraction-reference AUC over budgets 1 through 8 after equal model-family-fold averaging",
     "uncertainty": "Two-sided 95% Student-t confidence interval over 30 paired seed deltas with 29 degrees of freedom",
@@ -184,6 +186,8 @@
   },
   "implementation_digests": {
     "modal_bench.py": "f42900e879fdbf637f4bebbdc040239d3ad471f7baf89db28f6a6b254d9aeebd",
+    "scripts/assemble_parhelion_final.py": "5289caf0f28983ae07f7b7791bfcc4a4a61de78f4cad84b7a8c4de5a113e460a",
+    "src/heliostune/cli.py": "e4e12f91ea85ed61767987d78cae0677737e74105b55b9fb6dbc92809686c471",
     "src/heliostune/multisource.py": "271f0c5983830ab1a6ae1802ab825c0e303bc8317eb1900f1dfc8fd26b2f8dc7",
     "src/heliostune/retrieval.py": "0eb8334e246fc29b24dd7b2e4356335adc77e7bfab852136286456f93bc4b2f9",
     "src/heliostune/selection.py": "e7a6a6948ee40eefd47d644d0f06504bdd616af99874c4019f23cf49e660bcc0",
