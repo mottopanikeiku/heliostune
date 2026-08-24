@@ -725,7 +725,9 @@
   },
   "implementation_sha256": {
     "modal_bench.py": "a3c7ec130dbce9d1e61dde41106dc3c95390cb0b2b232d22374cef1bb8cd14a4",
-    "scripts/build_parhelion_v3_protocol.py": "a286741507739525701c3b39b6c5e6e0196cb5c8d94de4f6d952775a28412f00",
+    "scripts/assemble_parhelion_v3.py": "5508f48b2d1358ad477925ae476996ab687036b29b4041d773c07e7c104c0f7b",
+    "scripts/build_parhelion_v3_protocol.py": "92decba0cabd5be7536e26029438525ddb5d6634191ad02455bfd6b31d9cb9cd",
+    "scripts/freeze_parhelion_v3.py": "9ee1a06157d9a0cc269522a42346125b49cfeed0ccd5316f9ff0666d2477b466",
     "scripts/prune_parhelion_v3_configs.py": "410e64890c0ea92a5df6af00ed91d61684ee948a128d447919baaa6758a549d7",
     "src/heliostune/bandit.py": "bf672659215f2115e78ee8c6d832f3458ef1e4015393ea26e4075b0b0b48425a",
     "src/heliostune/cli.py": "a3752a4aae062261d888dc37fe7a5e65cc7427a8a8a016f64647bf2453bef322",
@@ -737,6 +739,7 @@
     "src/heliostune/protocol.py": "02f7ebfe672153adc342b525fbb522d40da88c3c5f9bc4585b5fb5d1a9f4cc16",
     "src/heliostune/retrieval.py": "486c858f122c2d8378ab0ec6fde91bbf360380aae7c294a53bf74351c7da4b4a",
     "src/heliostune/schema.py": "eced722598c4c0e61f09b4dc902628e2113ca5148f054ed8baec8b25608a82e8",
+    "src/heliostune/v3_artifacts.py": "2c2ec031bc334a421239f447ed88ee016e7e9ceb8840e1e7f1dbdfc7ad5b846e",
     "src/heliostune/v3_engine.py": "61ad0c2bbcd9f63466fc6069fa868b47557f5bf2f51daf26bc47acaf05201a6e"
   },
   "methods": [
