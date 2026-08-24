@@ -269,6 +269,20 @@ def _inspect(args: argparse.Namespace) -> int:
     return 0
 
 
+def _verify_catalog(args: argparse.Namespace) -> int:
+    from heliostune.catalog import verify_research_catalog
+
+    facts = verify_research_catalog(args.catalog)
+    _CONSOLE.print(
+        "Verified research catalog: "
+        f"[bold]{facts['measurement_rows']}[/bold] measurement rows, "
+        f"[bold]{facts['json_artifacts']}[/bold] JSON artifacts, "
+        f"[bold]{facts['html_reports']}[/bold] HTML reports, "
+        f"[bold]{facts['aliases']}[/bold] historical aliases"
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="heliostune",
@@ -341,6 +355,18 @@ def build_parser() -> argparse.ArgumentParser:
     inspect = subparsers.add_parser("inspect", help="show coverage and failures in a JSONL matrix")
     inspect.add_argument("input", type=Path)
     inspect.set_defaults(handler=_inspect)
+
+    verify_catalog = subparsers.add_parser(
+        "verify-catalog",
+        help="verify every research artifact digest, count, alias, and frozen v2 estimate",
+    )
+    verify_catalog.add_argument(
+        "catalog",
+        type=Path,
+        nargs="?",
+        default=Path("benchmarks/research-artifact-manifest.json"),
+    )
+    verify_catalog.set_defaults(handler=_verify_catalog)
     return parser
 
 

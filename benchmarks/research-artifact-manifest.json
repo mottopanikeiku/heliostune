@@ -1,0 +1,1789 @@
+{
+  "absent_freeze_aliases": {
+    "artifacts/h100-final-summary.json": {
+      "published_replacement": "benchmarks/results/parhelion-h100-final.json",
+      "published_replacement_sha256": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd",
+      "recorded_sha256": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd",
+      "replacement_representation": "identity",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/h100-measurements.jsonl": {
+      "published_replacement": "benchmarks/data/h100-measurements.jsonl.zst",
+      "published_replacement_sha256": "91b94ec42a71b1832203a6c5cdedf0102cf8d04ae9992d739fffa5351b7ac206",
+      "recorded_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8",
+      "replacement_representation": "zstd_of_recorded_content",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/h100-report.html": {
+      "published_replacement": "site/index.html",
+      "published_replacement_sha256": "149dc7c1a705a5d7189e575274440a72ddbcba59e183554d7a0bd6fd739beb61",
+      "recorded_sha256": "149dc7c1a705a5d7189e575274440a72ddbcba59e183554d7a0bd6fd739beb61",
+      "replacement_representation": "identity",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/parhelion-final.jsonl": {
+      "published_replacement": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+      "published_replacement_sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f",
+      "recorded_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d",
+      "replacement_representation": "zstd_of_recorded_content",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/parhelion-selection.json": {
+      "published_replacement": "benchmarks/results/parhelion-t4-selection.json",
+      "published_replacement_sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca",
+      "recorded_sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca",
+      "replacement_representation": "identity",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/t4-final-summary.json": {
+      "published_replacement": "benchmarks/results/parhelion-t4-validation.json",
+      "published_replacement_sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4",
+      "recorded_sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4",
+      "replacement_representation": "identity",
+      "status": "not_present_at_audited_commit"
+    },
+    "artifacts/t4-measurements.jsonl": {
+      "published_replacement": "benchmarks/data/t4-measurements.jsonl.zst",
+      "published_replacement_sha256": "f00c2a1498937707c872f667cf210de5e7319218c7df56e05a15174441a36c00",
+      "recorded_sha256": "f3910e73aec68d48015b0fb9d0469ff2be8c3210d5777dab61e4a9cdd660d217",
+      "replacement_representation": "zstd_of_recorded_content",
+      "status": "not_present_at_audited_commit"
+    }
+  },
+  "catalog_id": "heliostune-research-artifacts-1",
+  "historical_baseline": {
+    "audited_commit": "08d73bc6327fabe917f56e1c9f25fbd0e8e936cf",
+    "path": "benchmarks/historical-artifact-baseline.json",
+    "sha256": "0fa4271a4589ac11c31d85dd2d787dd0aabc461d3ae304098a2f0dee24ab2b5d"
+  },
+  "inventories": {
+    "configs": [
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m16n32k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m16n64k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m16n128k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m32n32k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m32n64k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m32n128k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m64n32k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m64n64k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m64n128k32-w8s3g8",
+        "num_stages": 3,
+        "num_warps": 8
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m128n32k32-w4s3g8",
+        "num_stages": 3,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m128n64k32-w8s3g8",
+        "num_stages": 3,
+        "num_warps": 8
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m128n128k32-w8s3g8",
+        "num_stages": 3,
+        "num_warps": 8
+      },
+      {
+        "block_k": 64,
+        "block_m": 16,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m16n32k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 16,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m16n64k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 16,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m16n128k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 32,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m32n32k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 32,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m32n64k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 32,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m32n128k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 64,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m64n32k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 64,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m64n64k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 64,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m64n128k64-w8s2g8",
+        "num_stages": 2,
+        "num_warps": 8
+      },
+      {
+        "block_k": 64,
+        "block_m": 128,
+        "block_n": 32,
+        "group_m": 8,
+        "key": "m128n32k64-w4s2g8",
+        "num_stages": 2,
+        "num_warps": 4
+      },
+      {
+        "block_k": 64,
+        "block_m": 128,
+        "block_n": 64,
+        "group_m": 8,
+        "key": "m128n64k64-w8s2g8",
+        "num_stages": 2,
+        "num_warps": 8
+      },
+      {
+        "block_k": 64,
+        "block_m": 128,
+        "block_n": 128,
+        "group_m": 8,
+        "key": "m128n128k64-w8s2g8",
+        "num_stages": 2,
+        "num_warps": 8
+      },
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 32,
+        "group_m": 4,
+        "key": "m16n32k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 64,
+        "group_m": 4,
+        "key": "m16n64k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 16,
+        "block_n": 128,
+        "group_m": 4,
+        "key": "m16n128k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 32,
+        "group_m": 4,
+        "key": "m32n32k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 64,
+        "group_m": 4,
+        "key": "m32n64k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 32,
+        "block_n": 128,
+        "group_m": 4,
+        "key": "m32n128k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 32,
+        "group_m": 4,
+        "key": "m64n32k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 64,
+        "group_m": 4,
+        "key": "m64n64k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 64,
+        "block_n": 128,
+        "group_m": 4,
+        "key": "m64n128k32-w8s4g4",
+        "num_stages": 4,
+        "num_warps": 8
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 32,
+        "group_m": 4,
+        "key": "m128n32k32-w4s4g4",
+        "num_stages": 4,
+        "num_warps": 4
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 64,
+        "group_m": 4,
+        "key": "m128n64k32-w8s4g4",
+        "num_stages": 4,
+        "num_warps": 8
+      },
+      {
+        "block_k": 32,
+        "block_m": 128,
+        "block_n": 128,
+        "group_m": 4,
+        "key": "m128n128k32-w8s4g4",
+        "num_stages": 4,
+        "num_warps": 8
+      }
+    ],
+    "derivation": {
+      "configs": "block_m in 16/32/64/128 \u00d7 block_n in 32/64/128 for the three declared block_k/stage/group families; serialized in coded order",
+      "workloads": "MODEL_SPECS in declared order \u00d7 attention-qkv/attention-out/ffn-up/ffn-down \u00d7 decode-1/decode-7/mixed-31/mixed-96/prefill-257/prefill-1024"
+    },
+    "model_configs": [
+      {
+        "attention_heads": 32,
+        "collection_revision_status": "not_recorded",
+        "config_bytes": 571,
+        "config_sha256": "cf25cdf4719f181d1d1d371973285d9afe9afde0d0c6a6fd48de857555ce1e0d",
+        "config_url": "https://huggingface.co/mistralai/Mistral-7B-v0.1/resolve/27d67f1b5f57dc0953326b2601d68371d40ea8da/config.json",
+        "hidden_size": 4096,
+        "intermediate_size": 14336,
+        "key_value_heads": 8,
+        "name": "mistral-7b",
+        "provenance_note": "This immutable pin reproduces the coded dimensions; it is not retroactive proof of the model revision used during historical collection.",
+        "reproduction_revision": "27d67f1b5f57dc0953326b2601d68371d40ea8da"
+      },
+      {
+        "attention_heads": 28,
+        "collection_revision_status": "not_recorded",
+        "config_bytes": 686,
+        "config_sha256": "267ce68584c5f24c3b267d934db2de68dd21d1ca677fb78ed809eb60067f7642",
+        "config_url": "https://huggingface.co/Qwen/Qwen2.5-7B/resolve/d149729398750b98c0af14eb82c78cfe92750796/config.json",
+        "hidden_size": 3584,
+        "intermediate_size": 18944,
+        "key_value_heads": 4,
+        "name": "qwen2.5-7b",
+        "provenance_note": "This immutable pin reproduces the coded dimensions; it is not retroactive proof of the model revision used during historical collection.",
+        "reproduction_revision": "d149729398750b98c0af14eb82c78cfe92750796"
+      },
+      {
+        "attention_heads": 32,
+        "collection_revision_status": "not_recorded",
+        "config_bytes": 967,
+        "config_sha256": "072d4df63228ef806a6b2b2f02a93f1d048ebd31584d0f61d1180aef36e5bcea",
+        "config_url": "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/resolve/f39ac1d28e925b323eae81227eaba4464caced4e/config.json",
+        "hidden_size": 3072,
+        "intermediate_size": 8192,
+        "key_value_heads": 32,
+        "name": "phi-3-mini",
+        "provenance_note": "This immutable pin reproduces the coded dimensions; it is not retroactive proof of the model revision used during historical collection.",
+        "reproduction_revision": "f39ac1d28e925b323eae81227eaba4464caced4e"
+      },
+      {
+        "attention_heads": 32,
+        "collection_revision_status": "not_recorded",
+        "config_bytes": 790,
+        "config_sha256": "03c19685d37a17a541641fb17fa40ba371d1d892e87334d3068d90e8f296a365",
+        "config_url": "https://huggingface.co/ibm-granite/granite-3.1-8b-instruct/resolve/4009206d5fc95d2e65a7b7633e159d6e97e25d35/config.json",
+        "hidden_size": 4096,
+        "intermediate_size": 12800,
+        "key_value_heads": 8,
+        "name": "granite-3.1-8b",
+        "provenance_note": "This immutable pin reproduces the coded dimensions; it is not retroactive proof of the model revision used during historical collection.",
+        "reproduction_revision": "4009206d5fc95d2e65a7b7633e159d6e97e25d35"
+      }
+    ],
+    "workloads": [
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+        "m": 1,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096",
+        "m": 7,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096",
+        "m": 31,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096",
+        "m": 96,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096",
+        "m": 257,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+        "m": 1024,
+        "model": "mistral-7b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-decode-1-m1-n4096-k4096",
+        "m": 1,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-decode-7-m7-n4096-k4096",
+        "m": 7,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-mixed-31-m31-n4096-k4096",
+        "m": 31,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-mixed-96-m96-n4096-k4096",
+        "m": 96,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-prefill-257-m257-n4096-k4096",
+        "m": 257,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096",
+        "m": 1024,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-decode-1-m1-n14336-k4096",
+        "m": 1,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-decode-7-m7-n14336-k4096",
+        "m": 7,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096",
+        "m": 31,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096",
+        "m": 96,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096",
+        "m": 257,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096",
+        "m": 1024,
+        "model": "mistral-7b",
+        "n": 14336,
+        "projection": "ffn-up",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-decode-1-m1-n4096-k14336",
+        "m": 1,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-decode-7-m7-n4096-k14336",
+        "m": 7,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336",
+        "m": 31,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336",
+        "m": 96,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336",
+        "m": 257,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 14336,
+        "key": "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336",
+        "m": 1024,
+        "model": "mistral-7b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584",
+        "m": 1,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584",
+        "m": 7,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584",
+        "m": 31,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584",
+        "m": 96,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584",
+        "m": 257,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584",
+        "m": 1024,
+        "model": "qwen2.5-7b",
+        "n": 4608,
+        "projection": "attention-qkv",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584",
+        "m": 1,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584",
+        "m": 7,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584",
+        "m": 31,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584",
+        "m": 96,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584",
+        "m": 257,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584",
+        "m": 1024,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "attention-out",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584",
+        "m": 1,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584",
+        "m": 7,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584",
+        "m": 31,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584",
+        "m": 96,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584",
+        "m": 257,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3584,
+        "key": "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584",
+        "m": 1024,
+        "model": "qwen2.5-7b",
+        "n": 18944,
+        "projection": "ffn-up",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+        "m": 1,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+        "m": 7,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+        "m": 31,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944",
+        "m": 96,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944",
+        "m": 257,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 18944,
+        "key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+        "m": 1024,
+        "model": "qwen2.5-7b",
+        "n": 3584,
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072",
+        "m": 1,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072",
+        "m": 7,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072",
+        "m": 31,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072",
+        "m": 96,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072",
+        "m": 257,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072",
+        "m": 1024,
+        "model": "phi-3-mini",
+        "n": 9216,
+        "projection": "attention-qkv",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-decode-1-m1-n3072-k3072",
+        "m": 1,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-decode-7-m7-n3072-k3072",
+        "m": 7,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072",
+        "m": 31,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072",
+        "m": 96,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072",
+        "m": 257,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072",
+        "m": 1024,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "attention-out",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072",
+        "m": 1,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "decode-1"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072",
+        "m": 7,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "decode-7"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072",
+        "m": 31,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072",
+        "m": 96,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072",
+        "m": 257,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 3072,
+        "key": "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072",
+        "m": 1024,
+        "model": "phi-3-mini",
+        "n": 8192,
+        "projection": "ffn-up",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192",
+        "m": 1,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192",
+        "m": 7,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192",
+        "m": 31,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192",
+        "m": 96,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192",
+        "m": 257,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 8192,
+        "key": "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192",
+        "m": 1024,
+        "model": "phi-3-mini",
+        "n": 3072,
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096",
+        "m": 1,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096",
+        "m": 7,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096",
+        "m": 31,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096",
+        "m": 96,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096",
+        "m": 257,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+        "m": 1024,
+        "model": "granite-3.1-8b",
+        "n": 6144,
+        "projection": "attention-qkv",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096",
+        "m": 1,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096",
+        "m": 7,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096",
+        "m": 31,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096",
+        "m": 96,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096",
+        "m": 257,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096",
+        "m": 1024,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "attention-out",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096",
+        "m": 1,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "decode-1"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096",
+        "m": 7,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "decode-7"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096",
+        "m": 31,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096",
+        "m": 96,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096",
+        "m": 257,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 4096,
+        "key": "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096",
+        "m": 1024,
+        "model": "granite-3.1-8b",
+        "n": 12800,
+        "projection": "ffn-up",
+        "regime": "prefill-1024"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800",
+        "m": 1,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800",
+        "m": 7,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800",
+        "m": 31,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800",
+        "m": 96,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "mixed-96"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800",
+        "m": 257,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "prefill-257"
+      },
+      {
+        "k": 12800,
+        "key": "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800",
+        "m": 1024,
+        "model": "granite-3.1-8b",
+        "n": 4096,
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      }
+    ]
+  },
+  "schema_version": 1,
+  "studies": [
+    {
+      "algorithm_commit": "5919cbb4a9d7684ac835ab7bfd89879ac8c82344",
+      "analysis_status": "historical_confirmatory",
+      "collection_command": "historical command bound by benchmarks/manifest.json",
+      "collection_run": "https://modal.com/apps/mottopanikeiku/main/ap-ccgVXq137C9p6vVUxPlvXA",
+      "collector_commit": "5919cbb4a9d7684ac835ab7bfd89879ac8c82344",
+      "data": [
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 515472,
+          "compressed_sha256": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 10368,
+            "L4": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/measurements.jsonl.zst",
+          "rows": 20736,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 14031148,
+          "uncompressed_sha256": "2719ed636f24b73a6a9e3fc33507971769dd9cf537a0e11a6ec073c15cfedad9"
+        }
+      ],
+      "measurement_schema": "heliostune-measurement-v1",
+      "protocol": {
+        "bytes": 1520,
+        "kind": "json_artifact",
+        "path": "benchmarks/manifest.json",
+        "schema": "heliostune-v1-manifest",
+        "sha256": "15f5c8636a18750cfbfe2dda8f6fdb3fbfc14b8947e96fc487d230ca85b35abf"
+      },
+      "results": [
+        {
+          "bytes": 19508,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/l4-to-a10.json",
+          "schema": "heliostune-v1-summary",
+          "sha256": "63f4e965bbff9bc26e2555d8cd27051334b0b7f36880b3a16b2034d605c9bbaa"
+        },
+        {
+          "bytes": 19510,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/a10-to-l4.json",
+          "schema": "heliostune-v1-summary",
+          "sha256": "eef908cfa52a6e13230330bbeec5b831dbe5cbff59f34edb476d485c61039f38"
+        }
+      ],
+      "software": {
+        "cuda": "12.8",
+        "modal": "1.5.3",
+        "python": "3.11",
+        "torch": "2.8.0+cu128",
+        "triton": "3.4.0"
+      },
+      "split_design": "held-out model family only",
+      "study_id": "heliostune-v1-l4-a10-transfer"
+    },
+    {
+      "algorithm_commit": "811b05bb65bc978e44ca8fa32ceeeab315acf391",
+      "analysis_status": "historical_confirmatory_primary",
+      "collection_commands": {
+        "h100": "modal run modal_bench.py --gpus H100 --replicates 3 --warmup-ms 25 --rep-ms 100 --output artifacts/h100-measurements.jsonl",
+        "t4": "historical invocation bound by the H100 freeze"
+      },
+      "collection_runs": {
+        "h100_final": "https://modal.com/apps/mottopanikeiku/main/ap-y68ldw4RUmTotSEIxGdqPz",
+        "t4_validation": "https://modal.com/apps/mottopanikeiku/main/ap-qxI4D2xUvtPfuhtgiSfVgm"
+      },
+      "collector_commit": "fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd",
+      "data": [
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 515472,
+          "compressed_sha256": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 10368,
+            "L4": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/measurements.jsonl.zst",
+          "rows": 20736,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 14031148,
+          "uncompressed_sha256": "2719ed636f24b73a6a9e3fc33507971769dd9cf537a0e11a6ec073c15cfedad9"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 362411,
+          "compressed_sha256": "f00c2a1498937707c872f667cf210de5e7319218c7df56e05a15174441a36c00",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "T4": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                7,
+                5
+              ],
+              "cuda_version": "12.8",
+              "device_name": "Tesla T4",
+              "gpu": "T4",
+              "multiprocessor_count": 40,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 14.56317138671875,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/t4-measurements.jsonl.zst",
+          "rows": 10368,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 6975966,
+          "uncompressed_sha256": "f3910e73aec68d48015b0fb9d0469ff2be8c3210d5777dab61e4a9cdd660d217"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 300578,
+          "compressed_sha256": "91b94ec42a71b1832203a6c5cdedf0102cf8d04ae9992d739fffa5351b7ac206",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "H100": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                9,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA H100 80GB HBM3",
+              "gpu": "H100",
+              "multiprocessor_count": 132,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.1788330078125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/h100-measurements.jsonl.zst",
+          "rows": 10368,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 7194302,
+          "uncompressed_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 1167672,
+          "compressed_sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 10368,
+            "H100": 10368,
+            "L4": 10368,
+            "T4": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                9,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA H100 80GB HBM3",
+              "gpu": "H100",
+              "multiprocessor_count": 132,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.1788330078125,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                7,
+                5
+              ],
+              "cuda_version": "12.8",
+              "device_name": "Tesla T4",
+              "gpu": "T4",
+              "multiprocessor_count": 40,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 14.56317138671875,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+          "rows": 41472,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 28201416,
+          "uncompressed_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d"
+        }
+      ],
+      "measurement_schema": "heliostune-measurement-v1",
+      "protocol_chain": [
+        {
+          "bytes": 6514,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v2-development-protocol.json",
+          "schema": "parhelion-v2-development-protocol",
+          "sha256": "ae544f798284528ed888a4c46d79b7419d5790cc8c967ad2897e9030f22374c8"
+        },
+        {
+          "bytes": 7854,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v2-h100-freeze.json",
+          "schema": "parhelion-v2-h100-freeze",
+          "sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a"
+        },
+        {
+          "bytes": 4843,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v2-post-run-manifest.json",
+          "schema": "parhelion-v2-post-run-manifest",
+          "sha256": "f9e2c79dc176daf1db0593c4411bbb534cd0a426aa421a26879f42e4d5000258"
+        }
+      ],
+      "result_links": {
+        "final": "benchmarks/results/parhelion-h100-final.json",
+        "report": "site/index.html",
+        "selection": "benchmarks/results/parhelion-t4-selection.json"
+      },
+      "results": [
+        {
+          "bytes": 18565,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-t4-selection.json",
+          "schema": "parhelion-v2-selection",
+          "sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca"
+        },
+        {
+          "bytes": 43608,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-t4-validation.json",
+          "schema": "parhelion-v2-validation-summary",
+          "sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4"
+        },
+        {
+          "bytes": 102864,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-h100-final.json",
+          "schema": "parhelion-v2-final-summary",
+          "sha256": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd"
+        }
+      ],
+      "software": {
+        "cuda": "12.8",
+        "modal": "1.5.3",
+        "python": "3.11",
+        "torch": "2.8.0+cu128",
+        "triton": "3.4.0"
+      },
+      "split_design": "held-out model family plus exact target (M,N,K) shape",
+      "study_id": "parhelion-v2-staged-transfer"
+    },
+    {
+      "analysis_status": "post_hoc_exploratory",
+      "collection_runs": "none; reuses immutable historical v2 timing matrix",
+      "data": [
+        {
+          "banks": [
+            0,
+            1,
+            2
+          ],
+          "compressed_bytes": 1167672,
+          "compressed_sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 10368,
+            "H100": 10368,
+            "L4": 10368,
+            "T4": 10368
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                9,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA H100 80GB HBM3",
+              "gpu": "H100",
+              "multiprocessor_count": 132,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.1788330078125,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                7,
+                5
+              ],
+              "cuda_version": "12.8",
+              "device_name": "Tesla T4",
+              "gpu": "T4",
+              "multiprocessor_count": 40,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 14.56317138671875,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+          "rows": 41472,
+          "schema": "heliostune-measurement-v1",
+          "uncompressed_bytes": 28201416,
+          "uncompressed_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d"
+        }
+      ],
+      "generator_command": "uv run python scripts/build_parhelion_v2_addendum.py",
+      "input_study_id": "parhelion-v2-staged-transfer",
+      "measurement_schema": "heliostune-measurement-v1",
+      "reports": [
+        {
+          "bytes": 154045,
+          "kind": "self_contained_html_report",
+          "path": "site/parhelion-v2-addendum.html",
+          "sha256": "6faa0d541ef622c131e483e946f7f9fb5c2427b800d39b22c56292af227b0095"
+        }
+      ],
+      "results": [
+        {
+          "bytes": 8624526,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-v2-addendum.json",
+          "schema": "parhelion-v2-post-hoc-addendum",
+          "sha256": "c40b1a6f2a7d3efb9633c9067b1db785a20bbd0ee285794bdb40609f81725062"
+        },
+        {
+          "bytes": 5238,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v2-addendum-manifest.json",
+          "schema": "parhelion-v2-addendum-manifest",
+          "sha256": "7ad84053ae0d721cc26b4f657e37a62abdbff75f6b335121fa606bc770c41773"
+        }
+      ],
+      "split_design": "held-out model family plus exact target (M,N,K) shape",
+      "study_id": "parhelion-v2-post-hoc-causal-addendum"
+    }
+  ]
+}

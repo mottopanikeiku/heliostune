@@ -13,10 +13,14 @@ from heliostune.multisource import compare_multisource
 from heliostune.multisource_engine import (
     PreparedReplay,
     assemble_multisource_summary,
+    evaluate_anchored_cold,
+    evaluate_cold_thompson,
     evaluate_multisource_retrieval,
     evaluate_parhelion,
+    evaluate_parhelion_no_forced_anchor,
     evaluate_pooled_source,
     prepare_multisource,
+    serialize_workload_endpoints,
 )
 from heliostune.schema import HardwareProfile, Measurement
 
@@ -537,3 +541,66 @@ def test_prepared_replay_is_immutable_and_matches_public_facade() -> None:
     )
 
     assert assembled == facade
+
+
+def test_causal_ablation_evaluators_share_schedule_and_paid_anchor() -> None:
+    prepared = prepare_multisource(
+        _corpus(),
+        source_gpus=("source-a", "source-b"),
+        target_gpu="target",
+        max_budget=2,
+        seeds=3,
+    )
+    retrieval = evaluate_multisource_retrieval(
+        prepared,
+        k=2,
+        temperature=0.7,
+        capture_endpoints=True,
+    )
+    parhelion = evaluate_parhelion(
+        prepared,
+        k=2,
+        temperature=0.7,
+        transfer_strength=0.0,
+        retrieval=retrieval,
+        capture_endpoints=True,
+    )
+    anchored = evaluate_anchored_cold(
+        prepared,
+        retrieval=retrieval,
+        capture_endpoints=True,
+    )
+    cold = evaluate_cold_thompson(prepared, capture_endpoints=True)
+    no_anchor = evaluate_parhelion_no_forced_anchor(
+        prepared,
+        k=2,
+        temperature=0.7,
+        transfer_strength=0.0,
+        capture_endpoints=True,
+    )
+    pooled_zero = evaluate_pooled_source(
+        prepared,
+        transfer_strength=0.0,
+        capture_endpoints=True,
+    )
+
+    assert parhelion.fold_metadata == anchored.fold_metadata == retrieval.fold_metadata
+    for seed in range(prepared.seeds):
+        for fold in range(len(prepared.folds)):
+            expected_budget_one = retrieval.deterministic_fold_curves[fold][0]
+            assert parhelion.stochastic_seed_fold_curves[seed][fold][0] == pytest.approx(
+                expected_budget_one
+            )
+            assert anchored.stochastic_seed_fold_curves[seed][fold][0] == pytest.approx(
+                expected_budget_one
+            )
+    assert pooled_zero.stochastic_seed_fold_curves == cold.stochastic_seed_fold_curves
+    assert len(serialize_workload_endpoints(prepared, parhelion)) == (
+        prepared.seeds * len(prepared.all_workloads)
+    )
+    assert len(serialize_workload_endpoints(prepared, anchored)) == (
+        prepared.seeds * len(prepared.all_workloads)
+    )
+    assert len(serialize_workload_endpoints(prepared, no_anchor)) == (
+        prepared.seeds * len(prepared.all_workloads)
+    )

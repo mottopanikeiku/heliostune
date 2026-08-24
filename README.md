@@ -2,13 +2,13 @@
 
 A measured study of retrieval, Bayesian adaptation, and source-to-target launch selection for FP16 Triton matrix multiplication.
 
-**Live evidence:** [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json) · [H100 freeze](benchmarks/parhelion-v2-h100-freeze.json)
+**Live evidence:** [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json) · [H100 freeze](benchmarks/parhelion-v2-h100-freeze.json)
 
 ## Result
 
 Parhelion is a retrieval-anchored Bayesian linear Thompson tuner built in response to the v1 result: nearest-shape reuse beat the original transferred posterior in both L4↔A10 directions. Parhelion converts a family- and shape-disjoint multi-GPU archive into four action-conditioned retrieval statistics, pays for the consensus retrieval action as query one, then adapts on target bank-0 observations.
 
-The staged result is negative under its frozen primary comparison. On the untouched Modal H100 domain, Parhelion reached **99.65%** of the held-out curated Triton reference at eight probes per workload and **0.9503 AUC** over budgets 1–8. It did **not** outperform the T4-frozen `torch.matmul` comparator: paired AUC delta **−0.6600**, two-sided 95% Student-t CI **[−0.6614, −0.6586]** over 30 paired seeds. Superiority was not demonstrated.
+The staged result is negative under its frozen primary comparison. On the untouched Modal H100 domain, Parhelion reached **99.65%** of the held-out curated Triton reference at eight probes per workload and **0.9503 AUC** over budgets 1–8. It did **not** outperform the T4-frozen `torch.matmul` comparator: paired AUC delta **−0.6600**, two-sided 95% Student-t Monte Carlo interval **[−0.6614, −0.6586]** over 30 paired policy seeds, conditional on the fixed matrix, corpus, archive, and campaign. Superiority was not demonstrated.
 
 | H100 method | AUC, budgets 1–8 | Fraction of reference at budget 8 |
 |---|---:|---:|
@@ -23,16 +23,21 @@ The staged result is negative under its frozen primary comparison. On the untouc
 
 Parhelion improves on its retrieval-only anchor by **4.71 percentage points AUC**, but trails cold Thompson by **0.82 points**. It reaches 95% of the reference after four probes; cold Thompson needs three and nearest-shape reuse needs five. The selected pooled transfer strength and Parhelion source-likelihood strength are both zero, so this corpus does not support a positive transferred-posterior claim. Parhelion still uses the frozen source archive to construct its retrieval anchor and retrieval covariates.
 
+The [post-hoc causal addendum](site/parhelion-v2-addendum.html) does not alter that confirmatory endpoint. With the same paid retrieval action at budget one, Parhelion's AUC was **0.00368 lower** than anchored cold Thompson; the exploratory paired policy-seed interval was **[−0.00566, −0.00169]**. Every new contrast is labeled `post_hoc_exploratory`, carries no superiority claim, and reuses the immutable H100 matrix without selection or recollection.
+
 Values above are fractions of a bank-1-selected, bank-2-scored best configuration from the curated 36-action Triton manifest. They are not fractions of a hardware ceiling. `torch.matmul` can exceed 1.0 because it is outside that manifest and is evaluation-only.
 
 ## What changed from v1
 
 The [v1 bidirectional study](https://mottopanikeiku.github.io/heliostune/v1.html) measured 20,736 L4/A10 rows. The original transferred linear posterior improved over cold start but lost to nearest-shape reuse:
 
+
 | Direction | Cold Thompson | Helios transfer | Nearest shape |
 |---|---:|---:|---:|
 | L4 → A10 | 90.18% | 92.37% | **96.69%** |
 | A10 → L4 | 94.72% | 94.83% | **98.96%** |
+
+The historical v1 replay held out model families only. Parhelion v2 uses the stricter family-plus-exact-shape split: before any source-derived rank, normalization, feature, or posterior is built, it also excludes source rows sharing a held-out target `(M,N,K)` shape. The v1 bytes and claims remain unchanged.
 
 Parhelion makes retrieval explicit rather than hiding it inside a learned prior:
 
@@ -52,11 +57,11 @@ The closest ideas are established: nearest-task warm starts, transferred cost mo
 - **Leakage control:** each fold excludes the complete target model family and every source row sharing an exact target `(M,N,K)` shape before retrieval, centering, source modeling, or selection.
 - **Shared adaptation:** budget `b` means `b` target probes per workload. A fold uses `24b` probes; all four folds use `96b`. One posterior is shared across the 24 workloads in a fold, so this is batched adaptation, not 96 independent tuners.
 - **T4 validation:** L4+A10 source archive; 12 seeds; method-local retrieval (12 points), pooled-source (4 strengths), and Parhelion (48 points) grids. Selected Parhelion `(k=16, T=2.0, α=0)`, retrieval `(k=8, T=0.2)`, pooled `α=0`, and primary comparator `torch`.
-- **H100 final:** L4+A10+T4 source archive; 30 seeds; the selected parameters and comparator were frozen before the only H100 invocation.
+- **H100 final:** H100 is an untouched hardware/timing matrix on the already fixed 96-workload corpus, not an unseen-workload study. L4+A10+T4 are sources; 30 seeds, selected parameters, and the comparator were frozen before the sole H100 invocation.
 - **Physical cost:** 31,104 source measurements plus 10,368 H100 measurements. The simulated budget-8 online cost is 768 target queries per live method across all folds; physical target collection remains exhaustive.
 - **Numerical gate:** all 41,472 four-GPU cells passed the FP32-reference correctness check.
 
-Parhelion and retrieval-only make the same paid query at budget one: both score 0.82277885 of the held-out reference on H100. The report exposes all four held-out-family tables, every method/budget point, exact-shape exclusions, source rows, paired uncertainty, and the target-selected strongest method as descriptive-only context.
+Parhelion and retrieval-only make the same paid query at budget one: both score 0.82277885 of the held-out reference on H100. The report exposes all four held-out-family tables, every method/budget point, exact-shape exclusions, source rows, and the target-selected strongest method as descriptive-only context. Stochastic intervals are policy-seed Monte Carlo intervals conditional on the fixed data and campaign; deterministic fold ranges are descriptive, not confidence intervals.
 
 ## Chain of custody
 
@@ -68,7 +73,7 @@ Parhelion and retrieval-only make the same paid query at budget one: both score 
 - Four-GPU replay archive SHA-256: `f417bd7e…`
 - Final summary SHA-256: `765b347a…`
 
-The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests.
+The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact historical runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests. The [research artifact catalog](benchmarks/research-artifact-manifest.json) verifies every historical and published alias digest; the separate [addendum manifest](benchmarks/parhelion-v2-addendum-manifest.json) binds the immutable input, implementation, exploratory result, and new report without touching historical bytes.
 
 ## Run locally
 
@@ -109,6 +114,13 @@ uv run ruff check .
 uv run ruff format --check .
 uv run coverage run --branch -m pytest
 uv run coverage report
+```
+
+Verify the catalog and byte-regenerate the exploratory addendum:
+
+```bash
+uv run heliostune verify-catalog benchmarks/research-artifact-manifest.json
+uv run python scripts/build_parhelion_v2_addendum.py --check
 ```
 
 Reproduce the frozen H100 replay directly from the compressed archive:
@@ -154,12 +166,16 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 - `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
 - `src/heliostune/multisource.py` — public multi-source replay facade
 - `src/heliostune/multisource_engine.py` — prepared folds and method-local evaluators
+- `src/heliostune/v2_addendum.py` — frozen v2 causal ablations and workload endpoints
+- `src/heliostune/uncertainty.py` — policy-seed intervals and deterministic fold summaries
 - `src/heliostune/selection.py` — strict staged T4 selector
 - `src/heliostune/bandit.py` — atomic Gaussian information-form posterior updates
 - `src/heliostune/kernel.py` — manual Triton matmul and measured collector
 - `src/heliostune/report_model.py` — immutable renderer input contract
 - `src/heliostune/report.py` — self-contained offline evidence report
 - `scripts/build_modal_wheel.py` — reproducible committed-wheel builder
+- `scripts/build_parhelion_v2_addendum.py` — byte-exact exploratory result/report builder
+- `scripts/verify_research_artifacts.py` — full catalog, alias, count, and frozen-point verifier
 - `scripts/assemble_parhelion_final.py` — historical v2 archive verifier
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
 - `site/` — offline final report, downloadable JSON, and archived v1 report
