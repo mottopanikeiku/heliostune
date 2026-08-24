@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Sequence
-from typing import Any, TypeVar
+from collections.abc import Iterable, Mapping, Sequence
+from functools import partial
+from typing import Any
 
 import numpy as np
 
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import KernelConfig, Workload
 from heliostune.features import FEATURE_NAMES, joint_features
+from heliostune.retrieval import log_tflops_reward
 from heliostune.schema import HardwareProfile, Measurement
 
-ActionT = TypeVar("ActionT")
 _OBSERVATION_BANK = 0
 _REFERENCE_BANK = 1
 _EVALUATION_BANK = 2
@@ -30,64 +31,148 @@ _METHOD_LABELS = {
 
 
 class BenchmarkTable:
-    """Indexed benchmark observations with strict matrix and bank checks."""
+    """The sole validated matrix gate for replay observations."""
 
     def __init__(self, measurements: Iterable[Measurement]) -> None:
         self.measurements = tuple(measurements)
         if not self.measurements:
             raise ValueError("benchmark table must not be empty")
+        if any(type(measurement) is not Measurement for measurement in self.measurements):
+            raise TypeError("benchmark table accepts only Measurement values")
+
         self._index: dict[tuple[str, str, str, int], Measurement] = {}
+        profiles: dict[str, HardwareProfile] = {}
+        workloads: dict[str, dict[str, Workload]] = {}
+        configs: dict[str, dict[str, KernelConfig]] = {}
         for measurement in self.measurements:
+            gpu = measurement.hardware.gpu
+            profile = profiles.setdefault(gpu, measurement.hardware)
+            if profile != measurement.hardware:
+                raise ValueError(
+                    f"inconsistent hardware profile for {gpu!r}: "
+                    f"{profile!r} != {measurement.hardware!r}"
+                )
+            gpu_workloads = workloads.setdefault(gpu, {})
+            known_workload = gpu_workloads.setdefault(
+                measurement.workload.key, measurement.workload
+            )
+            if known_workload != measurement.workload:
+                raise ValueError(
+                    f"inconsistent workload definition on {gpu!r}: {measurement.workload.key}"
+                )
+            gpu_configs = configs.setdefault(gpu, {})
+            known_config = gpu_configs.setdefault(measurement.config.key, measurement.config)
+            if known_config != measurement.config:
+                raise ValueError(
+                    f"inconsistent config definition on {gpu!r}: {measurement.config.key}"
+                )
             key = (
-                measurement.hardware.gpu,
+                gpu,
                 measurement.workload.key,
                 measurement.config.key,
-                measurement.replicate,
+                measurement.bank,
             )
             if key in self._index:
                 raise ValueError(f"duplicate measurement: {key}")
             self._index[key] = measurement
 
+        self._profiles = profiles
+        self._workloads = workloads
+        self._configs = configs
+        for gpu in self.gpus:
+            self.validate_matrix(gpu, self.banks(gpu))
+
     @property
     def gpus(self) -> tuple[str, ...]:
-        return tuple(sorted({item.hardware.gpu for item in self.measurements}))
+        return tuple(sorted(self._profiles))
 
     def hardware(self, gpu: str) -> HardwareProfile:
-        profiles = {item.hardware for item in self.measurements if item.hardware.gpu == gpu}
-        if len(profiles) != 1:
-            raise ValueError(f"expected one hardware profile for {gpu!r}, found {len(profiles)}")
-        return profiles.pop()
+        try:
+            return self._profiles[gpu]
+        except KeyError as exc:
+            raise KeyError(f"unknown GPU {gpu!r}") from exc
 
     def workloads(self, gpu: str) -> tuple[Workload, ...]:
-        values = {
-            item.workload.key: item.workload
-            for item in self.measurements
-            if item.hardware.gpu == gpu
-        }
+        try:
+            values = self._workloads[gpu]
+        except KeyError as exc:
+            raise KeyError(f"unknown GPU {gpu!r}") from exc
         return tuple(values[key] for key in sorted(values))
 
     def configs(self, gpu: str) -> tuple[KernelConfig, ...]:
-        values = {
-            item.config.key: item.config for item in self.measurements if item.hardware.gpu == gpu
-        }
+        try:
+            values = self._configs[gpu]
+        except KeyError as exc:
+            raise KeyError(f"unknown GPU {gpu!r}") from exc
         return tuple(values[key] for key in sorted(values))
 
-    def replicates(self, gpu: str) -> tuple[int, ...]:
-        return tuple(
-            sorted({item.replicate for item in self.measurements if item.hardware.gpu == gpu})
-        )
+    def banks(self, gpu: str) -> tuple[int, ...]:
+        if gpu not in self._profiles:
+            raise KeyError(f"unknown GPU {gpu!r}")
+        return tuple(sorted({item.bank for item in self.measurements if item.hardware.gpu == gpu}))
 
     def get(
         self,
         gpu: str,
         workload: Workload,
         config: KernelConfig,
-        replicate: int = _OBSERVATION_BANK,
+        bank: int = _OBSERVATION_BANK,
     ) -> Measurement:
         try:
-            return self._index[(gpu, workload.key, config.key, replicate)]
+            return self._index[(gpu, workload.key, config.key, bank)]
         except KeyError as exc:
-            raise KeyError((gpu, workload.key, config.key, replicate)) from exc
+            raise KeyError((gpu, workload.key, config.key, bank)) from exc
+
+    def validate_matrix(self, gpu: str, required_banks: Sequence[int]) -> None:
+        expected_banks = tuple(sorted(required_banks))
+        if len(set(expected_banks)) != len(expected_banks):
+            raise ValueError(f"requested banks for {gpu!r} must be unique")
+        observed_banks = self.banks(gpu)
+        if observed_banks != expected_banks:
+            raise ValueError(
+                f"{gpu} requires exactly banks {expected_banks}, found {observed_banks}"
+            )
+
+        torch_timings: dict[
+            tuple[int, str],
+            tuple[float, float | None, float | None],
+        ] = {}
+        for workload in self.workloads(gpu):
+            for config in self.configs(gpu):
+                for bank in expected_banks:
+                    cell = f"{gpu}/{workload.key}/{config.key}/bank-{bank}"
+                    try:
+                        measurement = self.get(gpu, workload, config, bank)
+                    except KeyError as exc:
+                        raise ValueError(f"missing matrix cell {cell}") from exc
+                    if not measurement.usable or measurement.latency_ms is None:
+                        classification = (
+                            f", failure_stage={measurement.failure_stage!r}"
+                            if measurement.failure_stage is not None
+                            else ""
+                        )
+                        raise ValueError(
+                            f"invalid matrix cell {cell}: {measurement.error!r}{classification}"
+                        )
+                    if (
+                        not math.isfinite(measurement.latency_ms)
+                        or measurement.latency_ms <= 0
+                        or not math.isfinite(measurement.torch_latency_ms)
+                        or measurement.torch_latency_ms <= 0
+                    ):
+                        raise ValueError(f"non-finite or non-positive matrix timing at {cell}")
+                    timing_key = (bank, workload.key)
+                    timing = (
+                        measurement.torch_latency_ms,
+                        measurement.torch_latency_p20_ms,
+                        measurement.torch_latency_p80_ms,
+                    )
+                    known_timing = torch_timings.setdefault(timing_key, timing)
+                    if known_timing != timing:
+                        raise ValueError(
+                            f"inconsistent duplicated torch timing at {cell}: "
+                            f"expected {known_timing!r}, got {timing!r}"
+                        )
 
     def validate_protocol(self, source_gpu: str, target_gpu: str) -> None:
         if source_gpu not in self.gpus or target_gpu not in self.gpus:
@@ -100,23 +185,14 @@ class BenchmarkTable:
             raise ValueError("source and target workload sets differ")
         if source_configs != target_configs:
             raise ValueError("source and target configuration sets differ")
-        required_banks = {_OBSERVATION_BANK, _REFERENCE_BANK, _EVALUATION_BANK}
         for gpu in (source_gpu, target_gpu):
-            if not required_banks.issubset(self.replicates(gpu)):
-                raise ValueError(f"{gpu} requires independent replicate banks 0, 1, and 2")
-            for workload in self.workloads(gpu):
-                for config in self.configs(gpu):
-                    for bank in required_banks:
-                        measurement = self.get(gpu, workload, config, bank)
-                        if not measurement.usable:
-                            raise ValueError(
-                                f"invalid frozen cell {gpu}/{workload.key}/{config.key}/bank-{bank}: "
-                                f"{measurement.error}"
-                            )
+            self.validate_matrix(
+                gpu,
+                (_OBSERVATION_BANK, _REFERENCE_BANK, _EVALUATION_BANK),
+            )
 
     def reference_config(self, gpu: str, workload: Workload) -> KernelConfig:
         """Select a configuration using only the independent reference bank."""
-
         return min(
             self.configs(gpu),
             key=lambda config: (
@@ -132,7 +208,6 @@ class BenchmarkTable:
         recommendation: KernelConfig,
     ) -> float:
         """Evaluate a recommendation and the reference winner only on held-out bank 2."""
-
         reference = self.reference_config(gpu, workload)
         return self._latency(gpu, workload, reference, _EVALUATION_BANK) / self._latency(
             gpu, workload, recommendation, _EVALUATION_BANK
@@ -143,18 +218,37 @@ class BenchmarkTable:
         gpu: str,
         workload: Workload,
         config: KernelConfig,
-        replicate: int,
+        bank: int,
     ) -> float:
-        value = self.get(gpu, workload, config, replicate).latency_ms
+        value = self.get(gpu, workload, config, bank).latency_ms
         if value is None:
             raise ValueError("validated measurement unexpectedly has no latency")
         return value
 
 
+def eligible_source_workloads(
+    table: BenchmarkTable,
+    source_gpu: str,
+    heldout_model: str,
+    heldout_workloads: Sequence[Workload],
+) -> tuple[tuple[Workload, ...], int]:
+    """Return family- and exact-shape-safe source rows plus shape exclusions."""
+    heldout_shapes = {(workload.m, workload.n, workload.k) for workload in heldout_workloads}
+    family_safe = tuple(
+        workload for workload in table.workloads(source_gpu) if workload.model != heldout_model
+    )
+    eligible = tuple(
+        workload
+        for workload in family_safe
+        if (workload.m, workload.n, workload.k) not in heldout_shapes
+    )
+    return eligible, len(family_safe) - len(eligible)
+
+
 def _reward(measurement: Measurement) -> float:
     if not measurement.usable or measurement.latency_ms is None:
-        raise ValueError("invalid cells cannot be converted into arbitrary reward penalties")
-    return -math.log(measurement.latency_ms)
+        raise ValueError("invalid cells cannot be converted into rewards")
+    return log_tflops_reward(measurement.workload, measurement.latency_ms)
 
 
 def _geometric_mean(values: Sequence[float]) -> float:
@@ -183,26 +277,12 @@ def _best_observed(
     workload: Workload,
     queried: Sequence[KernelConfig],
 ) -> KernelConfig:
-    return max(
+    if not queried:
+        raise ValueError("an incumbent requires at least one paid target observation")
+    return min(
         queried,
         key=lambda config: (
-            _reward(table.get(target_gpu, workload, config, _OBSERVATION_BANK)),
-            config.key,
-        ),
-    )
-
-
-def _model_recommendation(
-    model: BayesianLinearBandit,
-    workload: Workload,
-    configs: Sequence[KernelConfig],
-    hardware: HardwareProfile,
-) -> KernelConfig:
-    coefficients = model.mean
-    return max(
-        configs,
-        key=lambda config: (
-            float(joint_features(workload, config, hardware) @ coefficients),
+            table._latency(target_gpu, workload, config, _OBSERVATION_BANK),
             config.key,
         ),
     )
@@ -297,7 +377,7 @@ def _random_curve(
     seed: int,
 ) -> list[float]:
     rng = np.random.default_rng(seed)
-    queried = {workload.key: [] for workload in workloads}
+    queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
     for order in orders:
         for workload in order:
@@ -315,10 +395,10 @@ def _ranked_curve(
     table: BenchmarkTable,
     target_gpu: str,
     workloads: Sequence[Workload],
-    ranks: dict[str, Sequence[KernelConfig]],
+    ranks: Mapping[str, Sequence[KernelConfig]],
     max_budget: int,
 ) -> list[float]:
-    queried = {workload.key: [] for workload in workloads}
+    queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
     for budget_index in range(max_budget):
         for workload in workloads:
@@ -340,22 +420,24 @@ def _bandit_curve(
     model: BayesianLinearBandit,
 ) -> list[float]:
     hardware = table.hardware(target_gpu)
-    queried = {workload.key: [] for workload in workloads}
+    queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
     for order in orders:
         for workload in order:
             available = [config for config in configs if config not in queried[workload.key]]
-            selected = model.choose(
-                available,
-                lambda config, workload=workload: joint_features(workload, config, hardware),
+            features_for_config = partial(
+                joint_features,
+                workload,
+                hardware=hardware,
             )
+            selected = model.choose(available, features_for_config)
             queried[workload.key].append(selected)
             model.update(
                 joint_features(workload, selected, hardware),
                 _reward(table.get(target_gpu, workload, selected, _OBSERVATION_BANK)),
             )
         recommendations = {
-            workload.key: _model_recommendation(model, workload, configs, hardware)
+            workload.key: _best_observed(table, target_gpu, workload, queried[workload.key])
             for workload in workloads
         }
         curve.append(_evaluate_recommendations(table, target_gpu, recommendations, workloads))
@@ -403,12 +485,12 @@ def compare_methods(
     noise_variance: float = 0.05,
     prior_precision: float = 1.0,
 ) -> dict[str, Any]:
-    """Run grouped leave-one-model-family-out replay in one GPU direction.
+    """Run family- and exact-shape-held-out replay in one GPU direction.
 
     Bank 0 is the only target latency stream visible to policies. Bank 1 selects
     the exhaustive reference configuration. Bank 2 evaluates every policy and
-    the bank-1 winner. A target model family is never present in its source
-    posterior, static baseline, or nearest-shape archive.
+    the bank-1 winner. Neither the held-out family nor a coincident target shape
+    may enter any source-derived object.
     """
 
     if source_gpu == target_gpu:
@@ -437,13 +519,22 @@ def compare_methods(
         "transfer_thompson": [],
     }
     fold_details: list[dict[str, Any]] = []
+    visible_source_rows_by_fold: dict[str, int] = {}
     for fold_index, heldout_model in enumerate(models):
-        source_workloads = tuple(
-            workload for workload in all_workloads if workload.model != heldout_model
-        )
         target_workloads = tuple(
             workload for workload in all_workloads if workload.model == heldout_model
         )
+        source_workloads, exact_shape_exclusions = eligible_source_workloads(
+            table,
+            source_gpu,
+            heldout_model,
+            target_workloads,
+        )
+        if not source_workloads:
+            raise ValueError(
+                f"no leakage-safe source workloads remain when holding out {heldout_model!r}"
+            )
+        visible_source_rows_by_fold[heldout_model] = len(source_workloads) * len(configs)
         source_model = _source_model(
             table,
             source_gpu,
@@ -556,6 +647,8 @@ def compare_methods(
                 "heldout_model": heldout_model,
                 "source_workloads": len(source_workloads),
                 "target_workloads": len(target_workloads),
+                "exact_shape_exclusions": exact_shape_exclusions,
+                "visible_bank0_source_observations": len(source_workloads) * len(configs),
                 "static_config": static_config.key,
             }
         )
@@ -569,7 +662,7 @@ def compare_methods(
         recommendations = {
             workload.key: min(
                 configs,
-                key=lambda config, workload=workload: (
+                key=lambda config: (
                     table._latency(
                         target_gpu,
                         workload,
@@ -629,9 +722,9 @@ def compare_methods(
         "source_gpu": source_gpu,
         "target_gpu": target_gpu,
         "methodology": (
-            "Grouped leave-one-model-family-out transfer. Policies see only timing bank 0; "
-            "bank 1 selects the best-of-manifest reference and bank 2 evaluates every "
-            "recommendation. Source acquisition is disclosed outside the target query budget."
+            "Grouped family-and-exact-shape-held-out transfer. Policies see only timing "
+            "bank 0; bank 1 selects the best-of-manifest reference and bank 2 evaluates "
+            "every recommendation. Source acquisition is outside the target query budget."
         ),
         "workloads": len(all_workloads),
         "configs": len(configs),
@@ -662,14 +755,12 @@ def compare_methods(
         },
         "source_cost": {
             "collected_measurements_per_gpu": measurements_per_gpu,
-            "visible_source_observations_per_fold": (
-                len(all_workloads) - len(all_workloads) // len(models)
-            )
-            * len(configs),
+            "visible_source_observations_per_fold": visible_source_rows_by_fold,
+            "visible_source_observations_total": sum(visible_source_rows_by_fold.values()),
             "disclosure": (
-                "The transfer prior sees bank-0 source measurements from non-held-out model "
-                "families. Source acquisition and all reference/evaluation banks are excluded "
-                "from the target query budget and disclosed separately."
+                "The transfer prior sees bank-0 source measurements only after held-out "
+                "family and exact-shape exclusion. Source acquisition and all reference/"
+                "evaluation banks are excluded from the target query budget."
             ),
         },
         "folds": fold_details,
@@ -677,7 +768,7 @@ def compare_methods(
             "workload_keys": [workload.key for workload in all_workloads],
             "config_keys": [config.key for config in configs],
             "target_budget_unit": "bank-0 configuration measurements per held-out workload",
-            "reward": "-log(selected configuration latency_ms)",
+            "reward": "log achieved TFLOP/s for the selected configuration",
             "bank_roles": {
                 "0": "policy-visible observations",
                 "1": "exhaustive-reference selection",

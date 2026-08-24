@@ -115,6 +115,12 @@ def _parhelion_summary(superiority_supported: bool) -> dict:
             descriptive_comparator: "H100 <descriptive winner>",
             "cold_thompson": "Cold <endpoint>",
         },
+        "method_roles": {
+            "parhelion_thompson": "sequential",
+            frozen_comparator: "sequential",
+            descriptive_comparator: "sequential",
+            "cold_thompson": "sequential",
+        },
         "transfer_method": "parhelion_thompson",
         "cold_method": "cold_thompson",
         "primary_comparator": frozen_comparator,
@@ -358,3 +364,63 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
         "Fold-level evidence audit"
     )
     assert "the target-selected strongest legacy method remains descriptive only" in document
+
+
+def test_report_separates_online_methods_controls_and_reference_parity(
+    tmp_path: Path,
+) -> None:
+    def point(budget: int, mean: float) -> dict[str, float | int]:
+        return {
+            "budget": budget,
+            "mean_fraction_oracle": mean,
+            "ci95_low": mean - 0.01,
+            "ci95_high": mean + 0.01,
+        }
+
+    summary = {
+        "source_gpu": "L4 + A10",
+        "target_gpu": "H100",
+        "workloads": 96,
+        "configs": 36,
+        "max_budget": 8,
+        "seeds": 30,
+        "methods": {
+            "random": [point(1, 0.5), point(8, 0.9)],
+            "static_multisource": [point(1, 0.7), point(8, 0.7)],
+            "torch": [point(1, 0.8), point(8, 0.8)],
+            "official_triton_config_exhaustive": [point(12, 0.98)],
+            "exhaustive": [point(36, 1.0)],
+            "heldout_reference": [point(36, 1.0)],
+        },
+    }
+    output = tmp_path / "roles.html"
+
+    render_report(summary, output)
+
+    document = output.read_text(encoding="utf-8")
+    sequential_figure = document.split('<figure class="chart-frame sequential-chart">', 1)[1].split(
+        "</figure>", 1
+    )[0]
+    control_panel = document.split('<section class="control-panel"', 1)[1].split("</section>", 1)[0]
+    assert "Random" in sequential_figure
+    assert "Static Multisource" not in sequential_figure
+    assert "Torch" not in sequential_figure
+    assert "Official Triton Config Exhaustive" not in sequential_figure
+    assert "Exhaustive" not in sequential_figure
+    assert "reference parity" in sequential_figure
+    assert ">8<" in sequential_figure
+    assert ">12<" not in sequential_figure
+    assert ">36<" not in sequential_figure
+    assert "Static Multisource" in control_panel
+    assert "Torch" in control_panel
+    assert "Official Triton Config Exhaustive" in control_panel
+    assert "Exhaustive" in control_panel
+    assert "Zero-query control" in control_panel
+    assert "External implementation control" in control_panel
+    assert "Endpoint at 36 measured configurations" in control_panel
+    assert (
+        "default-src 'none'; style-src 'unsafe-inline'; img-src data:; "
+        "script-src 'none'; base-uri 'none'; form-action 'none'"
+    ) in document
+    assert "<link" not in document
+    assert "conditional on the fixed benchmark matrix" in document
