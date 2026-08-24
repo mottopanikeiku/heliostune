@@ -1,0 +1,1186 @@
+{
+  "auc": {
+    "cold_thompson": 0.8825630694927448,
+    "exhaustive": 1.002896528202395,
+    "heldout_reference": 1.0,
+    "multisource_retrieval": 0.5051330338086797,
+    "parhelion_thompson": 0.8518046329737359,
+    "pooled_source_thompson": 0.8825630694927448,
+    "random": 0.6683308143975936,
+    "single_source_nearest": 0.3941904235844762,
+    "static_multisource": 0.25366845107357394,
+    "torch": 3.8407842597701083
+  },
+  "cold_method": "cold_thompson",
+  "configs": 36,
+  "data_kind": "measured",
+  "experiment": {
+    "adaptation_scope": "one shared posterior with paired batched workload updates per method and seed",
+    "aggregation": "geometric mean fraction of held-out exhaustive reference",
+    "bank_roles": {
+      "0": "policy-visible observations and source archive",
+      "1": "exhaustive-reference selection",
+      "2": "held-out recommendation evaluation"
+    },
+    "budget_one_invariant": "Parhelion and multi-source retrieval query and recommend the identical retrieval anchor at budget 1, charged once to each method.",
+    "confidence_interval": "Stochastic curves use normal 95% seed intervals after equal-fold averaging; the paired primary AUC1..8 endpoint uses a two-sided 95% Student-t interval; deterministic curves use fold variation.",
+    "config_keys": [
+      "m128n128k32-w8s3g8",
+      "m128n128k32-w8s4g4",
+      "m128n128k64-w8s2g8",
+      "m128n32k32-w4s3g8",
+      "m128n32k32-w4s4g4",
+      "m128n32k64-w4s2g8",
+      "m128n64k32-w8s3g8",
+      "m128n64k32-w8s4g4",
+      "m128n64k64-w8s2g8",
+      "m16n128k32-w4s3g8",
+      "m16n128k32-w4s4g4",
+      "m16n128k64-w4s2g8",
+      "m16n32k32-w4s3g8",
+      "m16n32k32-w4s4g4",
+      "m16n32k64-w4s2g8",
+      "m16n64k32-w4s3g8",
+      "m16n64k32-w4s4g4",
+      "m16n64k64-w4s2g8",
+      "m32n128k32-w4s3g8",
+      "m32n128k32-w4s4g4",
+      "m32n128k64-w4s2g8",
+      "m32n32k32-w4s3g8",
+      "m32n32k32-w4s4g4",
+      "m32n32k64-w4s2g8",
+      "m32n64k32-w4s3g8",
+      "m32n64k32-w4s4g4",
+      "m32n64k64-w4s2g8",
+      "m64n128k32-w8s3g8",
+      "m64n128k32-w8s4g4",
+      "m64n128k64-w8s2g8",
+      "m64n32k32-w4s3g8",
+      "m64n32k32-w4s4g4",
+      "m64n32k64-w4s2g8",
+      "m64n64k32-w4s3g8",
+      "m64n64k32-w4s4g4",
+      "m64n64k64-w4s2g8"
+    ],
+    "live_methods": [
+      "random",
+      "single_source_nearest",
+      "multisource_retrieval",
+      "cold_thompson",
+      "pooled_source_thompson",
+      "parhelion_thompson"
+    ],
+    "parhelion_features": [
+      "bias",
+      "log_m",
+      "log_n",
+      "log_k",
+      "log_m_over_n",
+      "log_k_over_n",
+      "log_flops",
+      "block_m",
+      "block_n",
+      "block_k",
+      "warps",
+      "stages",
+      "group_m",
+      "m_tile_coverage",
+      "m_divisible",
+      "n_divisible",
+      "k_divisible",
+      "multiprocessors",
+      "memory_gb",
+      "compute_capability",
+      "m_x_block_m",
+      "n_x_block_n",
+      "k_x_block_k",
+      "sm_x_warps",
+      "memory_x_tile_area",
+      "weighted_advantage_mean",
+      "weighted_variance",
+      "normalized_neighbor_distance",
+      "source_gpu_agreement"
+    ],
+    "recommendation": "best measured bank-0 incumbent for every live adaptive method",
+    "retrieval_action_score": "distance-weighted, per-workload-centered log-TFLOP/s advantage",
+    "retrieval_distance": "frozen normalized Euclidean distance over log2(M, N, K)",
+    "reward": "log-TFLOP/s from the bank-0 selected-configuration latency",
+    "target_budget_unit": "distinct bank-0 configuration probes per held-out workload",
+    "workload_keys": [
+      "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096",
+      "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096",
+      "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096",
+      "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800",
+      "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800",
+      "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800",
+      "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800",
+      "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096",
+      "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096",
+      "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096",
+      "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096",
+      "mistral-7b-attention-out-decode-1-m1-n4096-k4096",
+      "mistral-7b-attention-out-decode-7-m7-n4096-k4096",
+      "mistral-7b-attention-out-mixed-31-m31-n4096-k4096",
+      "mistral-7b-attention-out-mixed-96-m96-n4096-k4096",
+      "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "mistral-7b-attention-out-prefill-257-m257-n4096-k4096",
+      "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+      "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "mistral-7b-ffn-down-decode-1-m1-n4096-k14336",
+      "mistral-7b-ffn-down-decode-7-m7-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336",
+      "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336",
+      "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336",
+      "mistral-7b-ffn-up-decode-1-m1-n14336-k4096",
+      "mistral-7b-ffn-up-decode-7-m7-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096",
+      "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096",
+      "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096",
+      "phi-3-mini-attention-out-decode-1-m1-n3072-k3072",
+      "phi-3-mini-attention-out-decode-7-m7-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072",
+      "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072",
+      "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072",
+      "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072",
+      "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072",
+      "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072",
+      "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072",
+      "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192",
+      "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192",
+      "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192",
+      "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192",
+      "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072",
+      "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072",
+      "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072",
+      "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072",
+      "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584",
+      "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584",
+      "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584",
+      "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584",
+      "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584",
+      "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584",
+      "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944",
+      "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584",
+      "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584",
+      "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584",
+      "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584"
+    ]
+  },
+  "folds": [
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12
+      },
+      "heldout_model": "granite-3.1-8b",
+      "parhelion_anchor_configs": {
+        "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096": "m32n128k32-w4s4g4",
+        "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096": "m128n128k32-w8s4g4",
+        "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096": "m32n128k32-w4s4g4",
+        "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096": "m128n128k32-w8s4g4",
+        "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800": "m32n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800": "m32n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800": "m64n128k32-w8s4g4",
+        "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800": "m128n128k32-w8s4g4",
+        "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096": "m16n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096": "m32n128k32-w4s4g4",
+        "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096": "m64n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096": "m128n128k32-w8s3g8",
+        "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096": "m64n128k32-w8s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 60,
+        "L4": 60
+      },
+      "static_config": "m64n128k32-w8s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 12,
+        "L4": 12
+      },
+      "heldout_model": "mistral-7b",
+      "parhelion_anchor_configs": {
+        "mistral-7b-attention-out-decode-1-m1-n4096-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-out-decode-7-m7-n4096-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-out-mixed-31-m31-n4096-k4096": "m32n128k32-w4s4g4",
+        "mistral-7b-attention-out-mixed-96-m96-n4096-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096": "m128n128k32-w8s4g4",
+        "mistral-7b-attention-out-prefill-257-m257-n4096-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096": "m32n128k32-w4s4g4",
+        "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096": "m128n64k32-w8s4g4",
+        "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096": "m128n128k32-w8s4g4",
+        "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-down-decode-1-m1-n4096-k14336": "m16n128k32-w4s4g4",
+        "mistral-7b-ffn-down-decode-7-m7-n4096-k14336": "m32n128k32-w4s4g4",
+        "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336": "m32n128k32-w4s4g4",
+        "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336": "m64n128k32-w8s4g4",
+        "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336": "m128n128k32-w8s4g4",
+        "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-up-decode-1-m1-n14336-k4096": "m16n128k32-w4s4g4",
+        "mistral-7b-ffn-up-decode-7-m7-n14336-k4096": "m32n128k32-w4s3g8",
+        "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096": "m64n128k32-w8s3g8",
+        "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096": "m128n128k32-w8s3g8",
+        "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096": "m64n128k32-w8s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 60,
+        "L4": 60
+      },
+      "static_config": "m64n128k32-w8s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2160,
+        "L4": 2160
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0
+      },
+      "heldout_model": "phi-3-mini",
+      "parhelion_anchor_configs": {
+        "phi-3-mini-attention-out-decode-1-m1-n3072-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-out-decode-7-m7-n3072-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072": "m32n128k32-w4s4g4",
+        "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072": "m64n128k32-w8s4g4",
+        "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072": "m128n128k32-w8s4g4",
+        "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072": "m64n128k32-w8s3g8",
+        "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072": "m32n128k32-w4s3g8",
+        "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072": "m64n128k32-w8s4g4",
+        "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072": "m128n128k32-w8s4g4",
+        "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072": "m64n128k32-w8s3g8",
+        "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192": "m32n128k32-w4s4g4",
+        "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192": "m32n128k32-w4s4g4",
+        "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192": "m64n128k32-w8s4g4",
+        "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192": "m128n128k32-w8s4g4",
+        "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192": "m64n128k32-w8s3g8",
+        "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072": "m16n128k32-w4s4g4",
+        "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072": "m32n128k32-w4s4g4",
+        "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072": "m64n128k32-w8s4g4",
+        "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072": "m128n128k32-w8s4g4",
+        "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072": "m64n128k32-w8s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 72,
+        "L4": 72
+      },
+      "static_config": "m64n128k32-w8s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592
+      }
+    },
+    {
+      "archive_excludes_exact_target_shapes": true,
+      "archive_excludes_heldout_family": true,
+      "excluded_exact_target_shapes_by_gpu": {
+        "A10": 0,
+        "L4": 0
+      },
+      "heldout_model": "qwen2.5-7b",
+      "parhelion_anchor_configs": {
+        "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584": "m32n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584": "m32n128k32-w4s4g4",
+        "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584": "m32n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584": "m32n128k32-w4s4g4",
+        "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944": "m16n128k32-w4s4g4",
+        "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944": "m32n128k32-w4s4g4",
+        "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944": "m64n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944": "m64n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584": "m16n128k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584": "m16n128k32-w4s3g8",
+        "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584": "m64n128k32-w8s3g8",
+        "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584": "m128n128k32-w8s4g4",
+        "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584": "m64n128k32-w8s3g8"
+      },
+      "single_source_nearest_gpu": "L4",
+      "source_workloads_by_gpu": {
+        "A10": 72,
+        "L4": 72
+      },
+      "static_config": "m64n128k32-w8s3g8",
+      "target_probes_per_live_method_per_workload": 8,
+      "target_workloads": 24,
+      "visible_bank0_source_observations_by_gpu": {
+        "A10": 2592,
+        "L4": 2592
+      }
+    }
+  ],
+  "hardware": [
+    {
+      "compute_capability": [
+        8,
+        9
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA L4",
+      "gpu": "L4",
+      "multiprocessor_count": 58,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0343017578125,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        8,
+        6
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA A10",
+      "gpu": "A10",
+      "multiprocessor_count": 72,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0582275390625,
+      "triton_version": "3.4.0"
+    },
+    {
+      "compute_capability": [
+        7,
+        5
+      ],
+      "cuda_version": "12.8",
+      "device_name": "Tesla T4",
+      "gpu": "T4",
+      "multiprocessor_count": 40,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 14.56317138671875,
+      "triton_version": "3.4.0"
+    }
+  ],
+  "headline": {
+    "budget": 8,
+    "cold_fraction_oracle": 0.9592496306426935,
+    "descriptive_target_strongest_legacy_method": "torch",
+    "paired_auc_delta_vs_primary": {
+      "ci95_high": -2.9859545141830823,
+      "ci95_low": -2.992004739409662,
+      "claim": null,
+      "comparator": "torch",
+      "degrees_of_freedom": 11,
+      "mean_auc_delta": -2.988979626796372,
+      "paired_seeds": 12,
+      "superiority_supported": false
+    },
+    "parhelion_auc": 0.8518046329737359,
+    "parhelion_fraction_oracle": 0.9789016407105368,
+    "primary_comparator": "torch",
+    "retrieval_fraction_oracle": 0.5863893252700807,
+    "trials_avoided_vs_exhaustive": 28
+  },
+  "hyperparameters": {
+    "multisource_retrieval": {
+      "k": 8,
+      "temperature": 0.2
+    },
+    "parhelion": {
+      "k": 16,
+      "temperature": 2.0,
+      "transfer_strength": 0.0
+    },
+    "pooled_source_thompson": {
+      "transfer_strength": 0.0
+    },
+    "selection_provenance": "Caller-supplied frozen choices selected externally; this replay performs no hyperparameter or baseline selection.",
+    "single_source_nearest": {
+      "contract": "parameter-free one-nearest-workload retrieval",
+      "k": 1,
+      "source_gpu": "L4",
+      "temperature": 1.0
+    }
+  },
+  "limitations": [
+    "The source archive cost is paid before target tuning and is not included in target probes.",
+    "Replay reports simulated online query efficiency from a physically exhaustive target matrix.",
+    "The curated 36-action manifest is not the full space of legal Triton configurations.",
+    "Steady-state kernel timings omit compilation and end-to-end serving overhead.",
+    "Protocol role is caller-declared; development and validation results are not untouched final-domain evidence.",
+    "Hyperparameters and the primary comparator are selected externally; this function never selects them or branches on a GPU name.",
+    "Three independent timing banks reduce leakage but do not model production interference.",
+    "The shape-disjoint L4 nearest baseline is v1-inspired and not an exact reproduction of the published v1 family-only replay."
+  ],
+  "max_budget": 8,
+  "measurement_banks": 3,
+  "method_labels": {
+    "cold_thompson": "Cold Thompson sampling",
+    "exhaustive": "Exhaustive autotuning",
+    "heldout_reference": "Held-out exhaustive reference",
+    "multisource_retrieval": "Multi-source retrieval",
+    "parhelion_thompson": "Parhelion retrieval-anchored Thompson sampling",
+    "pooled_source_thompson": "Pooled-source Thompson sampling",
+    "random": "Random search",
+    "single_source_nearest": "Single-source nearest-shape reuse",
+    "static_multisource": "Static multi-source best",
+    "torch": "torch.matmul"
+  },
+  "methodology": "Grouped leave-one-model-family-out multi-source replay. Every source archive, normalization, and posterior excludes the held-out family and exact target shapes. Policies see only bank 0; bank 1 selects the reference and bank 2 evaluates recommendations. Parhelion pays for its consensus retrieval anchor as query one, then adapts a retrieval-augmented Thompson posterior and returns a measured incumbent.",
+  "methods": {
+    "cold_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.5780612685498434,
+        "ci95_low": 0.5271352717751776,
+        "mean_fraction_oracle": 0.5525982701625105
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8825781261262091,
+        "ci95_low": 0.8042500730144924,
+        "mean_fraction_oracle": 0.8434140995703507
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9225426609588647,
+        "ci95_low": 0.8739039956707315,
+        "mean_fraction_oracle": 0.8982233283147981
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9514267726090385,
+        "ci95_low": 0.9306573454682802,
+        "mean_fraction_oracle": 0.9410420590386593
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9569634087269151,
+        "ci95_low": 0.9482301758437625,
+        "mean_fraction_oracle": 0.9525967922853388
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9584871861541552,
+        "ci95_low": 0.9543099358962487,
+        "mean_fraction_oracle": 0.9563985610252019
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9594546227274668,
+        "ci95_low": 0.9545090070773433,
+        "mean_fraction_oracle": 0.9569818149024051
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9619565881558506,
+        "ci95_low": 0.9565426731295364,
+        "mean_fraction_oracle": 0.9592496306426935
+      }
+    ],
+    "exhaustive": [
+      {
+        "budget": 36,
+        "ci95_high": 1.005149199067373,
+        "ci95_low": 1.0006438573374168,
+        "mean_fraction_oracle": 1.002896528202395
+      }
+    ],
+    "heldout_reference": [
+      {
+        "budget": 36,
+        "ci95_high": 1.0,
+        "ci95_low": 1.0,
+        "mean_fraction_oracle": 1.0
+      }
+    ],
+    "multisource_retrieval": [
+      {
+        "budget": 1,
+        "ci95_high": 0.3359848471752699,
+        "ci95_low": 0.2511860844717,
+        "mean_fraction_oracle": 0.29358546582348494
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.35655356652517906,
+        "ci95_low": 0.3501825196332196,
+        "mean_fraction_oracle": 0.35336804307919933
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.5579552230304743,
+        "ci95_low": 0.47861474663922077,
+        "mean_fraction_oracle": 0.5182849848348475
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.5692333838841365,
+        "ci95_low": 0.5265924590158485,
+        "mean_fraction_oracle": 0.5479129214499925
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.5971050726755607,
+        "ci95_low": 0.5556887870328393,
+        "mean_fraction_oracle": 0.5763969298542
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.6011152958362033,
+        "ci95_low": 0.5613225538177279,
+        "mean_fraction_oracle": 0.5812189248269656
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.6021441410988607,
+        "ci95_low": 0.5656712095624726,
+        "mean_fraction_oracle": 0.5839076753306667
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.6056554417862827,
+        "ci95_low": 0.5671232087538787,
+        "mean_fraction_oracle": 0.5863893252700807
+      }
+    ],
+    "parhelion_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.29358546582348494,
+        "ci95_low": 0.29358546582348494,
+        "mean_fraction_oracle": 0.29358546582348494
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8104556564029738,
+        "ci95_low": 0.7830089213775883,
+        "mean_fraction_oracle": 0.796732288890281
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9341256965412135,
+        "ci95_low": 0.9152988712010754,
+        "mean_fraction_oracle": 0.9247122838711445
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9512517890572362,
+        "ci95_low": 0.9437333031413851,
+        "mean_fraction_oracle": 0.9474925460993107
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9545439542827606,
+        "ci95_low": 0.9526126262935125,
+        "mean_fraction_oracle": 0.9535782902881366
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9570903503357853,
+        "ci95_low": 0.9552020498979739,
+        "mean_fraction_oracle": 0.9561462001168796
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.965793979547038,
+        "ci95_low": 0.9607827164331884,
+        "mean_fraction_oracle": 0.9632883479901132
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9827224213107721,
+        "ci95_low": 0.9750808601103014,
+        "mean_fraction_oracle": 0.9789016407105368
+      }
+    ],
+    "pooled_source_thompson": [
+      {
+        "budget": 1,
+        "ci95_high": 0.5780612685498434,
+        "ci95_low": 0.5271352717751776,
+        "mean_fraction_oracle": 0.5525982701625105
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.8825781261262091,
+        "ci95_low": 0.8042500730144924,
+        "mean_fraction_oracle": 0.8434140995703507
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.9225426609588647,
+        "ci95_low": 0.8739039956707315,
+        "mean_fraction_oracle": 0.8982233283147981
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.9514267726090385,
+        "ci95_low": 0.9306573454682802,
+        "mean_fraction_oracle": 0.9410420590386593
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.9569634087269151,
+        "ci95_low": 0.9482301758437625,
+        "mean_fraction_oracle": 0.9525967922853388
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.9584871861541552,
+        "ci95_low": 0.9543099358962487,
+        "mean_fraction_oracle": 0.9563985610252019
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.9594546227274668,
+        "ci95_low": 0.9545090070773433,
+        "mean_fraction_oracle": 0.9569818149024051
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.9619565881558506,
+        "ci95_low": 0.9565426731295364,
+        "mean_fraction_oracle": 0.9592496306426935
+      }
+    ],
+    "random": [
+      {
+        "budget": 1,
+        "ci95_high": 0.2490077372732615,
+        "ci95_low": 0.21952603512712757,
+        "mean_fraction_oracle": 0.23426688620019454
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.49829271477225845,
+        "ci95_low": 0.46628703212704903,
+        "mean_fraction_oracle": 0.48228987344965374
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.64398958196918,
+        "ci95_low": 0.606920250475368,
+        "mean_fraction_oracle": 0.625454916222274
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.7292516077976362,
+        "ci95_low": 0.6986666637900344,
+        "mean_fraction_oracle": 0.7139591357938353
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.7829837155781386,
+        "ci95_low": 0.7575659806145428,
+        "mean_fraction_oracle": 0.7702748480963407
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.8248638736184548,
+        "ci95_low": 0.8000478155046395,
+        "mean_fraction_oracle": 0.8124558445615472
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.8549303848389943,
+        "ci95_low": 0.8318459856745216,
+        "mean_fraction_oracle": 0.843388185256758
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.8758785889874662,
+        "ci95_low": 0.8532350622128239,
+        "mean_fraction_oracle": 0.864556825600145
+      }
+    ],
+    "single_source_nearest": [
+      {
+        "budget": 1,
+        "ci95_high": 0.09891804961529041,
+        "ci95_low": 0.08204469218073066,
+        "mean_fraction_oracle": 0.09048137089801053
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.1609133383873074,
+        "ci95_low": 0.15359444880247955,
+        "mean_fraction_oracle": 0.15725389359489347
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.2717289954918862,
+        "ci95_low": 0.21324403442549322,
+        "mean_fraction_oracle": 0.24248651495868973
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.49572188168477344,
+        "ci95_low": 0.45990390481630467,
+        "mean_fraction_oracle": 0.47781289325053905
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.49898767099065244,
+        "ci95_low": 0.493713037722207,
+        "mean_fraction_oracle": 0.4963503543564297
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.5422228820539273,
+        "ci95_low": 0.5357557895874879,
+        "mean_fraction_oracle": 0.5389893358207076
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.5779484579942902,
+        "ci95_low": 0.5648747068323279,
+        "mean_fraction_oracle": 0.571411582413309
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.5867257522800651,
+        "ci95_low": 0.5707491344863971,
+        "mean_fraction_oracle": 0.5787374433832311
+      }
+    ],
+    "static_multisource": [
+      {
+        "budget": 1,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 2,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 3,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 4,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 5,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 6,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 7,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      },
+      {
+        "budget": 8,
+        "ci95_high": 0.2608536727410116,
+        "ci95_low": 0.24648322940613626,
+        "mean_fraction_oracle": 0.25366845107357394
+      }
+    ],
+    "torch": [
+      {
+        "budget": 1,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 2,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 3,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 4,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 5,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 6,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 7,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      },
+      {
+        "budget": 8,
+        "ci95_high": 3.9031608478928357,
+        "ci95_low": 3.778407671647381,
+        "mean_fraction_oracle": 3.8407842597701083
+      }
+    ]
+  },
+  "model_families": 4,
+  "primary_comparator": "torch",
+  "primary_metrics": {
+    "comparator_selection": "External and frozen before final-domain evaluation; target-side strongest legacy is descriptive only and never becomes the primary comparator.",
+    "descriptive_target_strongest_legacy_method": "torch",
+    "fold_aggregation": "Stochastic curves average model-family folds within each paired seed before the primary AUC1..8 Student-t interval. Deterministic curve intervals reflect variation across equal-weight folds.",
+    "fraction_reference_auc": {
+      "cold_thompson": 0.8825630694927448,
+      "exhaustive": 1.002896528202395,
+      "heldout_reference": 1.0,
+      "multisource_retrieval": 0.5051330338086797,
+      "parhelion_thompson": 0.8518046329737359,
+      "pooled_source_thompson": 0.8825630694927448,
+      "random": 0.6683308143975936,
+      "single_source_nearest": 0.3941904235844762,
+      "static_multisource": 0.25366845107357394,
+      "torch": 3.8407842597701083
+    },
+    "paired_parhelion_vs_primary_auc_delta": {
+      "ci95_high": -2.9859545141830823,
+      "ci95_low": -2.992004739409662,
+      "claim": null,
+      "comparator": "torch",
+      "degrees_of_freedom": 11,
+      "mean_auc_delta": -2.988979626796372,
+      "paired_seeds": 12,
+      "superiority_supported": false
+    },
+    "paired_seed_fraction_reference_auc_1_to_8": {
+      "cold_thompson": [
+        0.8620633542509135,
+        0.8817301496081289,
+        0.8877423191939416,
+        0.8900075252852758,
+        0.898078124587044,
+        0.9092910128898006,
+        0.8627789981994209,
+        0.9086929719129414,
+        0.8534986436290828,
+        0.8820304266718819,
+        0.8776141441078757,
+        0.8772291635766294
+      ],
+      "multisource_retrieval": [
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797,
+        0.5051330338086797
+      ],
+      "parhelion_thompson": [
+        0.8578312960344256,
+        0.8497007499118752,
+        0.8551834505896296,
+        0.8476993396572595,
+        0.848959765795565,
+        0.857018779352841,
+        0.8486272854605511,
+        0.8615687965540549,
+        0.8478903197011084,
+        0.8495226479233847,
+        0.8496508938676937,
+        0.8480022708364419
+      ],
+      "pooled_source_thompson": [
+        0.8620633542509135,
+        0.8817301496081289,
+        0.8877423191939416,
+        0.8900075252852758,
+        0.898078124587044,
+        0.9092910128898006,
+        0.8627789981994209,
+        0.9086929719129414,
+        0.8534986436290828,
+        0.8820304266718819,
+        0.8776141441078757,
+        0.8772291635766294
+      ],
+      "random": [
+        0.6708008908684506,
+        0.7129534493041616,
+        0.6867622617296538,
+        0.6814113955804393,
+        0.6543864719431068,
+        0.6631075838355169,
+        0.6623746767602159,
+        0.6511610900817308,
+        0.6440587440386184,
+        0.6664749864004685,
+        0.6479045046219445,
+        0.678573717606815
+      ],
+      "single_source_nearest": [
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626,
+        0.39419042358447626
+      ],
+      "static_multisource": [
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394,
+        0.25366845107357394
+      ],
+      "torch": [
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083,
+        3.8407842597701083
+      ]
+    },
+    "primary_budget": 8,
+    "queries_to_95_percent_reference": {
+      "cold_thompson": 5,
+      "exhaustive": 36,
+      "heldout_reference": 36,
+      "multisource_retrieval": null,
+      "parhelion_thompson": 5,
+      "pooled_source_thompson": 5,
+      "random": null,
+      "single_source_nearest": null,
+      "static_multisource": null,
+      "torch": 1
+    }
+  },
+  "project": "HeliosTune v2",
+  "protocol_role": "validation",
+  "provenance": {
+    "budget_one_anchor": "Parhelion and multi-source retrieval use the same independently frozen retrieval rank-one action",
+    "gpu_name_special_casing": "none",
+    "hyperparameters": "externally selected and frozen before this replay",
+    "primary_comparator": "caller-supplied and frozen before target evaluation",
+    "protocol_role": "caller-declared",
+    "reward": "log-TFLOP/s for every source and target posterior observation",
+    "single_source_nearest": "parameter-free k=1 retrieval bound to first declared source L4"
+  },
+  "queries_to_95_percent_reference": {
+    "cold_thompson": 5,
+    "exhaustive": 36,
+    "heldout_reference": 36,
+    "multisource_retrieval": null,
+    "parhelion_thompson": 5,
+    "pooled_source_thompson": 5,
+    "random": null,
+    "single_source_nearest": null,
+    "static_multisource": null,
+    "torch": 1
+  },
+  "seeds": 12,
+  "source_cost": {
+    "collected_measurements_all_source_gpus": 20736,
+    "collected_measurements_per_source_gpu": 10368,
+    "disclosure": "Policies use only bank-0 source observations from leakage-safe rows. All physical source acquisition and source reference/evaluation banks are outside the target online-query budget.",
+    "visible_bank0_source_observations_by_fold": [
+      4320,
+      4320,
+      5184,
+      5184
+    ]
+  },
+  "source_gpu": "L4 + A10",
+  "source_gpus": [
+    "L4",
+    "A10"
+  ],
+  "source_hardware": {
+    "gpus": [
+      "L4",
+      "A10"
+    ],
+    "profiles": [
+      {
+        "compute_capability": [
+          8,
+          9
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA L4",
+        "gpu": "L4",
+        "multiprocessor_count": 58,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 22.0343017578125,
+        "triton_version": "3.4.0"
+      },
+      {
+        "compute_capability": [
+          8,
+          6
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA A10",
+        "gpu": "A10",
+        "multiprocessor_count": 72,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 22.0582275390625,
+        "triton_version": "3.4.0"
+      }
+    ]
+  },
+  "target_collection_cost": {
+    "adaptation_scope": "Each adaptive method uses one shared posterior and a paired, batched workload order per budget round; workloads are not tuned as independent posteriors.",
+    "budget_b_formula": "Per live method: target workloads in one fold times b (24*b for each frozen four-family corpus fold), and all workloads times b (96*b across four folds).",
+    "disclosure": "Replay simulates online selection from an already collected exhaustive target matrix. Physical collection includes all three banks and is not reduced by the reported online query budget.",
+    "exhaustive_bank0_queries_per_workload": 36,
+    "physically_collected_measurements": 10368,
+    "simulated_online_queries_all_live_methods_all_folds": 4608,
+    "simulated_online_queries_per_live_method_all_folds": 768,
+    "simulated_online_queries_per_live_method_by_fold": [
+      192,
+      192,
+      192,
+      192
+    ],
+    "simulated_online_queries_per_live_method_per_workload": 8
+  },
+  "target_gpu": "T4",
+  "target_hardware": {
+    "compute_capability": [
+      7,
+      5
+    ],
+    "cuda_version": "12.8",
+    "device_name": "Tesla T4",
+    "gpu": "T4",
+    "multiprocessor_count": 40,
+    "torch_version": "2.8.0+cu128",
+    "total_memory_gb": 14.56317138671875,
+    "triton_version": "3.4.0"
+  },
+  "transfer_method": "parhelion_thompson",
+  "transfer_strength": 0.0,
+  "workloads": 96
+}

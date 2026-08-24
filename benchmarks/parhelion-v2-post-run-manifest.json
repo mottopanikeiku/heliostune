@@ -29,18 +29,21 @@
     },
     "t4_raw": {
       "published_path": "data/t4-measurements.jsonl.zst",
+      "compressed_sha256": "f00c2a1498937707c872f667cf210de5e7319218c7df56e05a15174441a36c00",
       "records": 10368,
       "failures": 0,
       "uncompressed_sha256": "f3910e73aec68d48015b0fb9d0469ff2be8c3210d5777dab61e4a9cdd660d217"
     },
     "h100_raw": {
       "published_path": "data/h100-measurements.jsonl.zst",
+      "compressed_sha256": "91b94ec42a71b1832203a6c5cdedf0102cf8d04ae9992d739fffa5351b7ac206",
       "records": 10368,
       "failures": 0,
       "uncompressed_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8"
     },
     "four_gpu_replay_archive": {
       "published_path": "data/parhelion-v2-measurements.jsonl.zst",
+      "compressed_sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f",
       "records": 41472,
       "uncompressed_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d"
     }
@@ -51,7 +54,7 @@
       "sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca"
     },
     "t4_summary_pre_fold_reporting": {
-      "source_path": "artifacts/t4-final-summary.json",
+      "published_path": "results/parhelion-t4-validation.json",
       "sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4"
     },
     "h100_summary": {
@@ -60,7 +63,7 @@
     },
     "h100_report": {
       "published_path": "../site/index.html",
-      "sha256": "9deb50ccc3187ec31d459ad4fe92e72fc7e56543c7c6a2fc80c506525dfa99e6"
+      "sha256": "149dc7c1a705a5d7189e575274440a72ddbcba59e183554d7a0bd6fd739beb61"
     }
   },
   "frozen_selection": {
@@ -97,6 +100,7 @@
     "h100_collection": "modal run modal_bench.py --gpus H100 --replicates 3 --warmup-ms 25 --rep-ms 100 --output artifacts/h100-measurements.jsonl",
     "archive_assembly": "uv run python scripts/assemble_parhelion_final.py",
     "frozen_replay": "uv run heliostune compare-multisource artifacts/parhelion-final.jsonl --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 --k 16 --temperature 2.0 --transfer-strength 0.0 --retrieval-k 8 --retrieval-temperature 0.2 --pooled-transfer-strength 0.0 --primary-comparator torch --protocol-role final --output artifacts/h100-final-summary.json",
+    "provenance_binding": "uv run python scripts/bind_parhelion_release.py",
     "report": "uv run heliostune report artifacts/h100-final-summary.json --output artifacts/h100-report.html"
   },
   "reporting_note": "Commit 93e6134 adds fold-level serialization and chain-of-custody rendering only. It was applied after the sole H100 run and does not alter policies, selected actions, metrics, or collected measurements."
