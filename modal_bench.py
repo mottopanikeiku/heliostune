@@ -29,6 +29,7 @@ def _configured_modal_wheel() -> Path:
 
 
 _MODAL_WHEEL = _configured_modal_wheel()
+_REMOTE_WHEEL = f"/root/{_MODAL_WHEEL.name}"
 
 app = modal.App("heliostune-bench")
 image = (
@@ -40,8 +41,8 @@ image = (
         "torch==2.8.0",
         "triton==3.4.0",
     )
-    .add_local_file(_MODAL_WHEEL, remote_path="/root/heliostune.whl", copy=True)
-    .run_commands("python -m pip install --no-deps /root/heliostune.whl")
+    .add_local_file(_MODAL_WHEEL, remote_path=_REMOTE_WHEEL, copy=True)
+    .run_commands(f"python -m pip install --no-deps {_REMOTE_WHEEL}")
 )
 
 

@@ -724,7 +724,7 @@
     "validation_gpu": "A100-80GB"
   },
   "implementation_sha256": {
-    "modal_bench.py": "a3c7ec130dbce9d1e61dde41106dc3c95390cb0b2b232d22374cef1bb8cd14a4",
+    "modal_bench.py": "a511b739e67260f1be7eebf75fb028710e295d4770b1023ae48bb8545f586447",
     "scripts/assemble_parhelion_v3.py": "5508f48b2d1358ad477925ae476996ab687036b29b4041d773c07e7c104c0f7b",
     "scripts/build_parhelion_v3_protocol.py": "92decba0cabd5be7536e26029438525ddb5d6634191ad02455bfd6b31d9cb9cd",
     "scripts/freeze_parhelion_v3.py": "9ee1a06157d9a0cc269522a42346125b49cfeed0ccd5316f9ff0666d2477b466",
