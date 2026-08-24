@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
+
+from heliostune.artifacts import read_json, write_json_atomic
+from heliostune.validation import exact_object
 
 _REPO = Path(__file__).resolve().parents[1]
 _SUMMARY = _REPO / "artifacts/h100-final-summary.json"
@@ -19,15 +21,12 @@ _RELEASE_PROVENANCE = {
 
 
 def main() -> None:
-    summary = json.loads(_SUMMARY.read_text(encoding="utf-8"))
+    summary = exact_object(read_json(_SUMMARY), context="H100 final summary")
     existing = summary.get("release_provenance")
     if existing is not None and existing != _RELEASE_PROVENANCE:
         raise ValueError("summary contains conflicting release provenance")
     summary["release_provenance"] = _RELEASE_PROVENANCE
-    _SUMMARY.write_text(
-        json.dumps(summary, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    write_json_atomic(_SUMMARY, summary)
 
 
 if __name__ == "__main__":

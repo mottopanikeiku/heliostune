@@ -51,7 +51,7 @@ The closest ideas are established: nearest-task warm starts, transferred cost mo
 - **Timing banks:** bank 0 is policy-visible; bank 1 selects the manifest reference; bank 2 scores recommendations.
 - **Leakage control:** each fold excludes the complete target model family and every source row sharing an exact target `(M,N,K)` shape before retrieval, centering, source modeling, or selection.
 - **Shared adaptation:** budget `b` means `b` target probes per workload. A fold uses `24b` probes; all four folds use `96b`. One posterior is shared across the 24 workloads in a fold, so this is batched adaptation, not 96 independent tuners.
-- **T4 validation:** L4+A10 source archive; 12 seeds; 15 unique baseline-grid points followed by 48 Parhelion points. Selected Parhelion `(k=16, T=2.0, α=0)`, retrieval `(k=8, T=0.2)`, pooled `α=0`, and primary comparator `torch`.
+- **T4 validation:** L4+A10 source archive; 12 seeds; method-local retrieval (12 points), pooled-source (4 strengths), and Parhelion (48 points) grids. Selected Parhelion `(k=16, T=2.0, α=0)`, retrieval `(k=8, T=0.2)`, pooled `α=0`, and primary comparator `torch`.
 - **H100 final:** L4+A10+T4 source archive; 30 seeds; the selected parameters and comparator were frozen before the only H100 invocation.
 - **Physical cost:** 31,104 source measurements plus 10,368 H100 measurements. The simulated budget-8 online cost is 768 target queries per live method across all folds; physical target collection remains exhaustive.
 - **Numerical gate:** all 41,472 four-GPU cells passed the FP32-reference correctness check.
@@ -72,59 +72,95 @@ The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) b
 
 ## Run locally
 
-Python 3.11–3.13 and [uv](https://docs.astral.sh/uv/) are supported.
+Python 3.11–3.13 and uv 0.12.5 are supported. From a clean clone:
 
 ```bash
-uv sync --extra dev
+git clone https://github.com/mottopanikeiku/heliostune.git
+cd heliostune
+uv sync --locked --extra dev
+uv run heliostune --help
+uv run heliostune --version
+uv run heliostune demo --output-dir /tmp/heliostune-demo --max-budget 2 --seeds 2
+uv run heliostune inspect /tmp/heliostune-demo/measurements.jsonl
+```
+
+Native zstandard inspection needs no external `zstd` executable:
+
+```bash
+uv run heliostune inspect benchmarks/data/parhelion-v2-measurements.jsonl.zst
+```
+
+The stable root API exposes strict artifact I/O without importing replay or reporting:
+
+```python
+from heliostune import __version__, read_measurements, write_measurements_atomic
+
+rows = read_measurements("benchmarks/data/t4-measurements.jsonl.zst")
+write_measurements_atomic("/tmp/t4-copy.jsonl.zst", rows)
+print(__version__, len(rows))
+```
+
+Run the complete CPU quality gates with:
+
+```bash
+uv lock --check
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
+uv run coverage run --branch -m pytest
+uv run coverage report
 ```
 
-Inspect the published four-GPU archive:
+Reproduce the frozen H100 replay directly from the compressed archive:
 
 ```bash
-zstd -d benchmarks/data/parhelion-v2-measurements.jsonl.zst \
-  -o artifacts/parhelion-final.jsonl
-uv run heliostune inspect artifacts/parhelion-final.jsonl
-```
-
-Reproduce the frozen H100 replay and offline report:
-
-```bash
-uv run heliostune compare-multisource artifacts/parhelion-final.jsonl \
+uv run heliostune compare-multisource \
+  benchmarks/data/parhelion-v2-measurements.jsonl.zst \
   --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 \
   --k 16 --temperature 2.0 --transfer-strength 0.0 \
   --retrieval-k 8 --retrieval-temperature 0.2 \
   --pooled-transfer-strength 0.0 --primary-comparator torch \
   --protocol-role final --output artifacts/h100-final-summary.json
-uv run python scripts/bind_parhelion_release.py
 uv run heliostune report artifacts/h100-final-summary.json \
   --output artifacts/h100-report.html
 ```
 
-The local `heliostune demo` remains synthetic and supports no hardware claim.
+The local `heliostune demo` is synthetic and supports no hardware claim.
 
 ## Collect on Modal
 
+Build the exact committed wheel before any paid call, then invoke the durable bank protocol:
+
 ```bash
-modal run modal_bench.py --gpus T4 \
-  --replicates 3 --warmup-ms 25 --rep-ms 100 \
-  --output artifacts/t4-measurements.jsonl
+uv run python scripts/build_modal_wheel.py
+uv run --extra modal modal run modal_bench.py \
+  --gpus T4 --banks 0,1,2 --warmup-ms 25 --rep-ms 100 \
+  --output artifacts/t4-measurements.jsonl.zst
 ```
 
-`modal_bench.py` supports `L4`, `A10`, `T4`, and `H100`. H100 collection uses Modal's exact `H100!` selector internally to reject automatic H200 substitution. Do not rerun the published H100 protocol; the command above is for independent replication.
+Output parents are created automatically. Each call ID is fsynced to
+`${output}.attempts.jsonl` before any result retrieval; `${output}.manifest.json`
+binds the request, journal, wheel, source, hardware, and final data digests. Resume
+an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
+`FunctionCall` IDs and spawns no replacements.
+
+`modal_bench.py` gates `L4`, `A10`, `T4`, `H100`, `A100-80GB`, and `H200` identities before tensor allocation. H100 uses Modal's exact `H100!` selector. Do not rerun the published H100 protocol; this command is for an independent study.
 
 ## Repository map
 
+- `src/heliostune/artifacts.py` — strict JSON/JSONL decoding and atomic zstandard persistence
+- `src/heliostune/collection.py` — paid-call planning, fsynced attempt journals, resume, and commit
+- `src/heliostune/hardware.py` — pure fleet identity and memory gates
 - `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
-- `src/heliostune/multisource.py` — grouped multi-source replay, baselines, paired endpoint, and fold evidence
+- `src/heliostune/multisource.py` — public multi-source replay facade
+- `src/heliostune/multisource_engine.py` — prepared folds and method-local evaluators
 - `src/heliostune/selection.py` — strict staged T4 selector
-- `src/heliostune/bandit.py` — Gaussian linear posterior and discounted likelihood transfer
+- `src/heliostune/bandit.py` — atomic Gaussian information-form posterior updates
 - `src/heliostune/kernel.py` — manual Triton matmul and measured collector
-- `src/heliostune/report.py` — self-contained Fable evidence report
-- `scripts/assemble_parhelion_final.py` — digest-verifying four-GPU archive assembly
-- `scripts/bind_parhelion_release.py` — deterministic release-provenance binding
+- `src/heliostune/report_model.py` — immutable renderer input contract
+- `src/heliostune/report.py` — self-contained offline evidence report
+- `scripts/build_modal_wheel.py` — reproducible committed-wheel builder
+- `scripts/assemble_parhelion_final.py` — historical v2 archive verifier
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
 - `site/` — offline final report, downloadable JSON, and archived v1 report
 

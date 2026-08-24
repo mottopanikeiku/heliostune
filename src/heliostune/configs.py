@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
+
+from heliostune.errors import SchemaError
+from heliostune.validation import exact_fields, exact_int, nonblank_string
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,12 +20,14 @@ class KernelConfig:
     group_m: int = 8
 
     def __post_init__(self) -> None:
-        if min(self.block_m, self.block_n, self.block_k, self.group_m) <= 0:
-            raise ValueError("tile sizes and group_m must be positive")
+        for name in ("block_m", "block_n", "block_k", "num_warps", "num_stages", "group_m"):
+            exact_int(getattr(self, name), context=f"kernel config {name}", minimum=1)
+        for name in ("block_m", "block_n", "block_k"):
+            size = getattr(self, name)
+            if size & (size - 1):
+                raise SchemaError(f"{name} must be a power of two")
         if self.num_warps not in {1, 2, 4, 8}:
-            raise ValueError("num_warps must be one of 1, 2, 4, or 8")
-        if self.num_stages <= 0:
-            raise ValueError("num_stages must be positive")
+            raise SchemaError("num_warps must be one of 1, 2, 4, or 8")
 
     @property
     def key(self) -> str:
@@ -36,8 +40,15 @@ class KernelConfig:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, value: dict[str, Any]) -> KernelConfig:
-        return cls(**{field: int(value[field]) for field in cls.__dataclass_fields__})
+    def from_dict(cls, value: object) -> KernelConfig:
+        fields = tuple(cls.__dataclass_fields__)
+        data = exact_fields(value, required=fields, context="kernel config")
+        return cls(
+            **{
+                field: exact_int(data[field], context=f"kernel config {field}", minimum=1)
+                for field in fields
+            }
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,10 +63,10 @@ class Workload:
     regime: str
 
     def __post_init__(self) -> None:
-        if min(self.m, self.n, self.k) <= 0:
-            raise ValueError("matrix dimensions must be positive")
-        if not self.model or not self.projection or not self.regime:
-            raise ValueError("model, projection, and regime must not be empty")
+        for name in ("m", "n", "k"):
+            exact_int(getattr(self, name), context=f"workload {name}", minimum=1)
+        for name in ("model", "projection", "regime"):
+            nonblank_string(getattr(self, name), context=f"workload {name}")
 
     @property
     def key(self) -> str:
@@ -69,14 +80,19 @@ class Workload:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, value: dict[str, Any]) -> Workload:
+    def from_dict(cls, value: object) -> Workload:
+        data = exact_fields(
+            value,
+            required=("m", "n", "k", "model", "projection", "regime"),
+            context="workload",
+        )
         return cls(
-            m=int(value["m"]),
-            n=int(value["n"]),
-            k=int(value["k"]),
-            model=str(value["model"]),
-            projection=str(value["projection"]),
-            regime=str(value["regime"]),
+            m=exact_int(data["m"], context="workload m", minimum=1),
+            n=exact_int(data["n"], context="workload n", minimum=1),
+            k=exact_int(data["k"], context="workload k", minimum=1),
+            model=nonblank_string(data["model"], context="workload model"),
+            projection=nonblank_string(data["projection"], context="workload projection"),
+            regime=nonblank_string(data["regime"], context="workload regime"),
         )
 
 
@@ -90,6 +106,21 @@ class ModelSpec:
     attention_heads: int
     key_value_heads: int
     config_url: str
+
+    def __post_init__(self) -> None:
+        nonblank_string(self.name, context="model spec name")
+        nonblank_string(self.config_url, context="model spec config_url")
+        for name in (
+            "hidden_size",
+            "intermediate_size",
+            "attention_heads",
+            "key_value_heads",
+        ):
+            exact_int(getattr(self, name), context=f"model spec {name}", minimum=1)
+        if self.hidden_size % self.attention_heads:
+            raise SchemaError("hidden_size must be divisible by attention_heads")
+        if self.key_value_heads > self.attention_heads:
+            raise SchemaError("key_value_heads must not exceed attention_heads")
 
     @property
     def key_value_size(self) -> int:

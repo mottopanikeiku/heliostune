@@ -9,6 +9,7 @@ import subprocess
 from collections import Counter
 from pathlib import Path
 
+from heliostune.artifacts import write_bytes_atomic
 from heliostune.schema import Measurement, read_jsonl
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -68,13 +69,13 @@ def _validate_chunk(
             measurement.hardware.gpu,
             measurement.workload.key,
             measurement.config.key,
-            measurement.replicate,
+            measurement.bank,
         )
         if key in keys:
             raise ValueError(f"duplicate {label} measurement {key}")
         keys.add(key)
-        if measurement.replicate not in {0, 1, 2}:
-            raise ValueError(f"unexpected {label} measurement bank {measurement.replicate}")
+        if measurement.bank not in {0, 1, 2}:
+            raise ValueError(f"unexpected {label} measurement bank {measurement.bank}")
         if (
             not measurement.usable
             or measurement.latency_ms is None
@@ -98,8 +99,7 @@ def main() -> None:
     _validate_chunk(t4_rows, ("T4",), "T4")
     _validate_chunk(h100_rows, ("H100",), "H100")
 
-    _OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    _OUTPUT.write_bytes(source_payload + t4_payload + h100_payload)
+    write_bytes_atomic(_OUTPUT, source_payload + t4_payload + h100_payload)
     print(f"h100_sha256={_sha256(_H100)}")
     print(f"final_sha256={_sha256(_OUTPUT)}")
     print(f"records={len(source_rows) + len(t4_rows) + len(h100_rows)}")
