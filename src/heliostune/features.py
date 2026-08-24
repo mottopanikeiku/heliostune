@@ -1,4 +1,4 @@
-"""Numerically bounded joint workload, hardware, and launch features."""
+"""Frozen v2 and profile-aware v3 workload/hardware/launch features."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from heliostune.configs import KernelConfig, Workload
 from heliostune.schema import HardwareProfile
 
-FEATURE_NAMES: tuple[str, ...] = (
+V2_FEATURE_NAMES: tuple[str, ...] = (
     "bias",
     "log_m",
     "log_n",
@@ -38,14 +38,36 @@ FEATURE_NAMES: tuple[str, ...] = (
     "memory_x_tile_area",
 )
 
+V3_FEATURE_NAMES: tuple[str, ...] = (
+    "bias",
+    "log_m",
+    "log_n",
+    "log_k",
+    "block_m",
+    "block_n",
+    "block_k",
+    "warps",
+    "stages",
+    "group_m",
+    "m_tile_coverage",
+    "m_divisible",
+    "multiprocessors",
+    "memory_gb",
+    "compute_capability",
+    "m_x_block_m",
+    "n_x_block_n",
+    "k_x_block_k",
+    "sm_x_warps",
+    "memory_x_tile_area",
+)
+_V3_INDICES = (0, 1, 2, 3, 7, 8, 9, 10, 11, 12, 13, 14, 17, 18, 19, 20, 21, 22, 23, 24)
 
-def joint_features(
+
+def _v2_values(
     workload: Workload,
     config: KernelConfig,
     hardware: HardwareProfile,
-) -> NDArray[np.float64]:
-    """Return a stable feature vector with every continuous value near ``[-1, 1]``."""
-
+) -> tuple[float, ...]:
     log_m = math.log2(workload.m) / 14.0
     log_n = math.log2(workload.n) / 14.0
     log_k = math.log2(workload.k) / 14.0
@@ -56,8 +78,7 @@ def joint_features(
     memory_gb = hardware.total_memory_gb / 48.0
     compute_capability = (hardware.compute_capability[0] + hardware.compute_capability[1] / 10) / 10
     tile_area = (config.block_m * config.block_n) / (128.0 * 128.0)
-
-    values = (
+    return (
         1.0,
         log_m,
         log_n,
@@ -84,4 +105,40 @@ def joint_features(
         sm_count * math.log2(config.num_warps) / 3.0,
         memory_gb * tile_area,
     )
-    return np.asarray(values, dtype=np.float64)
+
+
+def v2_joint_features(
+    workload: Workload,
+    config: KernelConfig,
+    hardware: HardwareProfile,
+) -> NDArray[np.float64]:
+    """Return the immutable 25-column feature basis used by Parhelion v2."""
+    return np.asarray(_v2_values(workload, config, hardware), dtype=np.float64)
+
+
+def v3_joint_features(
+    workload: Workload,
+    config: KernelConfig,
+    hardware: HardwareProfile,
+) -> NDArray[np.float64]:
+    """Return the 20-column v3 basis with exact affine/constant columns removed."""
+    values = _v2_values(workload, config, hardware)
+    return np.asarray(tuple(values[index] for index in _V3_INDICES), dtype=np.float64)
+
+
+def v3_feature_rank(
+    workloads: tuple[Workload, ...],
+    configs: tuple[KernelConfig, ...],
+    hardware_profiles: tuple[HardwareProfile, ...],
+) -> int:
+    if not workloads or not configs or not hardware_profiles:
+        raise ValueError("v3 feature rank requires workloads, configs, and hardware profiles")
+    matrix = np.stack(
+        [
+            v3_joint_features(workload, config, hardware)
+            for hardware in hardware_profiles
+            for workload in workloads
+            for config in configs
+        ]
+    )
+    return int(np.linalg.matrix_rank(matrix))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,7 @@ from heliostune.collection import (
 )
 from heliostune.configs import KernelConfig, Workload
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
+from heliostune.protocol import v3_seed
 from heliostune.schema import HardwareProfile, Measurement
 
 _WORKLOADS = (
@@ -139,6 +141,43 @@ def test_build_call_plan_is_canonical_and_matches_collector_shuffle() -> None:
     assert all(item.seed == item.bank for item in plan)
     assert plan[0].workload_order == plan[2].workload_order
     assert plan[0].config_orders == plan[2].config_orders
+
+
+def test_v3_call_plan_uses_protocol_seed_preimages() -> None:
+    request = CollectionRequest(
+        gpus=("L4", "A10"),
+        banks=(0,),
+        workload_keys=tuple(workload.key for workload in _WORKLOADS),
+        config_keys=tuple(config.key for config in _CONFIGS),
+        warmup_ms=25.0,
+        repetition_ms=100.0,
+        seed_protocol="parhelion-v3",
+    )
+
+    plan = build_call_plan(request)
+
+    for item in plan:
+        expected_seed = v3_seed(
+            purpose="collector-workload-order",
+            gpu=item.gpu,
+            bank=item.bank,
+        )
+        assert item.seed == expected_seed
+        expected_workloads = list(request.workload_keys)
+        random.Random(expected_seed).shuffle(expected_workloads)
+        assert item.workload_order == tuple(expected_workloads)
+        for workload_key, config_order in item.config_orders:
+            expected_configs = list(request.config_keys)
+            random.Random(
+                v3_seed(
+                    purpose="collector-config-order",
+                    gpu=item.gpu,
+                    bank=item.bank,
+                    workload_key=workload_key,
+                )
+            ).shuffle(expected_configs)
+            assert config_order == tuple(expected_configs)
+    assert plan[0].seed != plan[1].seed
 
 
 @pytest.mark.parametrize("banks", [(), (0, 0), (True,), (-1,)])

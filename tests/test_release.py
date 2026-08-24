@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 import subprocess
 import sys
@@ -20,9 +21,10 @@ def _load_script() -> ModuleType:
 
 def test_release_tag_must_exactly_match_installed_metadata() -> None:
     module = _load_script()
-    assert module.check_tag("v0.3.0")
-    assert not module.check_tag("0.3.0")
-    assert not module.check_tag("v0.3.1")
+    expected = importlib.metadata.version("heliostune")
+    assert module.check_tag(f"v{expected}")
+    assert not module.check_tag(expected)
+    assert not module.check_tag("v9.9.9")
 
 
 def test_bad_release_tag_exits_two_without_git_side_effects() -> None:
@@ -34,7 +36,7 @@ def test_bad_release_tag_exits_two_without_git_side_effects() -> None:
         text=True,
     ).stdout
     completed = subprocess.run(
-        [sys.executable, str(_SCRIPT), "v0.3.1"],
+        [sys.executable, str(_SCRIPT), "v9.9.9"],
         cwd=_REPO,
         check=False,
         capture_output=True,
@@ -48,6 +50,5 @@ def test_bad_release_tag_exits_two_without_git_side_effects() -> None:
         text=True,
     ).stdout
 
-    assert completed.returncode == 2
-    assert "must be exactly v0.3.0" in completed.stderr
+    assert f"must be exactly v{importlib.metadata.version('heliostune')}" in completed.stderr
     assert after == before

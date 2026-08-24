@@ -21,6 +21,7 @@ from heliostune.artifacts import (
     write_measurements_atomic,
 )
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
+from heliostune.protocol import v3_seed
 from heliostune.schema import HardwareProfile, Measurement
 from heliostune.validation import exact_fields, exact_int, exact_object, nonblank_string
 
@@ -87,6 +88,7 @@ class CollectionRequest:
     warmup_ms: float
     repetition_ms: float
     pilot: bool = False
+    seed_protocol: str = "legacy-bank"
 
     def __post_init__(self) -> None:
         for name in ("gpus", "banks", "workload_keys", "config_keys"):
@@ -104,6 +106,8 @@ class CollectionRequest:
             raise SchemaError("collection repetition_ms must be finite and positive")
         if type(self.pilot) is not bool:
             raise SchemaError("collection pilot must be a boolean")
+        if self.seed_protocol not in {"legacy-bank", "parhelion-v3"}:
+            raise SchemaError("collection seed_protocol must be legacy-bank or parhelion-v3")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -114,6 +118,7 @@ class CollectionRequest:
             "warmup_ms": self.warmup_ms,
             "repetition_ms": self.repetition_ms,
             "pilot": self.pilot,
+            "seed_protocol": self.seed_protocol,
         }
 
     @property
@@ -637,19 +642,38 @@ def build_call_plan(request: CollectionRequest) -> tuple[CallPlanItem, ...]:
     """Return canonical sorted calls and the exact collector shuffle schedule."""
     plan: list[CallPlanItem] = []
     for gpu, bank in sorted((gpu, bank) for gpu in request.gpus for bank in request.banks):
-        randomizer = random.Random(bank)
+        if request.seed_protocol == "parhelion-v3":
+            workload_seed = v3_seed(
+                purpose="collector-workload-order",
+                gpu=gpu,
+                bank=bank,
+            )
+            workload_randomizer = random.Random(workload_seed)
+        else:
+            workload_seed = bank
+            workload_randomizer = random.Random(bank)
         workload_order = list(request.workload_keys)
-        randomizer.shuffle(workload_order)
+        workload_randomizer.shuffle(workload_order)
         config_orders: list[tuple[str, tuple[str, ...]]] = []
         for workload_key in workload_order:
+            if request.seed_protocol == "parhelion-v3":
+                config_seed = v3_seed(
+                    purpose="collector-config-order",
+                    gpu=gpu,
+                    bank=bank,
+                    workload_key=workload_key,
+                )
+                config_randomizer = random.Random(config_seed)
+            else:
+                config_randomizer = workload_randomizer
             config_order = list(request.config_keys)
-            randomizer.shuffle(config_order)
+            config_randomizer.shuffle(config_order)
             config_orders.append((workload_key, tuple(config_order)))
         plan.append(
             CallPlanItem(
                 gpu=gpu,
                 bank=bank,
-                seed=bank,
+                seed=workload_seed,
                 workload_order=tuple(workload_order),
                 config_orders=tuple(config_orders),
             )

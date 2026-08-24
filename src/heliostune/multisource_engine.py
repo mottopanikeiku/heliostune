@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, KernelConfig, Workload
-from heliostune.features import FEATURE_NAMES, joint_features
+from heliostune.features import V2_FEATURE_NAMES, v2_joint_features
 from heliostune.replay import BenchmarkTable, eligible_source_workloads
 from heliostune.retrieval import (
     RETRIEVAL_FEATURE_NAMES,
@@ -187,7 +187,7 @@ def _pooled_source_model(
     configs: Sequence[KernelConfig],
 ) -> BayesianLinearBandit:
     model = BayesianLinearBandit(
-        dimension=len(FEATURE_NAMES),
+        dimension=len(V2_FEATURE_NAMES),
         noise_variance=_NOISE_VARIANCE,
         prior_precision=_PRIOR_PRECISION,
         seed=0,
@@ -197,7 +197,7 @@ def _pooled_source_model(
         for workload in source_workloads[gpu]:
             for config in configs:
                 model.update(
-                    joint_features(workload, config, hardware),
+                    v2_joint_features(workload, config, hardware),
                     _reward(table, gpu, workload, config),
                 )
     return model
@@ -211,7 +211,7 @@ def _parhelion_features(
 ) -> NDArray[np.float64]:
     return np.concatenate(
         (
-            joint_features(workload, config, hardware),
+            v2_joint_features(workload, config, hardware),
             np.asarray(retrieval.score(workload, config).as_array(), dtype=np.float64),
         )
     )
@@ -233,7 +233,7 @@ def _parhelion_source_model(
     retrieval: RetrievalIndex,
 ) -> BayesianLinearBandit:
     model = BayesianLinearBandit(
-        dimension=len(FEATURE_NAMES) + len(RETRIEVAL_FEATURE_NAMES),
+        dimension=len(V2_FEATURE_NAMES) + len(RETRIEVAL_FEATURE_NAMES),
         noise_variance=_NOISE_VARIANCE,
         prior_precision=_PRIOR_PRECISION,
         seed=0,
@@ -692,7 +692,7 @@ def prepare_multisource(
         joint_feature_rows: dict[tuple[str, str], NDArray[np.float64]] = {}
         for workload in target_workloads:
             for config in configs:
-                row = joint_features(workload, config, target_hardware)
+                row = v2_joint_features(workload, config, target_hardware)
                 row.setflags(write=False)
                 joint_feature_rows[(workload.key, config.key)] = row
 
@@ -723,7 +723,7 @@ def prepare_multisource(
                 )
             )
             cold = BayesianLinearBandit(
-                dimension=len(FEATURE_NAMES),
+                dimension=len(V2_FEATURE_NAMES),
                 noise_variance=_NOISE_VARIANCE,
                 prior_precision=_PRIOR_PRECISION,
                 seed=paired_seed,
@@ -1121,7 +1121,7 @@ def evaluate_cold_thompson(
         for seed in range(prepared.seeds):
             paired_seed = fold.index * 100_000 + seed
             model = BayesianLinearBandit(
-                dimension=len(FEATURE_NAMES),
+                dimension=len(V2_FEATURE_NAMES),
                 noise_variance=_NOISE_VARIANCE,
                 prior_precision=_PRIOR_PRECISION,
                 seed=paired_seed,
@@ -1178,7 +1178,7 @@ def evaluate_anchored_cold(
         for seed in range(prepared.seeds):
             paired_seed = fold.index * 100_000 + seed
             model = BayesianLinearBandit(
-                dimension=len(FEATURE_NAMES),
+                dimension=len(V2_FEATURE_NAMES),
                 noise_variance=_NOISE_VARIANCE,
                 prior_precision=_PRIOR_PRECISION,
                 seed=paired_seed,
@@ -1764,7 +1764,7 @@ def assemble_multisource_summary(
                 "distance-weighted, per-workload-centered log-TFLOP/s advantage"
             ),
             "retrieval_distance": "frozen normalized Euclidean distance over log2(M, N, K)",
-            "parhelion_features": [*FEATURE_NAMES, *RETRIEVAL_FEATURE_NAMES],
+            "parhelion_features": [*V2_FEATURE_NAMES, *RETRIEVAL_FEATURE_NAMES],
             "bank_roles": {
                 "0": "policy-visible observations and source archive",
                 "1": "exhaustive-reference selection",

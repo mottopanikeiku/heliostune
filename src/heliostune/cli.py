@@ -185,6 +185,78 @@ def _select_parhelion(args: argparse.Namespace) -> int:
     return 0
 
 
+def _select_v3(args: argparse.Namespace) -> int:
+    from heliostune.collection import sha256_file
+    from heliostune.protocol import (
+        load_v3_protocol,
+        require_v3_runtime,
+        runtime_manifest,
+    )
+    from heliostune.v3_engine import prepare_v3, select_v3_parameters
+
+    _reject_output_collisions(args.output, args.summary_output)
+    protocol = load_v3_protocol(args.protocol)
+    require_v3_runtime(protocol)
+    config_manifest = exact_object(
+        read_json(args.config_manifest),
+        context="v3 retained config manifest",
+    )
+    retained = config_manifest.get("retained_config_keys")
+    official = config_manifest.get("retained_official_config_keys")
+    if not isinstance(retained, list) or not isinstance(official, list):
+        raise ProtocolError("v3 config manifest lacks retained/official key lists")
+    measurements = read_measurements(args.input)
+    prepared = _protocol_call(
+        "v3 preparation violation",
+        lambda: prepare_v3(
+            protocol,
+            measurements,
+            source_gpus=("L4", "A10"),
+            target_gpu="A100-80GB",
+            retained_config_keys=tuple(str(key) for key in retained),
+            official_config_keys=tuple(str(key) for key in official),
+            seeds=tuple(range(30)),
+        ),
+    )
+    selection = _protocol_call(
+        "v3 selection violation",
+        lambda: select_v3_parameters(prepared),
+    )
+    summary = {
+        "schema_version": 1,
+        "study_id": "parhelion-v3-a100-selection-summary",
+        "selected": selection["selected"],
+        "jobs": args.jobs,
+        "input": {"path": str(args.input), "sha256": sha256_file(args.input)},
+        "protocol": {
+            "path": str(args.protocol),
+            "sha256": sha256_file(args.protocol),
+        },
+        "config_manifest": {
+            "path": str(args.config_manifest),
+            "sha256": sha256_file(args.config_manifest),
+        },
+        "runtime": runtime_manifest(),
+    }
+    selection["jobs"] = args.jobs
+    selection["runtime"] = runtime_manifest()
+    with tempfile.TemporaryDirectory(prefix="heliostune-select-v3-") as temporary:
+        root = Path(temporary)
+        staged_selection = root / "selection.json"
+        staged_summary = root / "summary.json"
+        write_json_atomic(staged_selection, selection)
+        write_json_atomic(staged_summary, summary)
+        _commit_staged_files(
+            {
+                args.output: staged_selection,
+                args.summary_output: staged_summary,
+            }
+        )
+    _CONSOLE.print(f"Wrote frozen A100 v3 selection to [bold]{args.output}[/bold]")
+    _CONSOLE.print(f"Wrote A100 v3 summary to [bold]{args.summary_output}[/bold]")
+    return 0
+
+
 def _report(args: argparse.Namespace) -> int:
     from heliostune.report import render_report
 
@@ -338,6 +410,30 @@ def build_parser() -> argparse.ArgumentParser:
     selection.add_argument("--output", type=Path, default=Path("parhelion-selection.json"))
     selection.add_argument("--summary-output", type=Path, default=Path("t4-summary.json"))
     selection.set_defaults(handler=_select_parhelion)
+
+    selection_v3 = subparsers.add_parser(
+        "select-v3",
+        help="run frozen method-local Parhelion v3 grids on A100-80GB",
+    )
+    selection_v3.add_argument("input", type=Path)
+    selection_v3.add_argument(
+        "--protocol",
+        type=Path,
+        default=Path("benchmarks/parhelion-v3-development-protocol.json"),
+    )
+    selection_v3.add_argument("--config-manifest", type=Path, required=True)
+    selection_v3.add_argument("--jobs", type=_positive_int, default=1)
+    selection_v3.add_argument(
+        "--output",
+        type=Path,
+        default=Path("benchmarks/results/parhelion-v3-a100-selection.json"),
+    )
+    selection_v3.add_argument(
+        "--summary-output",
+        type=Path,
+        default=Path("artifacts/parhelion-v3-a100-summary.json"),
+    )
+    selection_v3.set_defaults(handler=_select_v3)
 
     report = subparsers.add_parser("report", help="render a replay summary as standalone HTML")
     report.add_argument("input", type=Path)

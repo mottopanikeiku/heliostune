@@ -31,6 +31,9 @@ def _cuda_must_not_run(monkeypatch: pytest.MonkeyPatch) -> None:
         {"configs": (DEFAULT_CONFIGS[0], DEFAULT_CONFIGS[0])},
         {"workloads": ()},
         {"workloads": (DEFAULT_WORKLOADS[0], DEFAULT_WORKLOADS[0])},
+        {"workload_order_seed": True},
+        {"config_order_seeds": {}},
+        {"tensor_seeds": {DEFAULT_WORKLOADS[0].key: 1}},
     ],
 )
 def test_bad_benchmark_manifest_is_rejected_before_cuda(
