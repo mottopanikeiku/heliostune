@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Sequence
-from typing import Self, TypeVar
+from typing import Self, TypeVar, cast
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -92,6 +92,8 @@ class BayesianLinearBandit:
                 non-finite, or would produce non-finite sufficient statistics.
         """
         vector = self._validated_features(features)
+        if isinstance(observation, (bool, np.bool_)):
+            raise ValueError("observation must be a finite scalar")
         try:
             response = float(observation)
         except (TypeError, ValueError) as exc:
@@ -103,15 +105,25 @@ class BayesianLinearBandit:
         with np.errstate(over="ignore", invalid="ignore"):
             precision_increment = noise_precision * np.outer(vector, vector)
             information_increment = noise_precision * vector * response
-        if not np.all(np.isfinite(precision_increment)) or not np.all(
-            np.isfinite(information_increment)
+            candidate_precision = self._precision + precision_increment
+            candidate_information = self._information + information_increment
+        if not np.all(np.isfinite(candidate_precision)) or not np.all(
+            np.isfinite(candidate_information)
         ):
-            raise ValueError("observation would produce non-finite sufficient statistics")
+            raise ValueError("observation would produce a non-finite posterior state")
+        next_count = self._observed_count + 1
+        try:
+            candidate_cholesky = cast(NDArray[np.float64], np.linalg.cholesky(candidate_precision))
+        except np.linalg.LinAlgError as exc:
+            raise ValueError(
+                f"posterior precision Cholesky failed for dimension {self._dimension} "
+                f"after {next_count} observations"
+            ) from exc
 
-        self._precision += precision_increment
-        self._information += information_increment
-        self._observed_count += 1
-        self._cholesky = None
+        self._precision = candidate_precision
+        self._information = candidate_information
+        self._observed_count = next_count
+        self._cholesky = candidate_cholesky
         self._mean = None
 
     def sample(self) -> NDArray[np.float64]:
@@ -226,7 +238,14 @@ class BayesianLinearBandit:
     def _posterior_cholesky(self) -> NDArray[np.float64]:
         """Return the cached lower Cholesky factor of posterior precision."""
         if self._cholesky is None:
-            self._cholesky = np.linalg.cholesky(self._precision)
+            try:
+                self._cholesky = cast(NDArray[np.float64], np.linalg.cholesky(self._precision))
+            except np.linalg.LinAlgError as exc:
+                raise ValueError(
+                    f"posterior precision Cholesky failed for dimension {self._dimension} "
+                    f"after {self._observed_count} observations"
+                ) from exc
+        assert self._cholesky is not None
         return self._cholesky
 
     @staticmethod

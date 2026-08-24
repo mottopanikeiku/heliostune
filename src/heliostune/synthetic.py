@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 import numpy as np
 
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, KernelConfig, Workload
+from heliostune.errors import SchemaError
 from heliostune.schema import HardwareProfile, Measurement
+from heliostune.validation import exact_int
 
 SYNTHETIC_HARDWARE: tuple[HardwareProfile, ...] = (
     HardwareProfile("sim-source", "Synthetic source GPU", (8, 9), 60, 24.0),
@@ -35,16 +38,29 @@ def _configuration_efficiency(
     return max(0.42, 0.96 - distance)
 
 
-def synthetic_measurements(seed: int = 7, replicates: int = 3) -> list[Measurement]:
+def synthetic_measurements(
+    seed: int = 7,
+    banks: Sequence[int] = (0, 1, 2),
+) -> list[Measurement]:
     """Generate a complete two-GPU matrix with transferable but shifted optima."""
+    validated_seed = exact_int(seed, context="synthetic seed", minimum=0)
+    bank_order = tuple(banks)
+    if not bank_order:
+        raise SchemaError("synthetic banks must not be empty")
+    validated_banks = tuple(
+        exact_int(bank, context=f"synthetic banks[{index}]", minimum=0)
+        for index, bank in enumerate(bank_order)
+    )
+    if len(set(validated_banks)) != len(validated_banks):
+        raise SchemaError("synthetic banks must be unique")
 
-    if replicates <= 0:
-        raise ValueError("replicates must be positive")
-    rng = np.random.default_rng(seed)
     measurements: list[Measurement] = []
-    for hardware in SYNTHETIC_HARDWARE:
+    for hardware_index, hardware in enumerate(SYNTHETIC_HARDWARE):
         throughput_tflops = 22.0 if hardware.gpu == "sim-source" else 28.0
-        for replicate in range(replicates):
+        for bank in validated_banks:
+            rng = np.random.default_rng(
+                np.random.SeedSequence([validated_seed, hardware_index, bank])
+            )
             for workload in DEFAULT_WORKLOADS:
                 compute_floor_ms = workload.flops / (throughput_tflops * 1e12) * 1e3
                 weight_traffic_ms = workload.k * workload.n * 2 / (420e9) * 1e3
@@ -59,11 +75,18 @@ def synthetic_measurements(seed: int = 7, replicates: int = 3) -> list[Measureme
                             hardware=hardware,
                             workload=workload,
                             config=config,
-                            replicate=replicate,
+                            bank=bank,
                             latency_ms=latency_ms,
                             torch_latency_ms=torch_latency_ms,
                             correct=True,
                             max_abs_error=0.001,
+                            latency_p20_ms=latency_ms * 0.99,
+                            latency_p80_ms=latency_ms * 1.01,
+                            torch_latency_p20_ms=torch_latency_ms * 0.99,
+                            torch_latency_p80_ms=torch_latency_ms * 1.01,
+                            compile_ms=0.5 + latency_ms,
+                            benchmark_wall_ms=100.0 + latency_ms,
+                            torch_benchmark_wall_ms=100.0 + torch_latency_ms,
                         )
                     )
     return measurements

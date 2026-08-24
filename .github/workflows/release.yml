@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.12.5"
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - name: Validate tag before build
+        run: uv run python scripts/check_release_tag.py "${GITHUB_REF_NAME}"
+      - name: Build from outside the checkout
+        run: |
+          rm -rf "${RUNNER_TEMP}/heliostune-release"
+          mkdir -p "${RUNNER_TEMP}/heliostune-release/dist"
+          cd "${RUNNER_TEMP}/heliostune-release"
+          uv build "${GITHUB_WORKSPACE}" --out-dir dist
+          test "$(find dist -maxdepth 1 -name '*.whl' -type f | wc -l)" -eq 1
+          test "$(find dist -maxdepth 1 -name '*.tar.gz' -type f | wc -l)" -eq 1
+          test "$(basename dist/*.whl)" = "heliostune-${GITHUB_REF_NAME#v}-py3-none-any.whl"
+          test "$(basename dist/*.tar.gz)" = "heliostune-${GITHUB_REF_NAME#v}.tar.gz"
+      - name: Isolated wheel smoke
+        run: |
+          uv venv --clear "${RUNNER_TEMP}/heliostune-release/venv" --python 3.11
+          uv pip install --python "${RUNNER_TEMP}/heliostune-release/venv/bin/python" "${RUNNER_TEMP}"/heliostune-release/dist/*.whl
+          "${RUNNER_TEMP}/heliostune-release/venv/bin/python" -c "import heliostune, importlib.metadata as m; assert 'v' + m.version('heliostune') == '${GITHUB_REF_NAME}'; assert heliostune.__version__ == m.version('heliostune')"
+          "${RUNNER_TEMP}/heliostune-release/venv/bin/heliostune" --help
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+        with:
+          subject-path: "${{ runner.temp }}/heliostune-release/dist/*"
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" "${RUNNER_TEMP}"/heliostune-release/dist/* --verify-tag --generate-notes

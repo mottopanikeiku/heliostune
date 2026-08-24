@@ -4,80 +4,182 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections.abc import Sequence
+import math
+import sys
+import tempfile
+from collections.abc import Callable, Mapping, Sequence
+from importlib.metadata import version
 from pathlib import Path
-from typing import Any
+from typing import TypeVar
 
 from rich.console import Console
 from rich.table import Table
 
+from heliostune.artifacts import (
+    read_json,
+    read_measurements,
+    write_bytes_atomic,
+    write_json_atomic,
+    write_measurements_atomic,
+)
+from heliostune.errors import HeliostuneError, ProtocolError
 from heliostune.multisource import compare_multisource
-from heliostune.replay import BenchmarkTable, compare_methods
-from heliostune.schema import read_jsonl, write_jsonl
+from heliostune.replay import compare_methods
 from heliostune.selection import select_parhelion
+from heliostune.validation import exact_object
 
 _CONSOLE = Console()
+_ResultT = TypeVar("_ResultT")
 
 
-def _read_measurements(path: Path):  # type: ignore[no-untyped-def]
-    with path.open(encoding="utf-8") as source:
-        return read_jsonl(source)
+def _strict_identifier(value: str) -> str:
+    if not value or value != value.strip():
+        raise argparse.ArgumentTypeError("must be nonblank with no surrounding whitespace")
+    return value
 
 
-def _write_json(value: dict[str, Any], path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+def _strict_csv(value: str) -> tuple[str, ...]:
+    items = tuple(value.split(","))
+    if not items or any(not item or item != item.strip() for item in items):
+        raise argparse.ArgumentTypeError(
+            "must be a non-empty comma-separated list without whitespace"
+        )
+    if len(set(items)) != len(items):
+        raise argparse.ArgumentTypeError("must not contain duplicates")
+    return items
 
 
-def _parse_sources(value: str) -> tuple[str, ...]:
-    sources = tuple(source.strip() for source in value.split(","))
-    if not sources or any(not source for source in sources):
-        raise ValueError("sources must be a non-empty comma-separated list")
-    return sources
+def _positive_int(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError("must be a positive decimal integer")
+    result = int(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("must be a positive decimal integer")
+    return result
+
+
+def _nonnegative_int(value: str) -> int:
+    if not value.isascii() or not value.isdecimal():
+        raise argparse.ArgumentTypeError("must be a non-negative decimal integer")
+    return int(value)
+
+
+def _finite_float(value: str) -> float:
+    if not value or value != value.strip():
+        raise argparse.ArgumentTypeError("must be a finite number without whitespace")
+    try:
+        result = float(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("must be a finite number") from exc
+    if not math.isfinite(result):
+        raise argparse.ArgumentTypeError("must be a finite number")
+    return result
+
+
+def _positive_float(value: str) -> float:
+    result = _finite_float(value)
+    if result <= 0:
+        raise argparse.ArgumentTypeError("must be finite and positive")
+    return result
+
+
+def _unit_float(value: str) -> float:
+    result = _finite_float(value)
+    if not 0 <= result <= 1:
+        raise argparse.ArgumentTypeError("must be finite and between zero and one")
+    return result
+
+
+def _reject_output_collisions(*paths: Path) -> None:
+    normalized = tuple(path.resolve() for path in paths)
+    if len(set(normalized)) != len(normalized):
+        raise ProtocolError("output paths must be distinct")
+    collisions = [path for path in paths if path.exists()]
+    if collisions:
+        raise ProtocolError(
+            "refusing to replace existing output(s): " + ", ".join(str(path) for path in collisions)
+        )
+
+
+def _protocol_call(label: str, function: Callable[[], _ResultT]) -> _ResultT:
+    try:
+        return function()
+    except HeliostuneError:
+        raise
+    except ValueError as exc:
+        raise ProtocolError(f"{label}: {exc}") from exc
+
+
+def _commit_staged_files(staged: Mapping[Path, Path]) -> None:
+    payloads = {destination: source.read_bytes() for destination, source in staged.items()}
+    for destination, payload in payloads.items():
+        write_bytes_atomic(destination, payload)
 
 
 def _compare(args: argparse.Namespace) -> int:
-    summary = compare_methods(
-        _read_measurements(args.input),
-        source_gpu=args.source,
-        target_gpu=args.target,
-        max_budget=args.max_budget,
-        seeds=args.seeds,
-        transfer_strength=args.transfer_strength,
+    _reject_output_collisions(args.output)
+    measurements = read_measurements(args.input)
+    summary = _protocol_call(
+        "replay protocol violation",
+        lambda: compare_methods(
+            measurements,
+            source_gpu=args.source,
+            target_gpu=args.target,
+            max_budget=args.max_budget,
+            seeds=args.seeds,
+            transfer_strength=args.transfer_strength,
+        ),
     )
-    _write_json(summary, args.output)
+    write_json_atomic(args.output, summary)
     _CONSOLE.print(f"Wrote replay summary to [bold]{args.output}[/bold]")
     return 0
 
 
 def _compare_multisource(args: argparse.Namespace) -> int:
-    summary = compare_multisource(
-        _read_measurements(args.input),
-        source_gpus=_parse_sources(args.sources),
-        target_gpu=args.target,
-        max_budget=args.max_budget,
-        seeds=args.seeds,
-        k=args.k,
-        temperature=args.temperature,
-        transfer_strength=args.transfer_strength,
-        retrieval_k=args.retrieval_k,
-        retrieval_temperature=args.retrieval_temperature,
-        pooled_transfer_strength=args.pooled_transfer_strength,
-        primary_comparator=args.primary_comparator,
-        protocol_role=args.protocol_role,
+    _reject_output_collisions(args.output)
+    measurements = read_measurements(args.input)
+    summary = _protocol_call(
+        "multi-source replay protocol violation",
+        lambda: compare_multisource(
+            measurements,
+            source_gpus=args.sources,
+            target_gpu=args.target,
+            max_budget=args.max_budget,
+            seeds=args.seeds,
+            k=args.k,
+            temperature=args.temperature,
+            transfer_strength=args.transfer_strength,
+            retrieval_k=args.retrieval_k,
+            retrieval_temperature=args.retrieval_temperature,
+            pooled_transfer_strength=args.pooled_transfer_strength,
+            primary_comparator=args.primary_comparator,
+            protocol_role=args.protocol_role,
+        ),
     )
-    _write_json(summary, args.output)
+    write_json_atomic(args.output, summary)
     _CONSOLE.print(f"Wrote multi-source replay summary to [bold]{args.output}[/bold]")
     return 0
 
 
 def _select_parhelion(args: argparse.Namespace) -> int:
-    selection, summary = select_parhelion(
-        _read_measurements(args.input),
-        jobs=args.jobs,
+    _reject_output_collisions(args.output, args.summary_output)
+    measurements = read_measurements(args.input)
+    selection, summary = _protocol_call(
+        "selection protocol violation",
+        lambda: select_parhelion(measurements, jobs=args.jobs),
     )
-    _write_json(selection, args.output)
-    _write_json(summary, args.summary_output)
+    with tempfile.TemporaryDirectory(prefix="heliostune-select-") as temporary:
+        root = Path(temporary)
+        staged_selection = root / "selection.json"
+        staged_summary = root / "summary.json"
+        write_json_atomic(staged_selection, selection)
+        write_json_atomic(staged_summary, summary)
+        _commit_staged_files(
+            {
+                args.output: staged_selection,
+                args.summary_output: staged_summary,
+            }
+        )
     _CONSOLE.print(f"Wrote frozen Parhelion selection to [bold]{args.output}[/bold]")
     _CONSOLE.print(f"Wrote selected T4 replay to [bold]{args.summary_output}[/bold]")
     return 0
@@ -86,7 +188,8 @@ def _select_parhelion(args: argparse.Namespace) -> int:
 def _report(args: argparse.Namespace) -> int:
     from heliostune.report import render_report
 
-    summary = json.loads(args.input.read_text(encoding="utf-8"))
+    _reject_output_collisions(args.output)
+    summary = exact_object(read_json(args.input), context="report summary")
     render_report(summary, args.output)
     _CONSOLE.print(f"Wrote standalone report to [bold]{args.output}[/bold]")
     return 0
@@ -96,28 +199,42 @@ def _demo(args: argparse.Namespace) -> int:
     from heliostune.report import render_report
     from heliostune.synthetic import synthetic_measurements
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
     data_path = args.output_dir / "measurements.jsonl"
     summary_path = args.output_dir / "summary.json"
     report_path = args.output_dir / "index.html"
+    _reject_output_collisions(data_path, summary_path, report_path)
     measurements = synthetic_measurements(seed=args.seed)
-    with data_path.open("w", encoding="utf-8") as destination:
-        write_jsonl(measurements, destination)
-    summary = compare_methods(
-        measurements,
-        source_gpu="sim-source",
-        target_gpu="sim-target",
-        max_budget=args.max_budget,
-        seeds=args.seeds,
-        transfer_strength=args.transfer_strength,
+    summary = _protocol_call(
+        "synthetic replay protocol violation",
+        lambda: compare_methods(
+            measurements,
+            source_gpu="sim-source",
+            target_gpu="sim-target",
+            max_budget=args.max_budget,
+            seeds=args.seeds,
+            transfer_strength=args.transfer_strength,
+        ),
     )
     summary["data_kind"] = "synthetic"
     summary["limitations"].insert(
         0,
         "This local demo is synthetic; only published Modal artifacts support hardware claims.",
     )
-    _write_json(summary, summary_path)
-    render_report(summary, report_path)
+    with tempfile.TemporaryDirectory(prefix="heliostune-demo-") as temporary:
+        root = Path(temporary)
+        staged_data = root / "measurements.jsonl"
+        staged_summary = root / "summary.json"
+        staged_report = root / "index.html"
+        write_measurements_atomic(staged_data, measurements)
+        write_json_atomic(staged_summary, summary)
+        render_report(summary, staged_report)
+        _commit_staged_files(
+            {
+                data_path: staged_data,
+                summary_path: staged_summary,
+                report_path: staged_report,
+            }
+        )
     _CONSOLE.print(f"Synthetic data: [bold]{data_path}[/bold]")
     _CONSOLE.print(f"Replay summary: [bold]{summary_path}[/bold]")
     _CONSOLE.print(f"Offline report: [bold]{report_path}[/bold]")
@@ -125,7 +242,7 @@ def _demo(args: argparse.Namespace) -> int:
 
 
 def _inspect(args: argparse.Namespace) -> int:
-    table = BenchmarkTable(tuple(_read_measurements(args.input)))
+    measurements = read_measurements(args.input)
     view = Table(title="HeliosTune benchmark matrix")
     view.add_column("GPU")
     view.add_column("Device")
@@ -133,13 +250,18 @@ def _inspect(args: argparse.Namespace) -> int:
     view.add_column("Configs", justify="right")
     view.add_column("Records", justify="right")
     view.add_column("Failures", justify="right")
-    for gpu in table.gpus:
-        records = [item for item in table.measurements if item.hardware.gpu == gpu]
+    gpus = sorted({measurement.hardware.gpu for measurement in measurements})
+    for gpu in gpus:
+        records = [item for item in measurements if item.hardware.gpu == gpu]
+        profiles = {item.hardware for item in records}
+        if len(profiles) != 1:
+            raise ProtocolError(f"inconsistent hardware profiles for {gpu!r}")
+        profile = next(iter(profiles))
         view.add_row(
             gpu,
-            table.hardware(gpu).device_name,
-            str(len(table.workloads(gpu))),
-            str(len(table.configs(gpu))),
+            profile.device_name,
+            str(len({item.workload.key for item in records})),
+            str(len({item.config.key for item in records})),
             str(len(records)),
             str(sum(not item.usable for item in records)),
         )
@@ -152,33 +274,39 @@ def build_parser() -> argparse.ArgumentParser:
         prog="heliostune",
         description="Transferable Bayesian autotuning for Triton LLM matmuls",
     )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {version('heliostune')}",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     compare = subparsers.add_parser("compare", help="replay tuning methods over a latency matrix")
     compare.add_argument("input", type=Path)
-    compare.add_argument("--source", required=True, help="source GPU label in the dataset")
-    compare.add_argument("--target", required=True, help="target GPU label in the dataset")
-    compare.add_argument("--max-budget", type=int, default=8)
-    compare.add_argument("--seeds", type=int, default=30)
-    compare.add_argument("--transfer-strength", type=float, default=0.08)
+    compare.add_argument("--source", required=True, type=_strict_identifier)
+    compare.add_argument("--target", required=True, type=_strict_identifier)
+    compare.add_argument("--max-budget", type=_positive_int, default=8)
+    compare.add_argument("--seeds", type=_positive_int, default=30)
+    compare.add_argument("--transfer-strength", type=_unit_float, default=0.08)
     compare.add_argument("--output", type=Path, default=Path("summary.json"))
     compare.set_defaults(handler=_compare)
 
     multisource = subparsers.add_parser(
-        "compare-multisource", help="replay Parhelion and baselines from a multi-GPU archive"
+        "compare-multisource",
+        help="replay Parhelion and baselines from a multi-GPU archive",
     )
     multisource.add_argument("input", type=Path)
-    multisource.add_argument("--sources", required=True, help="comma-separated source GPU labels")
-    multisource.add_argument("--target", required=True, help="target GPU label in the dataset")
-    multisource.add_argument("--max-budget", type=int, default=8)
-    multisource.add_argument("--seeds", type=int, default=30)
-    multisource.add_argument("--k", type=int)
-    multisource.add_argument("--temperature", type=float)
-    multisource.add_argument("--transfer-strength", type=float)
-    multisource.add_argument("--retrieval-k", type=int)
-    multisource.add_argument("--retrieval-temperature", type=float)
-    multisource.add_argument("--pooled-transfer-strength", type=float)
-    multisource.add_argument("--primary-comparator")
+    multisource.add_argument("--sources", required=True, type=_strict_csv)
+    multisource.add_argument("--target", required=True, type=_strict_identifier)
+    multisource.add_argument("--max-budget", type=_positive_int, default=8)
+    multisource.add_argument("--seeds", type=_positive_int, default=30)
+    multisource.add_argument("--k", type=_positive_int)
+    multisource.add_argument("--temperature", type=_positive_float)
+    multisource.add_argument("--transfer-strength", type=_unit_float)
+    multisource.add_argument("--retrieval-k", type=_positive_int)
+    multisource.add_argument("--retrieval-temperature", type=_positive_float)
+    multisource.add_argument("--pooled-transfer-strength", type=_unit_float)
+    multisource.add_argument("--primary-comparator", type=_strict_identifier)
     multisource.add_argument(
         "--protocol-role",
         choices=("development", "validation", "final"),
@@ -188,10 +316,11 @@ def build_parser() -> argparse.ArgumentParser:
     multisource.set_defaults(handler=_compare_multisource)
 
     selection = subparsers.add_parser(
-        "select-parhelion", help="run the frozen 48-point Parhelion grid on T4"
+        "select-parhelion",
+        help="run the frozen method-local Parhelion grids on T4",
     )
     selection.add_argument("input", type=Path)
-    selection.add_argument("--jobs", type=int, default=1)
+    selection.add_argument("--jobs", type=_positive_int, default=1)
     selection.add_argument("--output", type=Path, default=Path("parhelion-selection.json"))
     selection.add_argument("--summary-output", type=Path, default=Path("t4-summary.json"))
     selection.set_defaults(handler=_select_parhelion)
@@ -203,10 +332,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     demo = subparsers.add_parser("demo", help="run a deterministic local synthetic experiment")
     demo.add_argument("--output-dir", type=Path, default=Path("artifacts/demo"))
-    demo.add_argument("--seed", type=int, default=7)
-    demo.add_argument("--max-budget", type=int, default=8)
-    demo.add_argument("--seeds", type=int, default=30)
-    demo.add_argument("--transfer-strength", type=float, default=0.08)
+    demo.add_argument("--seed", type=_nonnegative_int, default=7)
+    demo.add_argument("--max-budget", type=_positive_int, default=8)
+    demo.add_argument("--seeds", type=_positive_int, default=30)
+    demo.add_argument("--transfer-strength", type=_unit_float, default=0.08)
     demo.set_defaults(handler=_demo)
 
     inspect = subparsers.add_parser("inspect", help="show coverage and failures in a JSONL matrix")
@@ -217,7 +346,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    return int(args.handler(args))
+    try:
+        return int(args.handler(args))
+    except (HeliostuneError, OSError, json.JSONDecodeError) as exc:
+        print(f"heliostune: error: {exc}", file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":

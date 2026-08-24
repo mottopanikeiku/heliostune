@@ -3,13 +3,21 @@ from __future__ import annotations
 import math
 import statistics
 from collections import Counter
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from typing import Any
 
 import pytest
 
 from heliostune.configs import KernelConfig, Workload
 from heliostune.multisource import compare_multisource
+from heliostune.multisource_engine import (
+    PreparedReplay,
+    assemble_multisource_summary,
+    evaluate_multisource_retrieval,
+    evaluate_parhelion,
+    evaluate_pooled_source,
+    prepare_multisource,
+)
 from heliostune.schema import HardwareProfile, Measurement
 
 _CONFIGS = (
@@ -77,7 +85,7 @@ def _corpus() -> tuple[Measurement, ...]:
                             latency_ms=base_latency * factors[config_index] * bank_factor,
                             torch_latency_ms=base_latency * 2.5,
                             correct=True,
-                            replicate=bank,
+                            bank=bank,
                             max_abs_error=0.0,
                         )
                     )
@@ -107,7 +115,7 @@ def _target_measurements(
     corpus: tuple[Measurement, ...],
 ) -> dict[tuple[str, str, int], Measurement]:
     return {
-        (row.workload.key, row.config.key, row.replicate): row
+        (row.workload.key, row.config.key, row.bank): row
         for row in corpus
         if row.hardware.gpu == "target"
     }
@@ -340,7 +348,7 @@ def test_source_archive_rejects_exact_target_shapes() -> None:
             latency_ms=(0.001 if row.config == _CONFIGS[0] else 1_000.0),
         )
         if row.hardware.gpu in {"source-a", "source-b"}
-        and row.replicate == 0
+        and row.bank == 0
         and shape_counts[(row.workload.m, row.workload.n, row.workload.k)] > 1
         else row
         for row in corpus
@@ -471,3 +479,61 @@ def test_primary_comparator_rejects_nonprotocol_seed_count_before_data_access() 
             seeds=11,
             primary_comparator="random",
         )
+
+
+def test_prepared_replay_is_immutable_and_matches_public_facade() -> None:
+    prepared = prepare_multisource(
+        _corpus(),
+        source_gpus=("source-a", "source-b"),
+        target_gpu="target",
+        max_budget=2,
+        seeds=3,
+    )
+
+    assert isinstance(prepared, PreparedReplay)
+    assert len(prepared.bank0_rewards) == len(_HARDWARE) * len(_WORKLOADS) * len(_CONFIGS)
+    assert all(
+        fold.exact_shape_exclusions == {"source-a": 1, "source-b": 1} for fold in prepared.folds
+    )
+    assert all(
+        not row.flags.writeable
+        for fold in prepared.folds
+        for row in fold.joint_feature_rows.values()
+    )
+    with pytest.raises(FrozenInstanceError):
+        prepared.max_budget = 1
+    with pytest.raises(TypeError):
+        prepared.bank0_rewards[("source-a", "missing", "missing")] = 0.0
+
+    retrieval = evaluate_multisource_retrieval(prepared, k=2, temperature=0.7)
+    pooled = evaluate_pooled_source(prepared, transfer_strength=0.2)
+    parhelion = evaluate_parhelion(
+        prepared,
+        k=2,
+        temperature=0.7,
+        transfer_strength=0.2,
+        retrieval=retrieval,
+    )
+    assembled = assemble_multisource_summary(
+        prepared,
+        retrieval=retrieval,
+        pooled=pooled,
+        parhelion=parhelion,
+        k=2,
+        temperature=0.7,
+        transfer_strength=0.2,
+        retrieval_k=2,
+        retrieval_temperature=0.7,
+        pooled_transfer_strength=0.2,
+        primary_comparator=None,
+    )
+    facade = _development_replay(
+        k=2,
+        temperature=0.7,
+        transfer_strength=0.2,
+        retrieval_k=2,
+        retrieval_temperature=0.7,
+        pooled_transfer_strength=0.2,
+    )
+
+    assert assembled == facade

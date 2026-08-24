@@ -7,8 +7,12 @@ import json
 import math
 import re
 from collections.abc import Mapping, Sequence
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
+
+from heliostune.artifacts import write_text_atomic
+from heliostune.report_model import ReportData, normalize_report_summary
 
 _CHART_WIDTH = 960
 _CHART_HEIGHT = 410
@@ -21,670 +25,9 @@ _DASH_PATTERNS = (None, "9 5", "3 5", "12 4 3 4", "6 4 2 4", "2 3")
 _MARKERS = ("circle", "diamond", "square")
 _MISSING = "Not reported"
 
-_STYLES = """
-:root {
-  color-scheme: light;
-  --canvas: #f1f3f0;
-  --paper: #fafbf9;
-  --paper-muted: #f5f7f4;
-  --ink: #18211c;
-  --ink-strong: #0d1711;
-  --muted: #55615a;
-  --subtle: #737f78;
-  --line: #d9dedb;
-  --line-strong: #b9c2bc;
-  --accent: #1f5d99;
-  --accent-soft: #e6eef6;
-  --note: #eef0ec;
-  --negative: #8f3f35;
-  --series-0: #1f5d99;
-  --series-1: #b85c2d;
-  --series-2: #287460;
-  --series-3: #6e5b9c;
-  --series-4: #85651c;
-  --series-5: #3f6f86;
-  --series-6: #a04658;
-  --series-7: #4c6a3d;
-  --series-8: #715047;
-  --series-9: #52657d;
-  --font-sans: "IBM Plex Sans", Aptos, "Segoe UI", "Helvetica Neue", sans-serif;
-  --font-mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Code", Consolas, monospace;
-  --text-2xs: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-title: clamp(1.6rem, 2.5vw, 2.15rem);
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-5: 1.5rem;
-  --space-6: 2rem;
-  --space-7: 3rem;
-  --space-8: 4rem;
-  --radius-sm: 0.2rem;
-  --radius-md: 0.35rem;
-  --page-max: 80rem;
-  --chart-min: 44rem;
-  --focus-ring: 0 0 0 0.1875rem rgba(31, 93, 153, 0.24);
-}
 
-* { box-sizing: border-box; }
-html { background: var(--canvas); }
-body {
-  margin: 0;
-  min-width: 0;
-  background: var(--canvas);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: var(--text-md);
-  line-height: 1.5;
-}
-a {
-  color: var(--accent);
-  text-decoration-thickness: 0.0625rem;
-  text-underline-offset: var(--space-1);
-}
-a:focus-visible, summary:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-.skip-link {
-  position: fixed;
-  inset: var(--space-3) auto auto var(--space-3);
-  z-index: 20;
-  padding: var(--space-2) var(--space-3);
-  background: var(--ink-strong);
-  color: var(--paper);
-  transform: translateY(-160%);
-}
-.skip-link:focus { transform: translateY(0); }
-.page {
-  width: 100%;
-  max-width: var(--page-max);
-  margin: 0 auto;
-  padding: 0 var(--space-6) var(--space-7);
-}
-.report-header {
-  padding: var(--space-5) 0 var(--space-4);
-  border-top: var(--space-1) solid var(--accent);
-}
-.utility-rail {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--line);
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.project-lockup { color: var(--ink-strong); font-weight: 700; }
-.data-flag {
-  color: var(--accent);
-  font-weight: 700;
-  text-align: right;
-}
-.identity-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
-  gap: var(--space-6);
-  align-items: end;
-  padding: var(--space-5) 0 var(--space-4);
-}
-.identity-layout > * { min-width: 0; }
-.kicker, .micro-label, .section-number, .hardware-role {
-  margin: 0;
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-h1, h2, h3 {
-  margin-top: 0;
-  color: var(--ink-strong);
-  letter-spacing: -0.015em;
-}
-h1 {
-  max-width: 34ch;
-  margin: var(--space-2) 0 var(--space-4);
-  font-size: var(--text-title);
-  font-weight: 680;
-  line-height: 1.12;
-}
-h2 {
-  margin-bottom: var(--space-2);
-  font-size: clamp(1.25rem, 2vw, 1.55rem);
-  font-weight: 680;
-  line-height: 1.2;
-}
-h3 {
-  margin-bottom: var(--space-3);
-  font-size: var(--text-md);
-  font-weight: 680;
-}
-.route {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: center;
-  max-width: 48rem;
-}
-.route-node {
-  min-width: 0;
-  padding: var(--space-2) 0;
-  border-block: 1px solid var(--line-strong);
-}
-.route-node span {
-  display: block;
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.route-node strong {
-  display: block;
-  overflow-wrap: anywhere;
-  color: var(--ink-strong);
-  font-size: var(--text-sm);
-  font-weight: 650;
-}
-.route-node.target { border-color: var(--ink); }
-.route-arrow {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-}
-.method-note {
-  padding-left: var(--space-4);
-  border-left: 2px solid var(--accent);
-}
-.method-note p { margin: 0; }
-.method-note .method-copy {
-  margin-top: var(--space-2);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.meta-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 0;
-  border-block: 1px solid var(--line-strong);
-}
-.meta-strip div {
-  min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  border-left: 1px solid var(--line);
-}
-.meta-strip div:first-child { border-left: 0; }
-.meta-strip dt {
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.meta-strip dd {
-  margin: var(--space-1) 0 0;
-  overflow-wrap: anywhere;
-  color: var(--ink-strong);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-}
-.status-copy {
-  margin: var(--space-3) 0 0;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.result-strip {
-  display: grid;
-  grid-template-columns: minmax(14rem, 1.35fr) repeat(3, minmax(0, 1fr));
-  margin: var(--space-5) 0 var(--space-6);
-  border-block: 1px solid var(--line-strong);
-}
-.result {
-  min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  border-left: 1px solid var(--line);
-}
-.result:first-child {
-  border-left: var(--space-1) solid var(--accent);
-  background: var(--accent-soft);
-}
-.result-value {
-  display: block;
-  margin-bottom: var(--space-1);
-  overflow-wrap: anywhere;
-  color: var(--ink-strong);
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  line-height: 1.25;
-}
-.result:first-child .result-value { color: var(--accent); font-size: 1.35rem; }
-.result-label { display: block; color: var(--muted); font-size: var(--text-xs); }
-.section {
-  min-width: 0;
-  padding: var(--space-6) 0;
-  border-top: 1px solid var(--line);
-}
-.section-head {
-  display: grid;
-  grid-template-columns: 7rem minmax(0, 1fr);
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-.section-head > * { min-width: 0; }
-.section-copy {
-  max-width: 78ch;
-  margin: 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.panel {
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  background: var(--paper);
-  border-radius: var(--radius-md);
-}
-.panel + .panel { margin-top: var(--space-4); }
-.chart-frame {
-  min-width: 0;
-  margin: 0;
-  border: 1px solid var(--line);
-  background: var(--paper);
-}
-.chart-scroll {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  padding: var(--space-2) var(--space-2) 0;
-  scrollbar-color: var(--line-strong) var(--paper-muted);
-}
-.chart-scroll svg {
-  display: block;
-  width: 100%;
-  min-width: var(--chart-min);
-  height: auto;
-}
-.chart-grid {
-  stroke: var(--line);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-.chart-axis {
-  stroke: var(--line-strong);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-}
-.chart-text {
-  fill: var(--muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.chart-label {
-  fill: var(--ink);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 650;
-}
-.oracle-line {
-  stroke: var(--subtle);
-  stroke-dasharray: 3 6;
-  vector-effect: non-scaling-stroke;
-}
-.series-line {
-  fill: none;
-  stroke-width: 2.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
-.series-band { stroke: none; opacity: 0.11; }
-.series-point {
-  stroke: var(--paper);
-  stroke-width: 1.6;
-  vector-effect: non-scaling-stroke;
-}
-.method-legend {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--space-2) var(--space-4);
-  margin: 0;
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--line);
-  list-style: none;
-}
-.method-legend li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-2);
-  align-items: center;
-  min-width: 0;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-.method-legend svg { flex: 0 0 auto; }
-.method-legend strong {
-  display: block;
-  overflow-wrap: anywhere;
-  color: var(--ink);
-  font-weight: 650;
-}
-.legend-endpoint {
-  display: block;
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-}
-figcaption {
-  padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--line);
-  color: var(--subtle);
-  font-size: var(--text-xs);
-}
-.data-disclosure {
-  min-width: 0;
-  margin-top: var(--space-3);
-  border: 1px solid var(--line);
-  background: var(--paper);
-}
-.data-disclosure summary {
-  cursor: pointer;
-  padding: var(--space-3) var(--space-4);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: 650;
-}
-.data-disclosure[open] summary { border-bottom: 1px solid var(--line); }
-.table-wrap {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scrollbar-color: var(--line-strong) var(--paper-muted);
-}
-.panel-table {
-  border: 1px solid var(--line);
-  background: var(--paper);
-}
-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  font-variant-numeric: tabular-nums;
-}
-caption {
-  padding: var(--space-3) var(--space-4);
-  color: var(--muted);
-  font-size: var(--text-xs);
-  text-align: left;
-}
-th, td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  vertical-align: top;
-}
-th {
-  background: var(--paper-muted);
-  color: var(--ink-strong);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-td { color: var(--muted); font-size: var(--text-xs); }
-tbody tr:last-child td { border-bottom: 0; }
-tbody tr:hover td { background: var(--accent-soft); color: var(--ink); }
-.numeric {
-  text-align: right;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-.method-name { color: var(--ink); font-weight: 650; }
-.identifier {
-  min-width: 24rem;
-  max-width: 44rem;
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-}
-.provenance-value {
-  min-width: 18rem;
-  max-width: 48rem;
-  overflow-wrap: anywhere;
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  white-space: normal;
-}
-.hardware-grid, .split-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-}
-.hardware-sheet { border-top: 2px solid var(--accent); }
-.hardware-sheet.target { border-top-color: var(--ink); }
-.hardware-name {
-  margin: var(--space-1) 0 var(--space-3);
-  overflow-wrap: anywhere;
-  font-family: var(--font-mono);
-  font-size: var(--text-md);
-  font-weight: 650;
-}
-.fact-list { margin: 0; }
-.fact-list div {
-  display: grid;
-  grid-template-columns: minmax(8rem, 0.75fr) minmax(0, 1fr);
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--line);
-}
-.fact-list dt { color: var(--subtle); font-size: var(--text-xs); }
-.fact-list dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-}
-.comparison-lead {
-  display: grid;
-  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: center;
-  padding: var(--space-4);
-  border-left: var(--space-1) solid var(--accent);
-  background: var(--accent-soft);
-}
-.delta {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-}
-.delta.negative { color: var(--negative); }
-.delta-context { max-width: 62ch; color: var(--muted); font-size: var(--text-sm); }
-.comparison-lead + .table-wrap { margin-top: var(--space-3); border: 1px solid var(--line); }
-.primary-evidence-note { margin-top: var(--space-3); }
-.disclosure {
-  padding: var(--space-4);
-  border-left: var(--space-1) solid var(--line-strong);
-  background: var(--note);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.disclosure strong { color: var(--ink-strong); }
-.disclosure p { margin: var(--space-2) 0 0; }
-.empty-state {
-  padding: var(--space-4);
-  border: 1px dashed var(--line-strong);
-  color: var(--muted);
-  background: var(--paper-muted);
-  font-size: var(--text-sm);
-}
-.matrix-stack { display: grid; gap: var(--space-3); }
-.fold-stack {
-  display: grid;
-  gap: var(--space-4);
-}
-.fold-audit { border-top: 2px solid var(--ink); }
-.fold-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  align-items: flex-start;
-}
-.fold-heading h3 {
-  margin: var(--space-1) 0 0;
-  overflow-wrap: anywhere;
-}
-.fold-target-count {
-  flex: 0 0 auto;
-  margin: 0;
-  padding-left: var(--space-4);
-  border-left: 1px solid var(--line-strong);
-  color: var(--subtle);
-  font-size: var(--text-xs);
-}
-.fold-target-count strong {
-  display: block;
-  color: var(--ink-strong);
-  font-family: var(--font-mono);
-  font-size: var(--text-lg);
-}
-.fold-source-table { margin-top: var(--space-3); }
-.custody-panel {
-  margin-bottom: var(--space-4);
-  padding: var(--space-4);
-  border-left: var(--space-1) solid var(--accent);
-  background: var(--accent-soft);
-}
-.custody-panel h3 { margin: var(--space-1) 0 var(--space-3); }
-.custody-chain {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin: 0;
-  padding: 0;
-  border-block: 1px solid var(--line-strong);
-  list-style: none;
-}
-.custody-chain li {
-  min-width: 0;
-  padding: var(--space-3);
-  border-left: 1px solid var(--line-strong);
-}
-.custody-chain li:first-child { border-left: 0; }
-.custody-stage {
-  display: block;
-  margin-bottom: var(--space-2);
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-.custody-facts { margin: 0; }
-.custody-facts div + div { margin-top: var(--space-2); }
-.custody-facts dt {
-  color: var(--subtle);
-  font-size: var(--text-2xs);
-}
-.custody-facts dd {
-  margin: var(--space-1) 0 0;
-  overflow-wrap: anywhere;
-  color: var(--ink-strong);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-}
-.limitations {
-  margin: 0;
-  padding-left: var(--space-5);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.limitations li + li { margin-top: var(--space-2); }
-.footer {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-5) 0;
-  border-top: 1px solid var(--line-strong);
-  color: var(--subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-}
-.footer strong { color: var(--ink); }
-
-@media (max-width: 62rem) {
-  .identity-layout { grid-template-columns: 1fr; gap: var(--space-4); }
-  .method-note { max-width: 52rem; }
-  .result-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .result:nth-child(odd) { border-left: 0; }
-  .result:first-child { border-left: var(--space-1) solid var(--accent); }
-  .result:nth-child(n + 3) { border-top: 1px solid var(--line); }
-}
-@media (max-width: 44rem) {
-  .page { padding-inline: var(--space-4); }
-  .report-header { padding-top: var(--space-4); }
-  .utility-rail { align-items: flex-start; }
-  .identity-layout { padding-block: var(--space-4); }
-  .meta-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .meta-strip div:nth-child(odd) { border-left: 0; }
-  .meta-strip div:nth-child(n + 3) { border-top: 1px solid var(--line); }
-  .result-strip { grid-template-columns: 1fr; margin-bottom: var(--space-5); }
-  .result { border-left: 0; border-top: 1px solid var(--line); }
-  .result:first-child { grid-column: auto; border-top: 0; border-left: var(--space-1) solid var(--accent); }
-  .section { padding-block: var(--space-5); }
-  .section-head { grid-template-columns: 1fr; gap: var(--space-1); }
-  .hardware-grid, .split-grid { grid-template-columns: 1fr; }
-  .comparison-lead { grid-template-columns: 1fr; gap: var(--space-2); }
-  .fold-heading { flex-direction: column; gap: var(--space-2); }
-  .fold-target-count {
-    width: 100%;
-    padding: var(--space-2) 0 0;
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
-  .custody-chain { grid-template-columns: 1fr; }
-  .custody-chain li {
-    border-top: 1px solid var(--line-strong);
-    border-left: 0;
-  }
-  .custody-chain li:first-child { border-top: 0; }
-  .footer { flex-direction: column; }
-}
-@media (max-width: 25rem) {
-  .utility-rail { flex-direction: column; gap: var(--space-2); }
-  .data-flag { text-align: left; }
-  .route { gap: var(--space-2); }
-  .meta-strip { grid-template-columns: 1fr; }
-  .meta-strip div, .meta-strip div:nth-child(odd) { border-left: 0; border-top: 1px solid var(--line); }
-  .meta-strip div:first-child { border-top: 0; }
-  .fact-list div { grid-template-columns: 1fr; gap: var(--space-1); }
-}
-@media print {
-  body, html { background: var(--paper); }
-  .page { max-width: none; padding: 0; }
-  .chart-scroll, .table-wrap { overflow: visible; }
-  .chart-scroll svg { min-width: 0; }
-  details:not([open]) > *:not(summary) { display: block; }
-  .section, .panel, .chart-frame, table { break-inside: avoid; }
-}
-"""
+def _styles() -> str:
+    return files("heliostune").joinpath("report.css").read_text(encoding="utf-8")
 
 
 def _escape(value: Any) -> str:
@@ -1238,6 +581,7 @@ def _render_comparison(
                 "like-for-like delta would be misleading."
             )
         return f'<div class="empty-state">{_escape(reason)}</div>'
+    assert transfer is not None and cold is not None
 
     budget, transfer_point, cold_point = comparisons[-1]
     delta = (transfer_point["mean"] - cold_point["mean"]) * 100
@@ -1480,7 +824,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
             if record.get("value", record.get("name")) not in (None, "")
         ] or experiment_keys("workload_keys")
         if workload_keys:
-            rows = "".join(
+            identifier_rows = "".join(
                 "<tr>"
                 f'<td class="numeric">{index:02d}</td>'
                 f'<td class="identifier">{_escape(_format_value(value))}</td>'
@@ -1491,7 +835,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
                 f'<details class="data-disclosure"><summary>Workload identifiers · {len(workload_keys)} rows</summary>'
                 '<div class="table-wrap"><table><caption>Complete workload identifiers supplied by the experiment</caption>'
                 '<thead><tr><th scope="col">ID</th><th scope="col">Workload key</th></tr></thead>'
-                f"<tbody>{rows}</tbody></table></div></details>"
+                f"<tbody>{identifier_rows}</tbody></table></div></details>"
             )
         else:
             count = _item_count(workloads)
@@ -1535,7 +879,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
             if record.get("value", record.get("name")) not in (None, "")
         ] or experiment_keys("config_keys")
         if config_keys:
-            rows = "".join(
+            identifier_rows = "".join(
                 "<tr>"
                 f'<td class="numeric">{index:02d}</td>'
                 f'<td class="identifier">{_escape(_format_value(value))}</td>'
@@ -1546,7 +890,7 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
                 f'<details class="data-disclosure"><summary>Launch configuration identifiers · {len(config_keys)} rows</summary>'
                 '<div class="table-wrap"><table><caption>Complete launch-configuration identifiers supplied by the experiment</caption>'
                 '<thead><tr><th scope="col">ID</th><th scope="col">Configuration key</th></tr></thead>'
-                f"<tbody>{rows}</tbody></table></div></details>"
+                f"<tbody>{identifier_rows}</tbody></table></div></details>"
             )
         else:
             count = _item_count(configs)
@@ -2038,26 +1382,78 @@ def _section(index: str, title: str, copy: str, content: str) -> str:
     )
 
 
-def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
-    """Render a complete offline research report from an aggregate tuning summary.
-
-    Required summary keys are ``source_gpu``, ``target_gpu``, ``workloads``, ``configs``,
-    and ``methods``. Each method maps to points containing ``budget``,
-    ``mean_fraction_oracle``, ``ci95_low``, and ``ci95_high``.
-    """
-
-    if not isinstance(summary, Mapping):
-        raise TypeError("summary must be a mapping")
-    missing = [
-        key
-        for key in ("source_gpu", "target_gpu", "workloads", "configs", "methods")
-        if key not in summary
+def _render_control_panel(data: ReportData) -> str:
+    controls = [
+        method for method in data.methods if method.role in {"zero_query", "external", "exhaustive"}
     ]
-    if missing:
-        raise ValueError(f"summary is missing required keys: {', '.join(missing)}")
+    if not controls:
+        return ""
+    cards: list[str] = []
+    for method in controls:
+        if not method.points:
+            continue
+        endpoint = method.points[-1]
+        if method.role == "exhaustive":
+            budget = f"Endpoint at {_format_budget(endpoint.budget)} measured configurations"
+        elif method.role == "external":
+            budget = "External implementation control · no tuner action-space budget"
+        else:
+            budget = "Zero-query control · no target policy probes"
+        uncertainty = endpoint.uncertainty
+        cards.append(
+            '<article class="metric-card control-card">'
+            f'<p class="eyebrow">{_escape(method.role.replace("_", " "))}</p>'
+            f"<h3>{_escape(method.label)}</h3>"
+            f'<p class="metric-card-value">{_escape(_format_number(endpoint.mean))}</p>'
+            f"<p>{_escape(budget)}</p>"
+            f'<p class="fine-print">{_escape(uncertainty.interval_method)}; '
+            f"n={uncertainty.n} {_escape(uncertainty.sampling_unit)}; conditional on "
+            f"{_escape(uncertainty.conditional_on)}.</p>"
+            "</article>"
+        )
+    if not cards:
+        return ""
+    return (
+        '<section class="control-panel" aria-labelledby="control-panel-title">'
+        '<header><p class="eyebrow">Separate action spaces</p>'
+        '<h3 id="control-panel-title">Zero-query, external, and exhaustive controls</h3></header>'
+        f'<div class="metric-grid">{"".join(cards)}</div></section>'
+    )
 
+
+def _render_uncertainty_notes(data: ReportData) -> str:
+    items: list[str] = []
+    for method in data.methods:
+        if method.role != "sequential" or not method.points:
+            continue
+        uncertainty = method.points[-1].uncertainty
+        items.append(
+            "<li>"
+            f"<strong>{_escape(method.label)}</strong>: "
+            f"{_escape(uncertainty.interval_method)} over n={uncertainty.n} "
+            f"{_escape(uncertainty.sampling_unit)}; conditional on "
+            f"{_escape(uncertainty.conditional_on)}."
+            "</li>"
+        )
+    return (
+        '<details class="data-disclosure uncertainty-disclosure">'
+        "<summary>Interval estimands and conditioning</summary>"
+        f'<ul class="audit-list">{"".join(items)}</ul></details>'
+        if items
+        else ""
+    )
+
+
+def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
+    """Normalize once, then atomically render a complete offline research report."""
+    data = normalize_report_summary(summary)
+    summary = data.raw_summary
     methods = _normalise_methods(summary["methods"])
-    labels = _method_display_labels(summary, methods)
+    labels = {method.key: method.label for method in data.methods}
+    roles = {method.key: method.role for method in data.methods}
+    sequential_methods = {
+        key: points for key, points in methods.items() if roles[key] == "sequential"
+    }
     source_profiles = _source_hardware_profiles(summary)
     if source_profiles:
         source_name = " + ".join(name for name, _ in source_profiles)
@@ -2093,14 +1489,17 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
     curve_points = sum(len(points) for points in methods.values())
 
     chart = (
-        '<figure class="chart-frame">'
+        '<figure class="chart-frame sequential-chart">'
         '<div class="chart-scroll">'
-        f"{_render_chart(methods, labels)}"
+        f"{_render_chart(sequential_methods, labels)}"
         "</div>"
-        f"{_render_legend(methods, labels)}"
-        "<figcaption>Lines connect reported means; bands encode the supplied 95% confidence bounds. "
-        "Values are plotted as supplied and are not recomputed by this renderer.</figcaption>"
+        f"{_render_legend(sequential_methods, labels)}"
+        "<figcaption>Only methods that pay target probes appear on this online-budget axis. "
+        "The horizontal reference-parity line is not a queried policy. Lines connect supplied "
+        "means; bands encode validated uncertainty bounds.</figcaption>"
         "</figure>"
+        f"{_render_uncertainty_notes(data)}"
+        f"{_render_control_panel(data)}"
         f'<details class="data-disclosure"><summary>Complete numeric results · {curve_points} rows</summary>'
         f"{_render_raw_table(methods, labels)}</details>"
     )
@@ -2178,8 +1577,9 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         '<html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         '<meta name="color-scheme" content="light">'
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; base-uri 'none'; form-action 'none'\">"
         f"<title>{_escape(title)}</title>"
-        f"<style>{_STYLES}</style></head><body>"
+        f"<style>{_styles()}</style></head><body>"
         '<a class="skip-link" href="#main">Skip to results</a>'
         '<div class="page"><header class="report-header">'
         '<div class="utility-rail">'
@@ -2213,7 +1613,7 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         f'<p class="status-copy"><strong>{_escape(data_label)}.</strong> {_escape(data_copy)}</p>'
         "</header>"
         f'<main id="main">{signals}'
-        f"{_section('01', 'Budget-efficiency curves', 'All supplied methods share the same target-budget and held-out-reference axes. The legend aligns each human-readable method label with its terminal value.', chart)}"
+        f"{_section('01', 'Budget-efficiency curves', 'The online chart contains only methods that pay target probes. Zero-query, external, and exhaustive controls remain in a separate panel; reference parity is horizontal.', chart)}"
         f"{_section('02', comparison_title, comparison_copy, comparison_content)}"
         f"{fold_section}"
         f"{_section(hardware_index, 'Hardware context', 'Each supplied source profile is shown separately from the target evaluation domain. Facts are rendered exactly as supplied.', _render_hardware(summary))}"
@@ -2227,6 +1627,4 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         "</body></html>"
     )
 
-    destination = Path(output_path)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(document, encoding="utf-8")
+    write_text_atomic(output_path, document)
