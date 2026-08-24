@@ -186,6 +186,103 @@ def test_development_replay_schema_and_parhelion_paid_anchor_contract() -> None:
     )
 
 
+def test_fold_results_serialize_complete_curves_without_changing_aggregates() -> None:
+    result = _development_replay()
+    fold_results = result["fold_results"]
+
+    assert [fold["heldout_model"] for fold in fold_results] == [
+        fold["heldout_model"] for fold in result["folds"]
+    ]
+    assert len(fold_results) == result["model_families"]
+
+    deterministic_methods = {
+        "static_multisource",
+        "torch",
+        "single_source_nearest",
+        "multisource_retrieval",
+        "exhaustive",
+        "heldout_reference",
+    }
+    for fold_result, fold in zip(fold_results, result["folds"], strict=True):
+        assert set(fold_result) == {
+            "heldout_model",
+            "target_workloads",
+            "visible_bank0_source_observations_by_gpu",
+            "excluded_exact_target_shapes_by_gpu",
+            "methods",
+        }
+        for metadata_key in (
+            "heldout_model",
+            "target_workloads",
+            "visible_bank0_source_observations_by_gpu",
+            "excluded_exact_target_shapes_by_gpu",
+        ):
+            assert fold_result[metadata_key] == fold[metadata_key]
+
+        fold_methods = fold_result["methods"]
+        assert set(fold_methods) == _EXPECTED_METHODS
+        for points in fold_methods.values():
+            assert all(
+                set(point)
+                == {
+                    "budget",
+                    "mean_fraction_oracle",
+                    "ci95_low",
+                    "ci95_high",
+                }
+                for point in points
+            )
+        for method in _CURVE_METHODS:
+            assert [point["budget"] for point in fold_methods[method]] == [1, 2]
+        for method in deterministic_methods:
+            assert all(
+                point["ci95_low"]
+                == point["mean_fraction_oracle"]
+                == point["ci95_high"]
+                for point in fold_methods[method]
+            )
+        assert [point["budget"] for point in fold_methods["exhaustive"]] == [
+            len(_CONFIGS)
+        ]
+        assert fold_methods["heldout_reference"] == [
+            {
+                "budget": len(_CONFIGS),
+                "mean_fraction_oracle": 1.0,
+                "ci95_low": 1.0,
+                "ci95_high": 1.0,
+            }
+        ]
+
+    # Fold serialization is reporting-only: the existing top-level means still
+    # equal the paired-seed/equal-fold aggregate used before this field existed.
+    for method in _EXPECTED_METHODS:
+        for point_index, aggregate_point in enumerate(result["methods"][method]):
+            fold_means = [
+                fold["methods"][method][point_index]["mean_fraction_oracle"]
+                for fold in fold_results
+            ]
+            assert aggregate_point["mean_fraction_oracle"] == pytest.approx(
+                statistics.fmean(fold_means)
+            )
+
+    # Deterministic top-level confidence bounds continue to reflect fold
+    # variation, while their newly supplied per-fold bounds are zero-width.
+    for method in deterministic_methods:
+        for point_index, aggregate_point in enumerate(result["methods"][method]):
+            fold_means = [
+                fold["methods"][method][point_index]["mean_fraction_oracle"]
+                for fold in fold_results
+            ]
+            half_width = (
+                1.96 * statistics.stdev(fold_means) / math.sqrt(len(fold_means))
+            )
+            mean = statistics.fmean(fold_means)
+            assert aggregate_point["ci95_low"] == pytest.approx(
+                max(0.0, mean - half_width)
+            )
+            assert aggregate_point["ci95_high"] == pytest.approx(mean + half_width)
+
+
 def test_baseline_parameters_are_independent_and_nearest_is_bound_to_first_source() -> None:
     common_baselines = {
         "retrieval_k": 1,

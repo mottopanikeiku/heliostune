@@ -897,6 +897,45 @@ def compare_multisource(
         }
     ]
 
+    fold_results: list[dict[str, Any]] = []
+    for fold_index, fold in enumerate(fold_details):
+        fold_methods = {
+            method: _aggregate([fold_curves[fold_index]], budgets)
+            for method, fold_curves in deterministic_fold_curves.items()
+        }
+        for method, per_seed_folds in stochastic_fold_curves.items():
+            fold_methods[method] = _aggregate(
+                [
+                    seed_fold_curves[fold_index]
+                    for seed_fold_curves in per_seed_folds
+                ],
+                budgets,
+            )
+        fold_methods["exhaustive"] = _aggregate(
+            [exhaustive_folds[fold_index]], [len(configs)]
+        )
+        fold_methods["heldout_reference"] = [
+            {
+                "budget": len(configs),
+                "mean_fraction_oracle": 1.0,
+                "ci95_low": 1.0,
+                "ci95_high": 1.0,
+            }
+        ]
+        fold_results.append(
+            {
+                "heldout_model": fold["heldout_model"],
+                "target_workloads": fold["target_workloads"],
+                "visible_bank0_source_observations_by_gpu": fold[
+                    "visible_bank0_source_observations_by_gpu"
+                ],
+                "excluded_exact_target_shapes_by_gpu": fold[
+                    "excluded_exact_target_shapes_by_gpu"
+                ],
+                "methods": fold_methods,
+            }
+        )
+
     auc = {
         method: float(
             np.mean([point["mean_fraction_oracle"] for point in points])
@@ -1137,6 +1176,7 @@ def compare_multisource(
             ),
         },
         "folds": fold_details,
+        "fold_results": fold_results,
         "experiment": {
             "workload_keys": [workload.key for workload in all_workloads],
             "config_keys": [config.key for config in configs],

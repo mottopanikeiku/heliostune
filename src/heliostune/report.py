@@ -536,6 +536,80 @@ tbody tr:hover td { background: var(--accent-soft); color: var(--ink); }
   font-size: var(--text-sm);
 }
 .matrix-stack { display: grid; gap: var(--space-3); }
+.fold-stack {
+  display: grid;
+  gap: var(--space-4);
+}
+.fold-audit { border-top: 2px solid var(--ink); }
+.fold-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+.fold-heading h3 {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+.fold-target-count {
+  flex: 0 0 auto;
+  margin: 0;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--line-strong);
+  color: var(--subtle);
+  font-size: var(--text-xs);
+}
+.fold-target-count strong {
+  display: block;
+  color: var(--ink-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+}
+.fold-source-table { margin-top: var(--space-3); }
+.custody-panel {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border-left: var(--space-1) solid var(--accent);
+  background: var(--accent-soft);
+}
+.custody-panel h3 { margin: var(--space-1) 0 var(--space-3); }
+.custody-chain {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border-block: 1px solid var(--line-strong);
+  list-style: none;
+}
+.custody-chain li {
+  min-width: 0;
+  padding: var(--space-3);
+  border-left: 1px solid var(--line-strong);
+}
+.custody-chain li:first-child { border-left: 0; }
+.custody-stage {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.custody-facts { margin: 0; }
+.custody-facts div + div { margin-top: var(--space-2); }
+.custody-facts dt {
+  color: var(--subtle);
+  font-size: var(--text-2xs);
+}
+.custody-facts dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
 .limitations {
   margin: 0;
   padding-left: var(--space-5);
@@ -578,6 +652,19 @@ tbody tr:hover td { background: var(--accent-soft); color: var(--ink); }
   .section-head { grid-template-columns: 1fr; gap: var(--space-1); }
   .hardware-grid, .split-grid { grid-template-columns: 1fr; }
   .comparison-lead { grid-template-columns: 1fr; gap: var(--space-2); }
+  .fold-heading { flex-direction: column; gap: var(--space-2); }
+  .fold-target-count {
+    width: 100%;
+    padding: var(--space-2) 0 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+  .custody-chain { grid-template-columns: 1fr; }
+  .custody-chain li {
+    border-top: 1px solid var(--line-strong);
+    border-left: 0;
+  }
+  .custody-chain li:first-child { border-top: 0; }
   .footer { flex-direction: column; }
 }
 @media (max-width: 25rem) {
@@ -1480,7 +1567,9 @@ def _render_experiment_matrix(workloads: Any, configs: Any, experiment: Any = No
 
 
 def _render_raw_table(
-    methods: Mapping[str, list[dict[str, float]]], labels: Mapping[str, str]
+    methods: Mapping[str, list[dict[str, float]]],
+    labels: Mapping[str, str],
+    caption: str = "Values used to draw the budget-efficiency figure",
 ) -> str:
     rows = []
     for name, points in methods.items():
@@ -1497,12 +1586,84 @@ def _render_raw_table(
     if not rows:
         return '<div class="empty-state">No raw method values were supplied.</div>'
     return (
-        '<div class="table-wrap"><table><caption>Values used to draw the budget-efficiency figure</caption>'
+        f'<div class="table-wrap"><table><caption>{_escape(caption)}</caption>'
         '<thead><tr><th scope="col">Method</th><th scope="col">Budget</th>'
         '<th scope="col">Mean fraction of held-out reference</th><th scope="col">CI95 low</th>'
         '<th scope="col">CI95 high</th></tr></thead>'
         f"<tbody>{''.join(rows)}</tbody></table></div>"
     )
+
+
+def _render_fold_source_table(fold: Mapping[str, Any]) -> str:
+    visible = _as_mapping(fold.get("visible_bank0_source_observations_by_gpu")) or {}
+    excluded = _as_mapping(fold.get("excluded_exact_target_shapes_by_gpu")) or {}
+    sources = list(
+        dict.fromkeys([*(str(key) for key in visible), *(str(key) for key in excluded)])
+    )
+    if not sources:
+        return (
+            '<div class="empty-state fold-source-table">'
+            "No per-source visibility or exact-shape exclusion counts were supplied for this fold."
+            "</div>"
+        )
+
+    visible_by_name = {str(key): value for key, value in visible.items()}
+    excluded_by_name = {str(key): value for key, value in excluded.items()}
+    rows = "".join(
+        "<tr>"
+        f'<td class="method-name">{_escape(source)}</td>'
+        f'<td class="numeric">{_escape(_format_value(visible_by_name.get(source)))}</td>'
+        f'<td class="numeric">{_escape(_format_value(excluded_by_name.get(source)))}</td>'
+        "</tr>"
+        for source in sources
+    )
+    return (
+        '<div class="table-wrap panel-table fold-source-table"><table>'
+        "<caption>Per-source fold visibility and exact-target-shape exclusion audit</caption>"
+        '<thead><tr><th scope="col">Source GPU</th>'
+        '<th scope="col">Visible bank-0 source rows</th>'
+        '<th scope="col">Excluded exact target shapes</th></tr></thead>'
+        f"<tbody>{rows}</tbody></table></div>"
+    )
+
+
+def _render_fold_results(summary: Mapping[str, Any]) -> str:
+    value = summary.get("fold_results")
+    if value is None:
+        return ""
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise TypeError("summary['fold_results'] must be a sequence")
+
+    panels = []
+    for index, raw_fold in enumerate(value, start=1):
+        fold = _as_mapping(raw_fold)
+        if fold is None:
+            raise TypeError(f"summary['fold_results'][{index - 1}] must be a mapping")
+        fold_methods = _normalise_methods(fold.get("methods", {}))
+        fold_labels = _method_display_labels(summary, fold_methods)
+        family = _format_value(fold.get("heldout_model"))
+        target_workloads = _format_value(fold.get("target_workloads"))
+        row_count = sum(len(points) for points in fold_methods.values())
+        heading_id = f"fold-result-{index}"
+        method_table = _render_raw_table(
+            fold_methods,
+            fold_labels,
+            f"Complete supplied method values for held-out family {family}",
+        )
+        panels.append(
+            f'<article class="panel fold-audit" aria-labelledby="{heading_id}">'
+            '<header class="fold-heading"><div>'
+            f'<p class="micro-label">Fold {index:02d} · held-out family</p>'
+            f'<h3 id="{heading_id}">{_escape(family)}</h3></div>'
+            '<p class="fold-target-count">'
+            f"<strong>{_escape(target_workloads)}</strong>"
+            "<span>Target workloads</span></p></header>"
+            f"{_render_fold_source_table(fold)}"
+            '<details class="data-disclosure">'
+            f"<summary>Complete method-by-budget numeric table · {row_count} rows</summary>"
+            f"{method_table}</details></article>"
+        )
+    return f'<div class="fold-stack">{"".join(panels)}</div>' if panels else ""
 
 
 def _flatten_details(value: Mapping[str, Any], prefix: str = "") -> list[tuple[str, Any]]:
@@ -1516,9 +1677,64 @@ def _flatten_details(value: Mapping[str, Any], prefix: str = "") -> list[tuple[s
     return details
 
 
+def _render_release_provenance(value: Any) -> str:
+    if value is None:
+        return ""
+    release = _as_mapping(value)
+    if release is None:
+        raise TypeError("summary['release_provenance'] must be a mapping")
+
+    stages = (
+        (
+            "01 · Collection",
+            (
+                ("Sole H100 run", "sole_h100_run"),
+                ("Raw H100 SHA-256", "raw_h100_sha256"),
+            ),
+        ),
+        (
+            "02 · Freeze",
+            (
+                ("Algorithm commit", "algorithm_commit"),
+                ("Freeze commit", "freeze_commit"),
+                ("Freeze SHA-256", "freeze_sha256"),
+            ),
+        ),
+        (
+            "03 · Release",
+            (
+                ("Final archive SHA-256", "final_archive_sha256"),
+                ("Post-run manifest path", "post_run_manifest_path"),
+            ),
+        ),
+    )
+    items = []
+    for stage, fields in stages:
+        facts = "".join(
+            "<div>"
+            f"<dt>{_escape(label)}</dt>"
+            f"<dd>{_escape(_format_value(release.get(key)))}</dd>"
+            "</div>"
+            for label, key in fields
+        )
+        items.append(
+            "<li>"
+            f'<span class="custody-stage">{_escape(stage)}</span>'
+            f'<dl class="custody-facts">{facts}</dl>'
+            "</li>"
+        )
+    return (
+        '<aside class="custody-panel" aria-labelledby="release-chain-title">'
+        '<p class="micro-label">Immutable evidence handoff</p>'
+        '<h3 id="release-chain-title">Release chain of custody</h3>'
+        f'<ol class="custody-chain">{"".join(items)}</ol></aside>'
+    )
+
+
 def _render_reproducibility(
     summary: Mapping[str, Any], methods: Mapping[str, list[dict[str, float]]]
 ) -> str:
+    release_panel = _render_release_provenance(summary.get("release_provenance"))
     workload_count = _item_count(summary.get("workloads"))
     config_count = _item_count(summary.get("configs"))
     status_label, _ = _data_status(summary)
@@ -1577,6 +1793,7 @@ def _render_reproducibility(
         experiment is not None
         or isinstance(reproducibility, Mapping)
         or any(field in summary for field in known_fields)
+        or bool(release_panel)
     )
     note = (
         ""
@@ -1592,7 +1809,7 @@ def _render_reproducibility(
         '<thead><tr><th scope="col">Field</th><th scope="col">Reported value</th></tr></thead>'
         f"<tbody>{rows}</tbody></table></div>"
     )
-    return f"{table}{note}"
+    return f"{release_panel}{table}{note}"
 
 
 def _source_cost(summary: Mapping[str, Any]) -> Any:
@@ -1690,6 +1907,21 @@ def _render_limitations(summary: Mapping[str, Any]) -> str:
     )
 
 
+def _declared_online_budget(summary: Mapping[str, Any]) -> float | None:
+    primary_metrics = _as_mapping(summary.get("primary_metrics"))
+    headline = _as_mapping(summary.get("headline"))
+    candidates = (
+        None if primary_metrics is None else primary_metrics.get("primary_budget"),
+        summary.get("max_budget"),
+        None if headline is None else headline.get("budget"),
+    )
+    for candidate in candidates:
+        number = _supplied_number(candidate)
+        if number is not None and number >= 0:
+            return number
+    return None
+
+
 def _headline_values(
     summary: Mapping[str, Any],
     methods: Mapping[str, list[dict[str, float]]],
@@ -1702,11 +1934,20 @@ def _headline_values(
         best_label = (
             f"Best endpoint · {labels[best_name]} at budget {_format_budget(best_point['budget'])}"
         )
-        max_budget = max(point["budget"] for points in methods.values() for point in points)
-        budget_value = _format_budget(max_budget)
-        budget_label = "Largest target budget reported"
     else:
         best_value, best_label = _MISSING, "Best reported endpoint"
+
+    online_budget = _declared_online_budget(summary)
+    if online_budget is not None:
+        budget_value = _format_budget(online_budget)
+        budget_label = "Declared online target budget"
+    elif endpoints:
+        largest_point_budget = max(
+            point["budget"] for points in methods.values() for point in points
+        )
+        budget_value = _format_budget(largest_point_budget)
+        budget_label = "Largest target budget reported"
+    else:
         budget_value, budget_label = _MISSING, "Largest target budget reported"
 
     headline = _as_mapping(summary.get("headline"))
@@ -1906,6 +2147,34 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         '<div class="panel"><h3>Interpretation boundaries</h3>'
         f"{_render_limitations(summary)}</div></div>"
     )
+    fold_content = _render_fold_results(summary)
+    if fold_content:
+        fold_section = _section(
+            "03",
+            "Fold-level evidence audit",
+            (
+                "Every held-out family exposes its target count, source rows visible to bank 0, "
+                "exact-target-shape exclusions, and all supplied method points. This reporting-only "
+                "decomposition does not alter the frozen primary comparator; the target-selected "
+                "strongest legacy method remains descriptive only."
+            ),
+            fold_content,
+        )
+        hardware_index, scope_index, provenance_index, limits_index = "04", "05", "06", "07"
+    else:
+        fold_section = ""
+        hardware_index, scope_index, provenance_index, limits_index = "03", "04", "05", "06"
+    provenance_copy = (
+        (
+            "Reported run metadata, release chain of custody, and experiment protocol are "
+            "inventoried separately from facts that are absent from the summary."
+        )
+        if summary.get("release_provenance") is not None
+        else (
+            "Reported run metadata and experiment protocol are inventoried separately from "
+            "facts that are absent from the summary."
+        )
+    )
 
     serialized_chart_data = {
         name: [
@@ -1966,10 +2235,11 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         f'<main id="main">{signals}'
         f"{_section('01', 'Budget-efficiency curves', 'All supplied methods share the same target-budget and held-out-reference axes. The legend aligns each human-readable method label with its terminal value.', chart)}"
         f"{_section('02', comparison_title, comparison_copy, comparison_content)}"
-        f"{_section('03', 'Hardware context', 'Each supplied source profile is shown separately from the target evaluation domain. Facts are rendered exactly as supplied.', _render_hardware(summary))}"
-        f"{_section('04', 'Experiment scope', 'The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.', _render_experiment_matrix(summary['workloads'], summary['configs'], summary.get('experiment')))}"
-        f"{_section('05', 'Protocol and provenance', 'Reported run metadata and experiment protocol are inventoried separately from facts that are absent from the summary.', _render_reproducibility(summary, methods))}"
-        f"{_section('06', 'Cost, budget scope, and limitations', 'Source acquisition, supplied target-budget accounting, posterior scope, and interpretation boundaries remain separate from the reported curves.', cost_and_limits)}"
+        f"{fold_section}"
+        f"{_section(hardware_index, 'Hardware context', 'Each supplied source profile is shown separately from the target evaluation domain. Facts are rendered exactly as supplied.', _render_hardware(summary))}"
+        f"{_section(scope_index, 'Experiment scope', 'The workload and launch-configuration inventories bound the reported reference and every curve. Large inventories are contained in local, expandable tables.', _render_experiment_matrix(summary['workloads'], summary['configs'], summary.get('experiment')))}"
+        f"{_section(provenance_index, 'Protocol and provenance', provenance_copy, _render_reproducibility(summary, methods))}"
+        f"{_section(limits_index, 'Cost, budget scope, and limitations', 'Source acquisition, supplied target-budget accounting, posterior scope, and interpretation boundaries remain separate from the reported curves.', cost_and_limits)}"
         "</main>"
         '<footer class="footer"><span><strong>HeliosTune</strong> / GPU autotuning transfer report</span>'
         "<span>Offline HTML · inline SVG · no network requests</span></footer></div>"
