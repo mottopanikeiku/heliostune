@@ -1,72 +1,74 @@
 # HeliosTune
 
-Transfer a Bayesian autotuning prior between GPU targets, spend a fixed number of target-side probes, and test whether it actually beats simpler launch-selection methods.
+A measured study of retrieval, Bayesian adaptation, and source-to-target launch selection for FP16 Triton matrix multiplication.
 
-**Measured report:** [L4 → A10](https://mottopanikeiku.github.io/heliostune/) · [A10 → L4](https://mottopanikeiku.github.io/heliostune/a10-to-l4.html) · [raw release manifest](benchmarks/manifest.json)
-
-HeliosTune implements a manual FP16 Triton matmul and a Gaussian linear Thompson sampler over joint workload, launch, and hardware descriptors. The source posterior becomes a discounted power prior on the target; each target observation is incorporated with a rank-one precision update. The study compares it with static source-best selection, random search, nearest-shape reuse, cold-start Thompson sampling, PyTorch, and exhaustive tuning over the frozen manifest.
+**Live evidence:** [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json) · [H100 freeze](benchmarks/parhelion-v2-h100-freeze.json)
 
 ## Result
 
-The transfer prior helped over cold start in both directions. It did **not** beat nearest-shape reuse. That negative result is the important one: on this action space, a simple retrieval heuristic carried source information more effectively than the linear Bayesian model.
+Parhelion is a retrieval-anchored Bayesian linear Thompson tuner built in response to the v1 result: nearest-shape reuse beat the original transferred posterior in both L4↔A10 directions. Parhelion converts a family- and shape-disjoint multi-GPU archive into four action-conditioned retrieval statistics, pays for the consensus retrieval action as query one, then adapts on target bank-0 observations.
 
-| Direction | Static | Random | Cold Thompson | **Helios transfer** | **Nearest shape** |
-|---|---:|---:|---:|---:|---:|
-| L4 → A10 | 83.05% | 87.94% | 90.18% | **92.37%** | **96.69%** |
-| A10 → L4 | 90.78% | 91.14% | 94.72% | **94.83%** | **98.96%** |
+The staged result is negative under its frozen primary comparison. On the untouched Modal H100 domain, Parhelion reached **99.65%** of the held-out curated Triton reference at eight probes per workload and **0.9503 AUC** over budgets 1–8. It did **not** outperform the T4-frozen `torch.matmul` comparator: paired AUC delta **−0.6600**, two-sided 95% Student-t CI **[−0.6614, −0.6586]** over 30 paired seeds. Superiority was not demonstrated.
 
-Values are mean fraction-of-held-out-reference AUC across target budgets 1–8; higher is better. Helios improved on cold Thompson by 2.19 percentage points for L4 → A10 and 0.11 points for A10 → L4, but trailed nearest-shape reuse by 4.32 and 4.14 points respectively. No subset or favorable direction is hidden.
+| H100 method | AUC, budgets 1–8 | Fraction of reference at budget 8 |
+|---|---:|---:|
+| Static multi-source best | 63.40% | 63.40% |
+| Random search | 84.19% | 92.82% |
+| Multi-source retrieval | 90.32% | 94.07% |
+| Single-source nearest shape | 90.35% | 96.70% |
+| **Parhelion** | **95.03%** | **99.65%** |
+| Cold Thompson | 95.84% | 99.68% |
+| Pooled-source Thompson | 95.84% | 99.68% |
+| `torch.matmul` | 161.03% | 161.03% |
 
-## Experimental controls
+Parhelion improves on its retrieval-only anchor by **4.71 percentage points AUC**, but trails cold Thompson by **0.82 points**. It reaches 95% of the reference after four probes; cold Thompson needs three and nearest-shape reuse needs five. The selected pooled transfer strength and Parhelion source-likelihood strength are both zero, so this corpus does not support a positive transferred-posterior claim. Parhelion still uses the frozen source archive to construct its retrieval anchor and retrieval covariates.
 
-- **96 model-derived workloads:** four projection types × six token regimes × four public model families.
-- **36 frozen launch configurations:** `BLOCK_M`, `BLOCK_N`, `BLOCK_K`, warps, stages, and grouping vary without target-latency pruning.
-- **Three timing banks:** bank 0 is policy-visible, bank 1 selects the best-of-manifest reference, and bank 2 evaluates every recommendation.
-- **Grouped transfer folds:** one complete model family is held out at a time. Its shapes never enter the source posterior or source baselines.
-- **Paired replay:** 30 policy seeds, identical per-round workload permutations, and budgets of 1–8 distinct configuration probes per held-out workload.
-- **Independent evaluation:** recommendations and the bank-1 reference winner are both scored only on bank 2.
-- **Numerical gate:** every one of the 20,736 measured GPU/configuration/workload/bank records passed the FP32-reference correctness check.
+Values above are fractions of a bank-1-selected, bank-2-scored best configuration from the curated 36-action Triton manifest. They are not fractions of a hardware ceiling. `torch.matmul` can exceed 1.0 because it is outside that manifest and is evaluation-only.
 
-The frozen protocol is commit [`5919cbb`](https://github.com/mottopanikeiku/heliostune/commit/5919cbb4a9d7684ac835ab7bfd89879ac8c82344), which predates the full target collection. The [Modal run](https://modal.com/apps/mottopanikeiku/main/ap-ccgVXq137C9p6vVUxPlvXA) allocated actual **NVIDIA L4** and **NVIDIA A10** devices. The compressed JSONL matrix, checksum, exact software versions, timing durations, and device properties are published under [`benchmarks/`](benchmarks/).
+## What changed from v1
 
-## Method
+The [v1 bidirectional study](https://mottopanikeiku.github.io/heliostune/v1.html) measured 20,736 L4/A10 rows. The original transferred linear posterior improved over cold start but lost to nearest-shape reuse:
 
-For workload $s$, launch action $a$, and GPU descriptor $h$, HeliosTune constructs a bounded feature vector $\phi(s,a,h)$. The linear reward model is
+| Direction | Cold Thompson | Helios transfer | Nearest shape |
+|---|---:|---:|---:|
+| L4 → A10 | 90.18% | 92.37% | **96.69%** |
+| A10 → L4 | 94.72% | 94.83% | **98.96%** |
 
-$$
-y = \phi(s,a,h)^\top \theta + \epsilon, \qquad \epsilon \sim \mathcal{N}(0,\sigma^2).
-$$
+Parhelion makes retrieval explicit rather than hiding it inside a learned prior:
 
-A source observation contributes the sufficient statistics
+1. Compute frozen Euclidean neighbor distance over `log2(M,N,K)/14`.
+2. Convert each source workload/action row to centered log-TFLOP/s advantage.
+3. Append weighted advantage mean, weighted variance, neighbor distance, and source-GPU sign agreement to the joint workload/launch/hardware features.
+4. Query the independently T4-selected consensus retrieval action first.
+5. Use a target-updated Bayesian linear Thompson posterior for later probes and recommend only the best measured bank-0 incumbent.
 
-$$
-\Lambda \leftarrow \Lambda + \sigma^{-2}\phi\phi^\top,
-\qquad
-\eta \leftarrow \eta + \sigma^{-2}\phi y.
-$$
+The closest ideas are established: nearest-task warm starts, transferred cost models, residual transfer, and contextual linear Thompson sampling. Relevant prior work includes [AutoTVM](https://arxiv.org/abs/1805.08166), [nearest-dataset SMBO initialization](https://ojs.aaai.org/index.php/AAAI/article/view/9354), [linear Thompson sampling](https://proceedings.mlr.press/v28/agrawal13.html), [RGPE/TST-R transfer Bayesian optimization](https://arxiv.org/abs/1802.02219), and [Transfer-Tuning](https://arxiv.org/abs/2201.05587). The bounded contribution here is the exact forced-anchor, centered multi-GPU retrieval representation, target-only update path, and staged hardware evaluation—not a claim to be the first transfer autotuner or a new regret theorem.
 
-Target initialization uses a power prior with frozen strength $\alpha=0.08$:
+## Frozen evaluation
 
-$$
-\Lambda_{t,0}=\lambda I+\alpha(\Lambda_s-\lambda I),
-\qquad
-\eta_{t,0}=\alpha\eta_s.
-$$
+- **Corpus:** 96 workloads = four model families × four projection types × six token regimes.
+- **Action set:** 36 launch configurations varying tiles, warps, stages, and grouping.
+- **Timing banks:** bank 0 is policy-visible; bank 1 selects the manifest reference; bank 2 scores recommendations.
+- **Leakage control:** each fold excludes the complete target model family and every source row sharing an exact target `(M,N,K)` shape before retrieval, centering, source modeling, or selection.
+- **Shared adaptation:** budget `b` means `b` target probes per workload. A fold uses `24b` probes; all four folds use `96b`. One posterior is shared across the 24 workloads in a fold, so this is batched adaptation, not 96 independent tuners.
+- **T4 validation:** L4+A10 source archive; 12 seeds; 15 unique baseline-grid points followed by 48 Parhelion points. Selected Parhelion `(k=16, T=2.0, α=0)`, retrieval `(k=8, T=0.2)`, pooled `α=0`, and primary comparator `torch`.
+- **H100 final:** L4+A10+T4 source archive; 30 seeds; the selected parameters and comparator were frozen before the only H100 invocation.
+- **Physical cost:** 31,104 source measurements plus 10,368 H100 measurements. The simulated budget-8 online cost is 768 target queries per live method across all folds; physical target collection remains exhaustive.
+- **Numerical gate:** all 41,472 four-GPU cells passed the FP32-reference correctness check.
 
-This discounts source likelihood information without double-counting the source ridge prior. Thompson samples and posterior means use Cholesky solves; the implementation never forms a covariance inverse.
+Parhelion and retrieval-only make the same paid query at budget one: both score 0.82277885 of the held-out reference on H100. The report exposes all four held-out-family tables, every method/budget point, exact-shape exclusions, source rows, paired uncertainty, and the target-selected strongest method as descriptive-only context.
 
-The online reward is `-log(latency_ms)`. PyTorch timing is evaluation-only and is not an uncharged calibration input to the policy.
+## Chain of custody
 
-## Workload corpus
+- Algorithm and development protocol: [`811b05b`](https://github.com/mottopanikeiku/heliostune/commit/811b05bb65bc978e44ca8fa32ceeeab315acf391)
+- Executable H100 freeze: [`c395630`](https://github.com/mottopanikeiku/heliostune/commit/c395630b9bcb4ef6a501d9a34696783620381c3c), SHA-256 `c9c7138e…`
+- Persisted T4 validation run: [Modal `ap-qxI4D2…`](https://modal.com/apps/mottopanikeiku/main/ap-qxI4D2xUvtPfuhtgiSfVgm)
+- Sole H100 run: [Modal `ap-y68ldw…`](https://modal.com/apps/mottopanikeiku/main/ap-y68ldw4RUmTotSEIxGdqPz), exact selector `H100!`
+- Raw H100 SHA-256: `747f30a9…`
+- Four-GPU replay archive SHA-256: `f417bd7e…`
+- Final summary SHA-256: `765b347a…`
 
-Dimensions come directly from public model configurations:
-
-- [Mistral 7B](https://huggingface.co/mistralai/Mistral-7B-v0.1/blob/main/config.json)
-- [Qwen2.5 7B](https://huggingface.co/Qwen/Qwen2.5-7B/blob/main/config.json)
-- [Phi-3 Mini](https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/blob/main/config.json)
-- [Granite 3.1 8B](https://huggingface.co/ibm-granite/granite-3.1-8b-instruct/blob/main/config.json)
-
-Each family contributes fused attention QKV, attention output, FFN up, and FFN down projections at token counts 1, 7, 31, 96, 257, and 1024. Irregular counts prevent a tile-aligned-only benchmark.
+The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests.
 
 ## Run locally
 
@@ -75,48 +77,60 @@ Python 3.11–3.13 and [uv](https://docs.astral.sh/uv/) are supported.
 ```bash
 uv sync --extra dev
 uv run pytest
-uv run heliostune demo --output-dir artifacts/demo
+uv run ruff check .
+uv run ruff format --check .
 ```
 
-The demo produces deterministic synthetic measurements, a replay summary, and a standalone offline report. Synthetic reports are visibly labeled and support no hardware-performance claims.
-
-Analyze a published matrix:
+Inspect the published four-GPU archive:
 
 ```bash
-zstd -d benchmarks/data/measurements.jsonl.zst -o measurements.jsonl
-uv run heliostune inspect measurements.jsonl
-uv run heliostune compare measurements.jsonl \
-  --source L4 --target A10 --output summary.json
-uv run heliostune report summary.json --output index.html
+zstd -d benchmarks/data/parhelion-v2-measurements.jsonl.zst \
+  -o artifacts/parhelion-final.jsonl
+uv run heliostune inspect artifacts/parhelion-final.jsonl
 ```
+
+Reproduce the frozen H100 replay and offline report:
+
+```bash
+uv run heliostune compare-multisource artifacts/parhelion-final.jsonl \
+  --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 \
+  --k 16 --temperature 2.0 --transfer-strength 0.0 \
+  --retrieval-k 8 --retrieval-temperature 0.2 \
+  --pooled-transfer-strength 0.0 --primary-comparator torch \
+  --protocol-role final --output artifacts/h100-final-summary.json
+uv run python scripts/bind_parhelion_release.py
+uv run heliostune report artifacts/h100-final-summary.json \
+  --output artifacts/h100-report.html
+```
+
+The local `heliostune demo` remains synthetic and supports no hardware claim.
 
 ## Collect on Modal
 
 ```bash
-uv sync --extra gpu
-modal setup
-uv run modal run modal_bench.py \
-  --replicates 3 \
-  --warmup-ms 25 \
-  --rep-ms 100 \
-  --output artifacts/measurements.jsonl
+modal run modal_bench.py --gpus T4 \
+  --replicates 3 --warmup-ms 25 --rep-ms 100 \
+  --output artifacts/t4-measurements.jsonl
 ```
 
-The runner launches L4 and A10 jobs concurrently for every bank, reads the actual device properties at runtime, randomizes workload/configuration order per bank, compiles and checks before timing, and records p20/p50/p80 steady-state latency. A small two-workload pilot is available with `--pilot`.
+`modal_bench.py` supports `L4`, `A10`, `T4`, and `H100`. H100 collection uses Modal's exact `H100!` selector internally to reject automatic H200 substitution. Do not rerun the published H100 protocol; the command above is for independent replication.
 
 ## Repository map
 
-- `src/heliostune/kernel.py` — manual grouped-program Triton matmul and collector
-- `src/heliostune/bandit.py` — Gaussian posterior and discounted transfer prior
-- `src/heliostune/replay.py` — leak-resistant folds, policies, baselines, and metrics
-- `src/heliostune/report.py` — self-contained high-signal HTML report
-- `modal_bench.py` — concurrent Modal collection on L4 and A10
-- `benchmarks/` — manifest, compressed measurements, and directional summaries
-- `tests/` — manifest, posterior, replay-isolation, and report contracts
+- `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
+- `src/heliostune/multisource.py` — grouped multi-source replay, baselines, paired endpoint, and fold evidence
+- `src/heliostune/selection.py` — strict staged T4 selector
+- `src/heliostune/bandit.py` — Gaussian linear posterior and discounted likelihood transfer
+- `src/heliostune/kernel.py` — manual Triton matmul and measured collector
+- `src/heliostune/report.py` — self-contained Fable evidence report
+- `scripts/assemble_parhelion_final.py` — digest-verifying four-GPU archive assembly
+- `scripts/bind_parhelion_release.py` — deterministic release-provenance binding
+- `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
+- `site/` — offline final report, downloadable JSON, and archived v1 report
 
 ## Scope
 
-This is a steady-state FP16 microkernel configuration-selection study on two GPU models and a curated 36-arm space. It does not establish generalization to arbitrary unseen GPUs, global Triton optimality, compilation-time savings, end-to-end serving gains, or production interference robustness. Source acquisition costs 2,592 visible observations per fold and is disclosed separately from the target query budget.
+This is a steady-state FP16 microkernel configuration-selection study over one fixed 96-workload corpus, one curated 36-arm space, and four Modal GPU fleets. It does not establish generalization to arbitrary GPUs or model families, global Triton optimality, Bayesian calibration, compilation-time savings, end-to-end serving gains, or production interference robustness. T4 is a validation domain, not independent final evidence. H100 is one untouched hardware domain, not proof of universal cross-architecture transfer.
 
 ## License
 
