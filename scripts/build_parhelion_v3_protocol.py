@@ -38,6 +38,8 @@ _OUTPUT = _REPO / "benchmarks/parhelion-v3-development-protocol.json"
 _SOURCE_PATHS = (
     "modal_bench.py",
     "scripts/build_parhelion_v3_protocol.py",
+    "scripts/assemble_parhelion_v3.py",
+    "scripts/freeze_parhelion_v3.py",
     "scripts/prune_parhelion_v3_configs.py",
     "src/heliostune/cli.py",
     "src/heliostune/bandit.py",
@@ -49,6 +51,7 @@ _SOURCE_PATHS = (
     "src/heliostune/protocol.py",
     "src/heliostune/retrieval.py",
     "src/heliostune/schema.py",
+    "src/heliostune/v3_artifacts.py",
     "src/heliostune/v3_engine.py",
 )
 
