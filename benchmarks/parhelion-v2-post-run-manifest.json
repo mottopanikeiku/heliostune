@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "study": "Parhelion v2 staged multi-source transfer evaluation",
+  "created_at_utc": "2026-08-24T03:25:31Z",
+  "author": "mottopanikeiku",
+  "protocol_status": "completed without H100 rerun or outcome-dependent method change",
+  "commits": {
+    "collector": "fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd",
+    "algorithm_and_development_protocol": "811b05bb65bc978e44ca8fa32ceeeab315acf391",
+    "executable_h100_freeze": "c395630b9bcb4ef6a501d9a34696783620381c3c",
+    "post_run_reporting_only": "93e613447e71273d4edc208f4d360e0f9c23b1d4"
+  },
+  "runs": {
+    "t4_validation_persisted": "https://modal.com/apps/mottopanikeiku/main/ap-qxI4D2xUvtPfuhtgiSfVgm",
+    "h100_final_sole_invocation": "https://modal.com/apps/mottopanikeiku/main/ap-y68ldw4RUmTotSEIxGdqPz"
+  },
+  "freeze": {
+    "path": "parhelion-v2-h100-freeze.json",
+    "sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+    "hash_file": "parhelion-v2-h100-freeze.sha256",
+    "predates_h100": true,
+    "independent_reviewer_clearance": "APPROVED FOR SOLE H100 INVOCATION"
+  },
+  "data": {
+    "l4_a10_compressed": {
+      "path": "data/measurements.jsonl.zst",
+      "records": 20736,
+      "sha256": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72"
+    },
+    "t4_raw": {
+      "published_path": "data/t4-measurements.jsonl.zst",
+      "records": 10368,
+      "failures": 0,
+      "uncompressed_sha256": "f3910e73aec68d48015b0fb9d0469ff2be8c3210d5777dab61e4a9cdd660d217"
+    },
+    "h100_raw": {
+      "published_path": "data/h100-measurements.jsonl.zst",
+      "records": 10368,
+      "failures": 0,
+      "uncompressed_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8"
+    },
+    "four_gpu_replay_archive": {
+      "published_path": "data/parhelion-v2-measurements.jsonl.zst",
+      "records": 41472,
+      "uncompressed_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d"
+    }
+  },
+  "artifacts": {
+    "t4_selection": {
+      "published_path": "results/parhelion-t4-selection.json",
+      "sha256": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca"
+    },
+    "t4_summary_pre_fold_reporting": {
+      "source_path": "artifacts/t4-final-summary.json",
+      "sha256": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4"
+    },
+    "h100_summary": {
+      "published_path": "results/parhelion-h100-final.json",
+      "sha256": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd"
+    },
+    "h100_report": {
+      "published_path": "../site/index.html",
+      "sha256": "9deb50ccc3187ec31d459ad4fe92e72fc7e56543c7c6a2fc80c506525dfa99e6"
+    }
+  },
+  "frozen_selection": {
+    "parhelion": {
+      "k": 16,
+      "temperature": 2.0,
+      "transfer_strength": 0.0
+    },
+    "multisource_retrieval": {
+      "k": 8,
+      "temperature": 0.2
+    },
+    "pooled_source_thompson": {
+      "transfer_strength": 0.0
+    },
+    "single_source_nearest_gpu": "L4",
+    "primary_comparator": "torch"
+  },
+  "h100_result": {
+    "parhelion_auc_1_to_8": 0.9502592348438624,
+    "parhelion_budget_8_fraction_reference": 0.9965225333288278,
+    "torch_auc_1_to_8": 1.6102594324032378,
+    "paired_auc_delta": -0.6600001975593753,
+    "paired_auc_delta_ci95": [
+      -0.6614242126628326,
+      -0.6585761824559181
+    ],
+    "paired_seeds": 30,
+    "degrees_of_freedom": 29,
+    "superiority_supported": false,
+    "claim": "No superiority is demonstrated under the frozen primary endpoint."
+  },
+  "commands": {
+    "h100_collection": "modal run modal_bench.py --gpus H100 --replicates 3 --warmup-ms 25 --rep-ms 100 --output artifacts/h100-measurements.jsonl",
+    "archive_assembly": "uv run python scripts/assemble_parhelion_final.py",
+    "frozen_replay": "uv run heliostune compare-multisource artifacts/parhelion-final.jsonl --sources L4,A10,T4 --target H100 --max-budget 8 --seeds 30 --k 16 --temperature 2.0 --transfer-strength 0.0 --retrieval-k 8 --retrieval-temperature 0.2 --pooled-transfer-strength 0.0 --primary-comparator torch --protocol-role final --output artifacts/h100-final-summary.json",
+    "report": "uv run heliostune report artifacts/h100-final-summary.json --output artifacts/h100-report.html"
+  },
+  "reporting_note": "Commit 93e6134 adds fold-level serialization and chain-of-custody rendering only. It was applied after the sole H100 run and does not alter policies, selected actions, metrics, or collected measurements."
+}
