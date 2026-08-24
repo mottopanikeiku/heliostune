@@ -52,13 +52,18 @@ def _remote_collect(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
+    from heliostune.configs import (
+        DEFAULT_WORKLOADS,
+        PARHELION_V3_CANDIDATE_CONFIGS,
+    )
     from heliostune.hardware import expectation_for_gpu, validate_hardware
     from heliostune.kernel import collect_benchmarks, get_hardware_profile
+    from heliostune.protocol import v3_seed
 
     workloads_by_key = {workload.key: workload for workload in DEFAULT_WORKLOADS}
-    configs_by_key = {config.key: config for config in DEFAULT_CONFIGS}
+    configs_by_key = {config.key: config for config in PARHELION_V3_CANDIDATE_CONFIGS}
     try:
         workloads = tuple(workloads_by_key[key] for key in workload_keys)
         configs = tuple(configs_by_key[key] for key in config_keys)
@@ -69,6 +74,34 @@ def _remote_collect(
     # any benchmark tensor allocation or paid timing work.
     profile = get_hardware_profile(gpu)
     validate_hardware(profile, expectation_for_gpu(gpu))
+    if seed_protocol == "parhelion-v3":
+        workload_order_seed = v3_seed(
+            purpose="collector-workload-order",
+            gpu=gpu,
+            bank=bank,
+        )
+        config_order_seeds = {
+            workload.key: v3_seed(
+                purpose="collector-config-order",
+                gpu=gpu,
+                bank=bank,
+                workload_key=workload.key,
+            )
+            for workload in workloads
+        }
+        tensor_seeds = {
+            workload.key: v3_seed(
+                purpose="tensor",
+                gpu=gpu,
+                bank=bank,
+                workload_key=workload.key,
+            )
+            for workload in workloads
+        }
+    else:
+        workload_order_seed = None
+        config_order_seeds = None
+        tensor_seeds = None
     return collect_benchmarks(
         gpu,
         bank=bank,
@@ -77,6 +110,9 @@ def _remote_collect(
         warmup_ms=warmup_ms,
         rep_ms=rep_ms,
         hardware_profile=profile,
+        workload_order_seed=workload_order_seed,
+        config_order_seeds=config_order_seeds,
+        tensor_seeds=tensor_seeds,
     )
 
 
@@ -87,8 +123,9 @@ def benchmark_l4(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("L4", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect("L4", bank, warmup_ms, rep_ms, workload_keys, config_keys, seed_protocol)
 
 
 @app.function(image=image, gpu="A10", timeout=60 * 60)
@@ -98,8 +135,11 @@ def benchmark_a10(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("A10", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect(
+        "A10", bank, warmup_ms, rep_ms, workload_keys, config_keys, seed_protocol
+    )
 
 
 @app.function(image=image, gpu="T4", timeout=60 * 60)
@@ -109,8 +149,9 @@ def benchmark_t4(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("T4", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect("T4", bank, warmup_ms, rep_ms, workload_keys, config_keys, seed_protocol)
 
 
 @app.function(image=image, gpu="H100!", timeout=60 * 60)
@@ -120,8 +161,11 @@ def benchmark_h100(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("H100", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect(
+        "H100", bank, warmup_ms, rep_ms, workload_keys, config_keys, seed_protocol
+    )
 
 
 @app.function(image=image, gpu="A100-80GB", timeout=60 * 60)
@@ -131,8 +175,17 @@ def benchmark_a100_80gb(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("A100-80GB", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect(
+        "A100-80GB",
+        bank,
+        warmup_ms,
+        rep_ms,
+        workload_keys,
+        config_keys,
+        seed_protocol,
+    )
 
 
 @app.function(image=image, gpu="H200", timeout=60 * 60)
@@ -142,8 +195,11 @@ def benchmark_h200(
     rep_ms: int,
     workload_keys: tuple[str, ...],
     config_keys: tuple[str, ...],
+    seed_protocol: str,
 ) -> list[dict[str, Any]]:
-    return _remote_collect("H200", bank, warmup_ms, rep_ms, workload_keys, config_keys)
+    return _remote_collect(
+        "H200", bank, warmup_ms, rep_ms, workload_keys, config_keys, seed_protocol
+    )
 
 
 def _strict_csv(value: str, *, label: str) -> tuple[str, ...]:
@@ -199,15 +255,53 @@ def _resolve_wheel(path: str) -> Path:
     return wheel
 
 
-def _selected_manifests(pilot: bool) -> tuple[tuple[str, ...], tuple[str, ...]]:
+def _selected_manifests(
+    pilot: bool,
+    protocol_path: Path | None,
+    config_path: Path | None,
+) -> tuple[tuple[str, ...], tuple[str, ...], str]:
+    from heliostune.artifacts import read_json
     from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
-
-    configs = DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS
-    workloads = DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS
-    return (
-        tuple(workload.key for workload in workloads),
-        tuple(config.key for config in configs),
+    from heliostune.protocol import (
+        V3_PILOT_CONFIG_KEYS,
+        V3_PILOT_WORKLOAD_KEYS,
+        load_v3_protocol,
+        require_v3_runtime,
     )
+    from heliostune.validation import exact_object
+
+    if protocol_path is None:
+        configs = DEFAULT_CONFIGS[:3] if pilot else DEFAULT_CONFIGS
+        workloads = DEFAULT_WORKLOADS[:2] if pilot else DEFAULT_WORKLOADS
+        return (
+            tuple(workload.key for workload in workloads),
+            tuple(config.key for config in configs),
+            "legacy-bank",
+        )
+    protocol = load_v3_protocol(protocol_path)
+    require_v3_runtime(protocol)
+    if pilot:
+        if config_path is not None:
+            raise ValueError("v3 pilot cannot use a config manifest")
+        return V3_PILOT_WORKLOAD_KEYS, V3_PILOT_CONFIG_KEYS, "parhelion-v3"
+    workload_rows = protocol.get("workloads")
+    config_rows = protocol.get("candidate_configs")
+    if not isinstance(workload_rows, list) or not isinstance(config_rows, list):
+        raise ValueError("v3 protocol must serialize workloads and candidate_configs")
+    workload_keys = tuple(
+        str(exact_object(row, context="v3 protocol workload")["key"]) for row in workload_rows
+    )
+    if config_path is None:
+        config_keys = tuple(
+            str(exact_object(row, context="v3 protocol config")["key"]) for row in config_rows
+        )
+    else:
+        manifest = exact_object(read_json(config_path), context="v3 config manifest")
+        retained = manifest.get("retained_config_keys")
+        if not isinstance(retained, list):
+            raise ValueError("v3 config manifest must contain retained_config_keys")
+        config_keys = tuple(str(key) for key in retained)
+    return workload_keys, config_keys, "parhelion-v3"
 
 
 @app.local_entrypoint()
@@ -253,7 +347,24 @@ def main(
     if type(rep_ms) is not int or rep_ms <= 0:
         raise ValueError("rep-ms must be a positive integer")
 
-    workload_keys, config_keys = _selected_manifests(pilot)
+    protocol_path = Path(protocol) if protocol else None
+    config_path = Path(config_manifest) if config_manifest else None
+    if protocol_path is not None and not protocol_path.is_file():
+        raise ValueError(f"protocol does not exist: {protocol_path}")
+    if config_path is not None and not config_path.is_file():
+        raise ValueError(f"config manifest does not exist: {config_path}")
+    if (
+        protocol_path is not None
+        and not pilot
+        and any(bank != 0 for bank in bank_values)
+        and config_path is None
+    ):
+        raise ValueError("v3 banks 1-4 require the frozen retained config manifest")
+    workload_keys, config_keys, seed_protocol = _selected_manifests(
+        pilot,
+        protocol_path,
+        config_path,
+    )
     request = CollectionRequest(
         gpus=gpu_names,
         banks=bank_values,
@@ -262,15 +373,10 @@ def main(
         warmup_ms=float(warmup_ms),
         repetition_ms=float(rep_ms),
         pilot=pilot,
+        seed_protocol=seed_protocol,
     )
     wheel_path = _resolve_wheel(wheel)
     head_commit, head_sha256 = _git_identity()
-    protocol_path = Path(protocol) if protocol else None
-    config_path = Path(config_manifest) if config_manifest else None
-    if protocol_path is not None and not protocol_path.is_file():
-        raise ValueError(f"protocol does not exist: {protocol_path}")
-    if config_path is not None and not config_path.is_file():
-        raise ValueError(f"config manifest does not exist: {config_path}")
     protocol_sha256 = (
         sha256_file(protocol_path)
         if protocol_path is not None
@@ -305,6 +411,7 @@ def main(
             rep_ms=rep_ms,
             workload_keys=request.workload_keys,
             config_keys=request.config_keys,
+            seed_protocol=request.seed_protocol,
         )
 
     chunks = execute_call_plan(
@@ -322,6 +429,9 @@ def main(
         chunks,
         facts={
             "head_commit": head_commit,
+            "protocol_path": None if protocol_path is None else str(protocol_path),
+            "config_manifest_path": None if config_path is None else str(config_path),
+            "seed_protocol": request.seed_protocol,
             "wheel_path": str(wheel_path),
             "python": "3.11",
             "numpy": "2.4.6",

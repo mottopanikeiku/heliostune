@@ -11,7 +11,7 @@ import numpy as np
 
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import KernelConfig, Workload
-from heliostune.features import FEATURE_NAMES, joint_features
+from heliostune.features import V2_FEATURE_NAMES, v2_joint_features
 from heliostune.retrieval import log_tflops_reward
 from heliostune.schema import HardwareProfile, Measurement
 
@@ -298,7 +298,7 @@ def _source_model(
     prior_precision: float,
 ) -> BayesianLinearBandit:
     model = BayesianLinearBandit(
-        dimension=len(FEATURE_NAMES),
+        dimension=len(V2_FEATURE_NAMES),
         noise_variance=noise_variance,
         prior_precision=prior_precision,
         seed=0,
@@ -307,7 +307,7 @@ def _source_model(
     for workload in workloads:
         for config in configs:
             observation = table.get(source_gpu, workload, config, _OBSERVATION_BANK)
-            model.update(joint_features(workload, config, hardware), _reward(observation))
+            model.update(v2_joint_features(workload, config, hardware), _reward(observation))
     return model
 
 
@@ -426,14 +426,14 @@ def _bandit_curve(
         for workload in order:
             available = [config for config in configs if config not in queried[workload.key]]
             features_for_config = partial(
-                joint_features,
+                v2_joint_features,
                 workload,
                 hardware=hardware,
             )
             selected = model.choose(available, features_for_config)
             queried[workload.key].append(selected)
             model.update(
-                joint_features(workload, selected, hardware),
+                v2_joint_features(workload, selected, hardware),
                 _reward(table.get(target_gpu, workload, selected, _OBSERVATION_BANK)),
             )
         recommendations = {
@@ -612,7 +612,7 @@ def compare_methods(
                 )
             )
             cold = BayesianLinearBandit(
-                dimension=len(FEATURE_NAMES),
+                dimension=len(V2_FEATURE_NAMES),
                 noise_variance=noise_variance,
                 prior_precision=prior_precision,
                 seed=paired_seed,
