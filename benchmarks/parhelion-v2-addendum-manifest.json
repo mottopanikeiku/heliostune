@@ -1,0 +1,83 @@
+{
+  "analysis_status": "post_hoc_exploratory",
+  "check_command": "uv run python scripts/build_parhelion_v2_addendum.py --check",
+  "generator_command": "uv run python scripts/build_parhelion_v2_addendum.py",
+  "historical_artifact_sha256": {
+    "benchmarks/data/h100-measurements.jsonl.zst": "91b94ec42a71b1832203a6c5cdedf0102cf8d04ae9992d739fffa5351b7ac206",
+    "benchmarks/data/measurements.jsonl.zst": "afe086002f25291d7ace321c61771a1fbb2eba6056422e7dda07455898c4bf72",
+    "benchmarks/data/parhelion-v2-measurements.jsonl.zst": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f",
+    "benchmarks/data/t4-measurements.jsonl.zst": "f00c2a1498937707c872f667cf210de5e7319218c7df56e05a15174441a36c00",
+    "benchmarks/manifest.json": "15f5c8636a18750cfbfe2dda8f6fdb3fbfc14b8947e96fc487d230ca85b35abf",
+    "benchmarks/parhelion-v2-development-protocol.json": "ae544f798284528ed888a4c46d79b7419d5790cc8c967ad2897e9030f22374c8",
+    "benchmarks/parhelion-v2-h100-freeze.json": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+    "benchmarks/parhelion-v2-h100-freeze.sha256": "f15f4fc859f6b981f141545d9c3f62533c9a28cb2709a8591b82266c2f6fa8ef",
+    "benchmarks/parhelion-v2-post-run-manifest.json": "f9e2c79dc176daf1db0593c4411bbb534cd0a426aa421a26879f42e4d5000258",
+    "benchmarks/parhelion-v2-post-run-manifest.sha256": "6921229637cfd0b62fbd77450351fc919a4b3568809e8a13c522fcd248cad754",
+    "benchmarks/results/a10-to-l4.json": "eef908cfa52a6e13230330bbeec5b831dbe5cbff59f34edb476d485c61039f38",
+    "benchmarks/results/l4-to-a10.json": "63f4e965bbff9bc26e2555d8cd27051334b0b7f36880b3a16b2034d605c9bbaa",
+    "benchmarks/results/parhelion-h100-final.json": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd",
+    "benchmarks/results/parhelion-t4-selection.json": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca",
+    "benchmarks/results/parhelion-t4-validation.json": "794d8f38a1b6fecaece0abdb38cdaa7ab5cdbf1bdfaefbde518c32daf84c28f4",
+    "site/a10-to-l4.html": "b30686ba16bb8daa2debe768772886b64de78bc1904e574d0c183c7364895c46",
+    "site/a10-to-l4.json": "eef908cfa52a6e13230330bbeec5b831dbe5cbff59f34edb476d485c61039f38",
+    "site/index.html": "149dc7c1a705a5d7189e575274440a72ddbcba59e183554d7a0bd6fd739beb61",
+    "site/l4-to-a10.json": "63f4e965bbff9bc26e2555d8cd27051334b0b7f36880b3a16b2034d605c9bbaa",
+    "site/parhelion-h100-final.json": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd",
+    "site/parhelion-t4-selection.json": "7968170990d8ae969d9b1e02baf7afa3dff0c6446497330c599aa4163ab516ca",
+    "site/v1.html": "8b8a9b8201a378ffa64a5bab967d516e19758a1a283b7381245bb3a5b945f0df"
+  },
+  "implementation_sha256": {
+    "scripts/build_parhelion_v2_addendum.py": "419d7eec9779fd03bd54690b3f5bdbde80055c38b56fd57cfa7c4b41e4244a28",
+    "src/heliostune/multisource_engine.py": "a2ca3592efa820d841e0ee14241774dde869336b289a40a7606145b64a686742",
+    "src/heliostune/report.css": "57a03db2f53ceef99514b36124cb0aacb1be8354f18e7eccd5e78880e5dab483",
+    "src/heliostune/report.py": "84fcfd705ab0eb7510971b2c458d895fd43bf23a784e4d208a96c647197e3563",
+    "src/heliostune/report_model.py": "b02b3cc57df951c629bff052404663b0bafaf830b45d20447f068b69ea62be01",
+    "src/heliostune/uncertainty.py": "5588cafef23d189011000f12d4044d55063ae7796be44bae17c79bf0823e29fb",
+    "src/heliostune/v2_addendum.py": "9ec5309db070ef65463a95362519499780ef2addb7d8798b72e4a9a381bb3d16"
+  },
+  "inputs": {
+    "development_protocol": {
+      "path": "benchmarks/parhelion-v2-development-protocol.json",
+      "sha256": "ae544f798284528ed888a4c46d79b7419d5790cc8c967ad2897e9030f22374c8"
+    },
+    "h100_freeze": {
+      "path": "benchmarks/parhelion-v2-h100-freeze.json",
+      "sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a"
+    },
+    "historical_baseline": {
+      "path": "benchmarks/historical-artifact-baseline.json",
+      "sha256": "0fa4271a4589ac11c31d85dd2d787dd0aabc461d3ae304098a2f0dee24ab2b5d"
+    },
+    "historical_final_result": {
+      "confirmatory_endpoint": "unchanged",
+      "path": "benchmarks/results/parhelion-h100-final.json",
+      "sha256": "765b347a2675b0647f9f58bd6ba36904dfcf2761be31b7e3b930b63a2ad28abd"
+    },
+    "measurement_archive": {
+      "path": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+      "sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f"
+    }
+  },
+  "invariants": {
+    "historical_torch_auc_delta": -0.6600001975593753,
+    "new_contrasts_have_superiority_claims": false,
+    "parhelion_and_anchored_cold_share_budget_one": true,
+    "parhelion_auc1_8": 0.9502592348438624,
+    "parhelion_budget8_fraction": 0.9965225333288278,
+    "pooled_zero_strength_equals_cold": true
+  },
+  "outputs": {
+    "report": {
+      "bytes": 154045,
+      "path": "site/parhelion-v2-addendum.html",
+      "sha256": "6faa0d541ef622c131e483e946f7f9fb5c2427b800d39b22c56292af227b0095"
+    },
+    "result": {
+      "bytes": 8624526,
+      "path": "benchmarks/results/parhelion-v2-addendum.json",
+      "sha256": "c40b1a6f2a7d3efb9633c9067b1db785a20bbd0ee285794bdb40609f81725062"
+    }
+  },
+  "schema_version": 1,
+  "study_id": "parhelion-v2-post-hoc-causal-addendum"
+}

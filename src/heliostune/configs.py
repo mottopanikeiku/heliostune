@@ -134,7 +134,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         14336,
         32,
         8,
-        "https://huggingface.co/mistralai/Mistral-7B-v0.1/resolve/main/config.json",
+        "https://huggingface.co/mistralai/Mistral-7B-v0.1/resolve/27d67f1b5f57dc0953326b2601d68371d40ea8da/config.json",
     ),
     ModelSpec(
         "qwen2.5-7b",
@@ -142,7 +142,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         18944,
         28,
         4,
-        "https://huggingface.co/Qwen/Qwen2.5-7B/resolve/main/config.json",
+        "https://huggingface.co/Qwen/Qwen2.5-7B/resolve/d149729398750b98c0af14eb82c78cfe92750796/config.json",
     ),
     ModelSpec(
         "phi-3-mini",
@@ -150,7 +150,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         8192,
         32,
         32,
-        "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/resolve/main/config.json",
+        "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct/resolve/f39ac1d28e925b323eae81227eaba4464caced4e/config.json",
     ),
     ModelSpec(
         "granite-3.1-8b",
@@ -158,7 +158,7 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
         12800,
         32,
         8,
-        "https://huggingface.co/ibm-granite/granite-3.1-8b-instruct/resolve/main/config.json",
+        "https://huggingface.co/ibm-granite/granite-3.1-8b-instruct/resolve/4009206d5fc95d2e65a7b7633e159d6e97e25d35/config.json",
     ),
 )
 

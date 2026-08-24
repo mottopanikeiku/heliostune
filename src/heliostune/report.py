@@ -1448,7 +1448,18 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
     """Normalize once, then atomically render a complete offline research report."""
     data = normalize_report_summary(summary)
     summary = data.raw_summary
-    methods = _normalise_methods(summary["methods"])
+    methods = {
+        method.key: [
+            {
+                "budget": point.budget,
+                "mean": point.mean,
+                "low": point.uncertainty.low,
+                "high": point.uncertainty.high,
+            }
+            for point in method.points
+        ]
+        for method in data.methods
+    }
     labels = {method.key: method.label for method in data.methods}
     roles = {method.key: method.role for method in data.methods}
     sequential_methods = {
