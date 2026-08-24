@@ -255,6 +255,28 @@ def _parhelion_source_model(
     return model
 
 
+def _capture_incumbents(
+    table: BenchmarkTable,
+    target_gpu: str,
+    workloads: Sequence[Workload],
+    queried: Mapping[str, Sequence[KernelConfig]],
+    destination: dict[str, KernelConfig] | None,
+) -> None:
+    if destination is None:
+        return
+    destination.update(
+        {
+            workload.key: _best_observed(
+                table,
+                target_gpu,
+                workload,
+                queried[workload.key],
+            )
+            for workload in workloads
+        }
+    )
+
+
 def _random_curve(
     table: BenchmarkTable,
     target_gpu: str,
@@ -262,6 +284,7 @@ def _random_curve(
     configs: Sequence[KernelConfig],
     orders: Sequence[Sequence[Workload]],
     seed: int,
+    endpoint_out: dict[str, KernelConfig] | None = None,
 ) -> list[float]:
     rng = np.random.default_rng(seed)
     queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
@@ -272,6 +295,7 @@ def _random_curve(
             selected = available[int(rng.integers(len(available)))]
             queried[workload.key].append(selected)
         curve.append(_incumbent_value(table, target_gpu, workloads, queried))
+    _capture_incumbents(table, target_gpu, workloads, queried, endpoint_out)
     return curve
 
 
@@ -281,6 +305,7 @@ def _ranked_curve(
     workloads: Sequence[Workload],
     ranks: Mapping[str, Sequence[KernelConfig]],
     max_budget: int,
+    endpoint_out: dict[str, KernelConfig] | None = None,
 ) -> list[float]:
     queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
@@ -288,6 +313,7 @@ def _ranked_curve(
         for workload in workloads:
             queried[workload.key].append(ranks[workload.key][budget_index])
         curve.append(_incumbent_value(table, target_gpu, workloads, queried))
+    _capture_incumbents(table, target_gpu, workloads, queried, endpoint_out)
     return curve
 
 
@@ -299,6 +325,7 @@ def _thompson_curve(
     orders: Sequence[Sequence[Workload]],
     model: BayesianLinearBandit,
     feature_fn: Callable[[Workload, KernelConfig], NDArray[np.float64]],
+    endpoint_out: dict[str, KernelConfig] | None = None,
 ) -> list[float]:
     queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
@@ -313,6 +340,7 @@ def _thompson_curve(
                 _reward(table, target_gpu, workload, selected),
             )
         curve.append(_incumbent_value(table, target_gpu, workloads, queried))
+    _capture_incumbents(table, target_gpu, workloads, queried, endpoint_out)
     return curve
 
 
@@ -325,6 +353,7 @@ def _parhelion_curve(
     model: BayesianLinearBandit,
     features: Mapping[tuple[str, str], NDArray[np.float64]],
     anchors: Mapping[str, KernelConfig],
+    endpoint_out: dict[str, KernelConfig] | None = None,
 ) -> list[float]:
     queried: dict[str, list[KernelConfig]] = {workload.key: [] for workload in workloads}
     curve: list[float] = []
@@ -348,6 +377,7 @@ def _parhelion_curve(
                 _reward(table, target_gpu, workload, selected),
             )
         curve.append(_incumbent_value(table, target_gpu, workloads, queried))
+    _capture_incumbents(table, target_gpu, workloads, queried, endpoint_out)
     return curve
 
 
@@ -508,6 +538,10 @@ class MethodEvaluation:
     deterministic_fold_curves: tuple[tuple[float, ...], ...]
     stochastic_seed_fold_curves: tuple[tuple[tuple[float, ...], ...], ...]
     fold_metadata: tuple[tuple[tuple[str, str], ...], ...]
+    endpoint_config_keys: tuple[
+        tuple[tuple[tuple[str, str], ...], ...],
+        ...,
+    ] = ()
 
 
 def _validate_prepare_inputs(
@@ -845,16 +879,25 @@ def parameter_independent_evaluations(
     )
 
 
+def _endpoint_pairs(
+    fold: PreparedFold,
+    endpoints: Mapping[str, KernelConfig],
+) -> tuple[tuple[str, str], ...]:
+    return tuple((workload.key, endpoints[workload.key].key) for workload in fold.target_workloads)
+
+
 def evaluate_multisource_retrieval(
     prepared: PreparedReplay,
     *,
     k: int,
     temperature: float,
+    capture_endpoints: bool = False,
 ) -> MethodEvaluation:
     """Evaluate only deterministic multi-source retrieval."""
     _validate_retrieval_parameters(k, temperature)
     fold_curves: list[tuple[float, ...]] = []
     metadata: list[tuple[tuple[str, str], ...]] = []
+    endpoint_folds: list[tuple[tuple[str, str], ...]] = []
     for fold in prepared.folds:
         retrieval = RetrievalIndex(fold.archive, k=k, temperature=float(temperature))
         ranks = {
@@ -862,6 +905,7 @@ def evaluate_multisource_retrieval(
             for workload in fold.target_workloads
         }
         anchors = {workload.key: ranks[workload.key][0] for workload in fold.target_workloads}
+        endpoints: dict[str, KernelConfig] | None = {} if capture_endpoints else None
         fold_curves.append(
             tuple(
                 _ranked_curve(
@@ -870,9 +914,12 @@ def evaluate_multisource_retrieval(
                     fold.target_workloads,
                     ranks,
                     prepared.max_budget,
+                    endpoint_out=endpoints,
                 )
             )
         )
+        if endpoints is not None:
+            endpoint_folds.append(_endpoint_pairs(fold, endpoints))
         metadata.append(
             tuple((workload_key, config.key) for workload_key, config in anchors.items())
         )
@@ -881,6 +928,7 @@ def evaluate_multisource_retrieval(
         tuple(fold_curves),
         (),
         tuple(metadata),
+        (tuple(endpoint_folds),) if capture_endpoints else (),
     )
 
 
@@ -888,10 +936,14 @@ def evaluate_pooled_source(
     prepared: PreparedReplay,
     *,
     transfer_strength: float,
+    capture_endpoints: bool = False,
 ) -> MethodEvaluation:
     """Evaluate only pooled-source Thompson sampling."""
     _validate_transfer_strength(transfer_strength, name="pooled_transfer_strength")
     per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
     for fold in prepared.folds:
         for seed in range(prepared.seeds):
             paired_seed = fold.index * 100_000 + seed
@@ -899,6 +951,7 @@ def evaluate_pooled_source(
                 transfer_strength=float(transfer_strength),
                 seed=paired_seed,
             )
+            endpoints: dict[str, KernelConfig] | None = {} if capture_endpoints else None
             per_seed_folds[seed].append(
                 tuple(
                     _thompson_curve(
@@ -909,14 +962,18 @@ def evaluate_pooled_source(
                         fold.paired_orders[seed],
                         model,
                         partial(_feature_from_cache, fold.joint_feature_rows),
+                        endpoint_out=endpoints,
                     )
                 )
             )
+            if endpoints is not None:
+                per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
     return MethodEvaluation(
         "pooled_source_thompson",
         (),
         tuple(tuple(folds) for folds in per_seed_folds),
         tuple(() for _ in prepared.folds),
+        (tuple(tuple(folds) for folds in per_seed_endpoints) if capture_endpoints else ()),
     )
 
 
@@ -927,6 +984,7 @@ def evaluate_parhelion(
     temperature: float,
     transfer_strength: float,
     retrieval: MethodEvaluation,
+    capture_endpoints: bool = False,
 ) -> MethodEvaluation:
     """Evaluate only Parhelion using the independently selected paid anchor."""
     _validate_retrieval_parameters(k, temperature)
@@ -938,6 +996,9 @@ def evaluate_parhelion(
 
     per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
     feature_metadata: list[tuple[tuple[str, str], ...]] = []
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
     config_by_key = {config.key: config for config in prepared.configs}
     for fold, anchor_keys in zip(prepared.folds, retrieval.fold_metadata, strict=True):
         parhelion_retrieval = RetrievalIndex(
@@ -978,6 +1039,7 @@ def evaluate_parhelion(
                 transfer_strength=float(transfer_strength),
                 seed=paired_seed,
             )
+            endpoints: dict[str, KernelConfig] | None = {} if capture_endpoints else None
             per_seed_folds[seed].append(
                 tuple(
                     _parhelion_curve(
@@ -989,15 +1051,301 @@ def evaluate_parhelion(
                         model,
                         feature_rows,
                         anchors,
+                        endpoint_out=endpoints,
                     )
                 )
             )
+            if endpoints is not None:
+                per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
     return MethodEvaluation(
         "parhelion_thompson",
         (),
         tuple(tuple(folds) for folds in per_seed_folds),
         tuple(feature_metadata),
+        (tuple(tuple(folds) for folds in per_seed_endpoints) if capture_endpoints else ()),
     )
+
+
+def evaluate_random(
+    prepared: PreparedReplay,
+    *,
+    capture_endpoints: bool = False,
+) -> MethodEvaluation:
+    """Evaluate uniform random search under the frozen paired order schedule."""
+    if not capture_endpoints:
+        return parameter_independent_evaluations(prepared)["random"]
+    per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
+    for fold in prepared.folds:
+        for seed in range(prepared.seeds):
+            paired_seed = fold.index * 100_000 + seed
+            endpoints: dict[str, KernelConfig] = {}
+            per_seed_folds[seed].append(
+                tuple(
+                    _random_curve(
+                        prepared.table,
+                        prepared.target_gpu,
+                        fold.target_workloads,
+                        prepared.configs,
+                        fold.paired_orders[seed],
+                        paired_seed,
+                        endpoint_out=endpoints,
+                    )
+                )
+            )
+            per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
+    return MethodEvaluation(
+        "random",
+        (),
+        tuple(tuple(folds) for folds in per_seed_folds),
+        tuple(() for _ in prepared.folds),
+        tuple(tuple(folds) for folds in per_seed_endpoints),
+    )
+
+
+def evaluate_cold_thompson(
+    prepared: PreparedReplay,
+    *,
+    capture_endpoints: bool = False,
+) -> MethodEvaluation:
+    """Evaluate the untouched base-feature ridge policy."""
+    if not capture_endpoints:
+        return parameter_independent_evaluations(prepared)["cold_thompson"]
+    per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
+    for fold in prepared.folds:
+        for seed in range(prepared.seeds):
+            paired_seed = fold.index * 100_000 + seed
+            model = BayesianLinearBandit(
+                dimension=len(FEATURE_NAMES),
+                noise_variance=_NOISE_VARIANCE,
+                prior_precision=_PRIOR_PRECISION,
+                seed=paired_seed,
+            )
+            endpoints: dict[str, KernelConfig] = {}
+            per_seed_folds[seed].append(
+                tuple(
+                    _thompson_curve(
+                        prepared.table,
+                        prepared.target_gpu,
+                        fold.target_workloads,
+                        prepared.configs,
+                        fold.paired_orders[seed],
+                        model,
+                        partial(_feature_from_cache, fold.joint_feature_rows),
+                        endpoint_out=endpoints,
+                    )
+                )
+            )
+            per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
+    return MethodEvaluation(
+        "cold_thompson",
+        (),
+        tuple(tuple(folds) for folds in per_seed_folds),
+        tuple(() for _ in prepared.folds),
+        tuple(tuple(folds) for folds in per_seed_endpoints),
+    )
+
+
+def evaluate_anchored_cold(
+    prepared: PreparedReplay,
+    *,
+    retrieval: MethodEvaluation,
+    capture_endpoints: bool = False,
+) -> MethodEvaluation:
+    """Force the paid retrieval anchor, then use untouched base v2 features."""
+    if retrieval.method != "multisource_retrieval":
+        raise ValueError("anchored cold requires a multi-source retrieval evaluation")
+    config_by_key = {config.key: config for config in prepared.configs}
+    per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
+    for fold, anchor_pairs in zip(
+        prepared.folds,
+        retrieval.fold_metadata,
+        strict=True,
+    ):
+        anchor_keys = dict(anchor_pairs)
+        anchors = {
+            workload.key: config_by_key[anchor_keys[workload.key]]
+            for workload in fold.target_workloads
+        }
+        for seed in range(prepared.seeds):
+            paired_seed = fold.index * 100_000 + seed
+            model = BayesianLinearBandit(
+                dimension=len(FEATURE_NAMES),
+                noise_variance=_NOISE_VARIANCE,
+                prior_precision=_PRIOR_PRECISION,
+                seed=paired_seed,
+            )
+            endpoints: dict[str, KernelConfig] | None = {} if capture_endpoints else None
+            per_seed_folds[seed].append(
+                tuple(
+                    _parhelion_curve(
+                        prepared.table,
+                        prepared.target_gpu,
+                        fold.target_workloads,
+                        prepared.configs,
+                        fold.paired_orders[seed],
+                        model,
+                        fold.joint_feature_rows,
+                        anchors,
+                        endpoint_out=endpoints,
+                    )
+                )
+            )
+            if endpoints is not None:
+                per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
+    return MethodEvaluation(
+        "anchored_cold_thompson",
+        (),
+        tuple(tuple(folds) for folds in per_seed_folds),
+        tuple(retrieval.fold_metadata),
+        (tuple(tuple(folds) for folds in per_seed_endpoints) if capture_endpoints else ()),
+    )
+
+
+def evaluate_parhelion_no_forced_anchor(
+    prepared: PreparedReplay,
+    *,
+    k: int,
+    temperature: float,
+    transfer_strength: float,
+    capture_endpoints: bool = False,
+) -> MethodEvaluation:
+    """Use v2 retrieval features with ordinary Thompson choice from budget one."""
+    _validate_retrieval_parameters(k, temperature)
+    _validate_transfer_strength(transfer_strength, name="transfer_strength")
+    per_seed_folds: list[list[tuple[float, ...]]] = [[] for _ in range(prepared.seeds)]
+    per_seed_endpoints: list[list[tuple[tuple[str, str], ...]]] = [
+        [] for _ in range(prepared.seeds)
+    ]
+    for fold in prepared.folds:
+        retrieval = RetrievalIndex(
+            fold.archive,
+            k=k,
+            temperature=float(temperature),
+        )
+        source_model = _parhelion_source_model(
+            prepared.table,
+            prepared.source_gpus,
+            fold.source_workloads,
+            prepared.configs,
+            retrieval,
+        )
+        feature_rows: dict[tuple[str, str], NDArray[np.float64]] = {}
+        for workload in fold.target_workloads:
+            for config in prepared.configs:
+                row = _parhelion_features(
+                    retrieval,
+                    workload,
+                    config,
+                    fold.target_hardware,
+                )
+                row.setflags(write=False)
+                feature_rows[(workload.key, config.key)] = row
+        for seed in range(prepared.seeds):
+            paired_seed = fold.index * 100_000 + seed
+            model = source_model.transferred(
+                transfer_strength=float(transfer_strength),
+                seed=paired_seed,
+            )
+            endpoints: dict[str, KernelConfig] | None = {} if capture_endpoints else None
+            per_seed_folds[seed].append(
+                tuple(
+                    _thompson_curve(
+                        prepared.table,
+                        prepared.target_gpu,
+                        fold.target_workloads,
+                        prepared.configs,
+                        fold.paired_orders[seed],
+                        model,
+                        partial(_feature_from_cache, feature_rows),
+                        endpoint_out=endpoints,
+                    )
+                )
+            )
+            if endpoints is not None:
+                per_seed_endpoints[seed].append(_endpoint_pairs(fold, endpoints))
+    return MethodEvaluation(
+        "parhelion_no_forced_anchor",
+        (),
+        tuple(tuple(folds) for folds in per_seed_folds),
+        tuple(() for _ in prepared.folds),
+        (tuple(tuple(folds) for folds in per_seed_endpoints) if capture_endpoints else ()),
+    )
+
+
+def serialize_workload_endpoints(
+    prepared: PreparedReplay,
+    evaluation: MethodEvaluation,
+) -> list[dict[str, object]]:
+    """Serialize every captured budget-max workload recommendation and bank-2 score."""
+    if not evaluation.endpoint_config_keys:
+        raise ValueError(f"{evaluation.method} did not capture workload endpoints")
+    config_by_key = {config.key: config for config in prepared.configs}
+    records: list[dict[str, object]] = []
+    stochastic = bool(evaluation.stochastic_seed_fold_curves)
+    for seed_index, fold_endpoints in enumerate(evaluation.endpoint_config_keys):
+        if len(fold_endpoints) != len(prepared.folds):
+            raise ValueError(f"{evaluation.method} endpoint fold count does not match replay")
+        for fold, endpoint_pairs in zip(
+            prepared.folds,
+            fold_endpoints,
+            strict=True,
+        ):
+            endpoints = dict(endpoint_pairs)
+            for workload in fold.target_workloads:
+                try:
+                    config = config_by_key[endpoints[workload.key]]
+                except KeyError as exc:
+                    raise ValueError(
+                        f"{evaluation.method} endpoint is missing {workload.key}"
+                    ) from exc
+                recommendation_latency = _latency(
+                    prepared.table,
+                    prepared.target_gpu,
+                    workload,
+                    config,
+                    _EVALUATION_BANK,
+                )
+                reference = prepared.table.reference_config(
+                    prepared.target_gpu,
+                    workload,
+                )
+                reference_latency = _latency(
+                    prepared.table,
+                    prepared.target_gpu,
+                    workload,
+                    reference,
+                    _EVALUATION_BANK,
+                )
+                records.append(
+                    {
+                        "method": evaluation.method,
+                        "seed": seed_index if stochastic else None,
+                        "heldout_model": fold.heldout_model,
+                        "workload_key": workload.key,
+                        "config_key": config.key,
+                        "bank0_paid_latency_ms": _latency(
+                            prepared.table,
+                            prepared.target_gpu,
+                            workload,
+                            config,
+                            _OBSERVATION_BANK,
+                        ),
+                        "bank2_evaluation_latency_ms": recommendation_latency,
+                        "bank2_reference_latency_ms": reference_latency,
+                        "fraction_reference": reference_latency / recommendation_latency,
+                        "tflops": workload.flops / recommendation_latency / 1e9,
+                    }
+                )
+    return records
 
 
 def _runs(evaluation: MethodEvaluation) -> list[list[float]]:
@@ -1555,11 +1903,16 @@ __all__ = [
     "PreparedFold",
     "PreparedReplay",
     "assemble_multisource_summary",
+    "evaluate_anchored_cold",
+    "evaluate_cold_thompson",
     "evaluate_multisource_retrieval",
     "evaluate_parhelion",
+    "evaluate_parhelion_no_forced_anchor",
     "evaluate_pooled_source",
+    "evaluate_random",
     "evaluation_auc",
     "parameter_independent_evaluations",
     "prepare_multisource",
+    "serialize_workload_endpoints",
     "run_multisource",
 ]
