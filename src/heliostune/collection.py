@@ -806,7 +806,7 @@ def execute_call_plan(
                         call_id,
                         "failed",
                         _timestamp(now),
-                        error=f"{type(exc).__name__}: {exc}",
+                        error=f"{type(exc).__name__}: {exc}".strip(),
                     )
                 )
             raise ProtocolError(

@@ -350,6 +350,7 @@ def _verify_catalog(args: argparse.Namespace) -> int:
         f"[bold]{facts['measurement_rows']}[/bold] measurement rows, "
         f"[bold]{facts['json_artifacts']}[/bold] JSON artifacts, "
         f"[bold]{facts['html_reports']}[/bold] HTML reports, "
+        f"[bold]{facts['file_artifacts']}[/bold] other files, "
         f"[bold]{facts['aliases']}[/bold] historical aliases"
     )
     return 0

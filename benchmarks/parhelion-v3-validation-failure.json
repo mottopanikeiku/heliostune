@@ -1,0 +1,151 @@
+{
+  "artifacts_not_produced": [
+    "benchmarks/data/parhelion-v3-pilot.jsonl.zst",
+    "benchmarks/data/parhelion-v3-pilot.jsonl.zst.manifest.json",
+    "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst",
+    "benchmarks/data/parhelion-v3-validation.jsonl.zst",
+    "benchmarks/parhelion-v3-config-manifest.json",
+    "benchmarks/results/parhelion-v3-a100-selection.json",
+    "benchmarks/parhelion-v3-h200-freeze.json",
+    "benchmarks/data/parhelion-v3-h200.jsonl.zst",
+    "benchmarks/data/parhelion-v3-final.jsonl.zst",
+    "benchmarks/results/parhelion-v3-final.json",
+    "site/parhelion-v3.html"
+  ],
+  "campaign_status": "terminated_pre_h200_under_predeclared_failure_rule",
+  "collection_binding": {
+    "head_sha256": "ab624c9fee5643031d8914ed47aaf74df637b9db6b4379fd8964a650ca763564",
+    "pilot_config_key_manifest_sha256": "9111111e5b65c4abbfcde3c8e7573c10573cf964297e01b2955b47f56a891955",
+    "protocol_sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+    "request_sha256": "6aa62ccd82de0c9fbd6d6d4c6b8f4a186445aef7b171b5eccdc118f84cd2e60f",
+    "wheel_sha256": "4672d8c6edd57b8936b7d94a6a5049552a90c2f916e3c079b0d589ca19beaeb4"
+  },
+  "failed_candidate": {
+    "git_commit": "c0cdf0e87713aff09ee5a66b23cd366d4bae7817",
+    "git_commit_sha256": "ab624c9fee5643031d8914ed47aaf74df637b9db6b4379fd8964a650ca763564",
+    "wheel": {
+      "filename": "heliostune-0.4.0.dev0-py3-none-any.whl",
+      "packaged_source_sha256": "9af18ff2005e0f784821ece4f761b3f29f8d99c21c98cddfd1348adbf98861a2",
+      "sha256": "4672d8c6edd57b8936b7d94a6a5049552a90c2f916e3c079b0d589ca19beaeb4"
+    }
+  },
+  "failure": {
+    "category": "remote_container_import_failure",
+    "cause": "the remote module imported before HELIOSTUNE_MODAL_WHEEL was present and searched the container-relative artifacts/modal-wheel directory",
+    "crash_loop_observed_at_utc": "2026-08-24T23:56:49Z",
+    "exception_type": "RuntimeError",
+    "first_observed_at_utc": "2026-08-24T23:51:51Z",
+    "message": "run `uv run python scripts/build_modal_wheel.py` before Modal; found []",
+    "remote_path": "/root/modal_bench.py",
+    "source": "modal_bench.py:_configured_modal_wheel"
+  },
+  "orchestration_attempts": [
+    {
+      "app_created_at_utc": "2026-08-24T23:26:55Z",
+      "app_id": "ap-23g6jX4qXrHvzDlbAPMa7z",
+      "app_state": "stopped",
+      "app_stopped_at_utc": "2026-08-24T23:28:43Z",
+      "attempt_journal": null,
+      "error": "pip 25 rejected the generic /root/heliostune.whl path before a paid FunctionCall existed",
+      "function_calls_spawned": 0,
+      "status": "image_build_failed_before_function_call_spawn"
+    },
+    {
+      "app_created_at_utc": "2026-08-24T23:51:38Z",
+      "app_id": "ap-nWqf5qjkL9CdGVuL5lWcl6",
+      "app_state": "stopped",
+      "app_stopped_at_utc": "2026-08-25T00:03:51Z",
+      "function_call_id": "fc-01M0V2ZWYR8GKXNC0MB32YFPFF",
+      "function_calls_spawned": 1,
+      "status": "paid_function_call_failed_during_remote_import"
+    },
+    {
+      "app_created_at_utc": "2026-08-25T00:04:14Z",
+      "app_id": "ap-uFyQ3siR4lkNblqmdQBSIS",
+      "app_state": "stopped",
+      "app_stopped_at_utc": "2026-08-25T00:04:16Z",
+      "function_call_id": "fc-01M0V2ZWYR8GKXNC0MB32YFPFF",
+      "function_calls_spawned": 0,
+      "result": "FunctionCall.from_id().get() returned RemoteError",
+      "status": "resume_only_restored_terminal_function_call"
+    }
+  ],
+  "outcome": "pilot_failed_before_measurement_collection",
+  "pilot_function_call": {
+    "app_created_at_utc": "2026-08-24T23:51:38Z",
+    "app_id": "ap-nWqf5qjkL9CdGVuL5lWcl6",
+    "app_state": "stopped",
+    "app_stopped_at_utc": "2026-08-25T00:03:51Z",
+    "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-nWqf5qjkL9CdGVuL5lWcl6",
+    "attempt_journal": {
+      "bytes": 1219,
+      "path": "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
+      "records": 2,
+      "sha256": "fdd85103cfe3482d75b4bc5ad3117f9b64099737e0ace3f9a5aa35bd4dd95c50"
+    },
+    "bank": 0,
+    "function_call_id": "fc-01M0V2ZWYR8GKXNC0MB32YFPFF",
+    "gpu": "L4",
+    "spawned_at_utc": "2026-08-24T23:51:47.497555Z",
+    "terminal_client_error": "RemoteError:",
+    "terminal_recorded_at_utc": "2026-08-25T00:06:21.215907Z",
+    "terminal_status": "failed"
+  },
+  "policy_application": {
+    "a100_validation_invoked": false,
+    "candidate_matrix_invoked": false,
+    "h200_invoked": false,
+    "performance_report": "not produced",
+    "pilot_retried": false,
+    "release_scope": "0.4.0 software, causal addendum, protocol, and failure evidence",
+    "replacement_run_permitted": false
+  },
+  "protocol": {
+    "analysis_runtime": {
+      "implementation": "CPython",
+      "numpy": "2.4.6",
+      "python_major_minor": [
+        3,
+        11
+      ]
+    },
+    "implementation_sha256": {
+      "modal_bench.py": "a511b739e67260f1be7eebf75fb028710e295d4770b1023ae48bb8545f586447",
+      "scripts/assemble_parhelion_v3.py": "5508f48b2d1358ad477925ae476996ab687036b29b4041d773c07e7c104c0f7b",
+      "scripts/build_parhelion_v3_protocol.py": "92decba0cabd5be7536e26029438525ddb5d6634191ad02455bfd6b31d9cb9cd",
+      "scripts/freeze_parhelion_v3.py": "9ee1a06157d9a0cc269522a42346125b49cfeed0ccd5316f9ff0666d2477b466",
+      "scripts/prune_parhelion_v3_configs.py": "410e64890c0ea92a5df6af00ed91d61684ee948a128d447919baaa6758a549d7",
+      "src/heliostune/bandit.py": "bf672659215f2115e78ee8c6d832f3458ef1e4015393ea26e4075b0b0b48425a",
+      "src/heliostune/cli.py": "a3752a4aae062261d888dc37fe7a5e65cc7427a8a8a016f64647bf2453bef322",
+      "src/heliostune/collection.py": "3097c6ed385e26a994806366bc3037ce5b89d0115a8409ef474a50d994d84f4a",
+      "src/heliostune/configs.py": "5aa075756f4bba433372db81b0da2520828fa02fefd95879cefb120994e8d752",
+      "src/heliostune/features.py": "d9226093fd9384842a1481ff4c16fa98ee98295b978ec80a5bb2ba80c67e2c80",
+      "src/heliostune/hardware.py": "197657b81ca27f90e6d0541c80f39bb6d3082ccc696eafc02ac2733d1b3f0b5e",
+      "src/heliostune/kernel.py": "815aef748b343e1fe45419d4f7c982a639f4ef4e006400e68b4618f6a59e6cca",
+      "src/heliostune/protocol.py": "02f7ebfe672153adc342b525fbb522d40da88c3c5f9bc4585b5fb5d1a9f4cc16",
+      "src/heliostune/retrieval.py": "486c858f122c2d8378ab0ec6fde91bbf360380aae7c294a53bf74351c7da4b4a",
+      "src/heliostune/schema.py": "eced722598c4c0e61f09b4dc902628e2113ca5148f054ed8baec8b25608a82e8",
+      "src/heliostune/v3_artifacts.py": "2c2ec031bc334a421239f447ed88ee016e7e9ceb8840e1e7f1dbdfc7ad5b846e",
+      "src/heliostune/v3_engine.py": "61ad0c2bbcd9f63466fc6069fa868b47557f5bf2f51daf26bc47acaf05201a6e"
+    },
+    "path": "benchmarks/parhelion-v3-development-protocol.json",
+    "pre_h200_failure_rule": "publish bound validation failure manifest and software/protocol",
+    "sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+    "software": {
+      "modal": "1.5.4",
+      "numpy": "2.4.6",
+      "python": "3.11.x",
+      "rich": "14.3.4",
+      "torch": "2.8.0",
+      "triton": "3.4.0",
+      "zstandard": "0.25.0"
+    },
+    "status": "predeclared_before_paid_performance_collection"
+  },
+  "schema_version": 1,
+  "study_id": "parhelion-v3-validation-failure",
+  "terminal_record_provenance": {
+    "retrieval": "zero-spawn resume of the existing FunctionCall ID",
+    "serialization_note": "the first resume observed RemoteError but failed to append it because the rendered exception carried surrounding whitespace; the terminal record was then appended from that observed result with the normalized value RemoteError:"
+  }
+}

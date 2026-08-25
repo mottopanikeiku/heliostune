@@ -7,7 +7,7 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-from heliostune.artifacts import write_json_atomic
+from heliostune.artifacts import read_json, write_json_atomic
 from heliostune.configs import (
     DEFAULT_WORKLOADS,
     PARHELION_V3_CANDIDATE_CONFIGS,
@@ -32,9 +32,11 @@ from heliostune.protocol import (
     V3_TRANSFER_STRENGTH_GRID,
     V3_VALIDATION_SEEDS,
 )
+from heliostune.validation import exact_object
 
 _REPO = Path(__file__).resolve().parents[1]
 _OUTPUT = _REPO / "benchmarks/parhelion-v3-development-protocol.json"
+_FAILURE = _REPO / "benchmarks/parhelion-v3-validation-failure.json"
 _SOURCE_PATHS = (
     "modal_bench.py",
     "scripts/build_parhelion_v3_protocol.py",
@@ -244,16 +246,33 @@ def build_protocol() -> dict[str, object]:
     }
 
 
+def _check_terminal_protocol() -> None:
+    frozen = exact_object(read_json(_OUTPUT), context="frozen v3 protocol")
+    failure = exact_object(read_json(_FAILURE), context="v3 validation failure")
+    binding = exact_object(failure.get("protocol"), context="v3 failure protocol binding")
+    if binding.get("path") != "benchmarks/parhelion-v3-development-protocol.json":
+        raise SystemExit("v3 failure manifest binds an unexpected protocol path")
+    if binding.get("sha256") != _sha256(_OUTPUT):
+        raise SystemExit("v3 failure manifest protocol digest does not match frozen bytes")
+    rebuilt = build_protocol()
+    rebuilt["implementation_sha256"] = frozen.get("implementation_sha256")
+    if rebuilt != frozen:
+        raise SystemExit("frozen v3 protocol contract changed after the terminal pilot")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     if args.check:
-        with tempfile.TemporaryDirectory(prefix="parhelion-v3-protocol-") as temporary:
-            generated = Path(temporary) / _OUTPUT.name
-            write_json_atomic(generated, build_protocol())
-            if not _OUTPUT.is_file() or _OUTPUT.read_bytes() != generated.read_bytes():
-                raise SystemExit(f"v3 development protocol is stale: {_OUTPUT}")
+        if _FAILURE.is_file():
+            _check_terminal_protocol()
+        else:
+            with tempfile.TemporaryDirectory(prefix="parhelion-v3-protocol-") as temporary:
+                generated = Path(temporary) / _OUTPUT.name
+                write_json_atomic(generated, build_protocol())
+                if not _OUTPUT.is_file() or _OUTPUT.read_bytes() != generated.read_bytes():
+                    raise SystemExit(f"v3 development protocol is stale: {_OUTPUT}")
     else:
         write_json_atomic(_OUTPUT, build_protocol())
     return 0
