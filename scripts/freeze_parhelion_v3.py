@@ -25,6 +25,7 @@ _HASH_OUTPUT = _REPO / "benchmarks/parhelion-v3-h200-freeze.sha256"
 _IMPLEMENTATION_PATHS = (
     "modal_bench.py",
     "scripts/assemble_parhelion_v3.py",
+    "scripts/canonicalize_parhelion_v3_a100.py",
     "scripts/freeze_parhelion_v3.py",
     "scripts/prune_parhelion_v3_configs.py",
     "src/heliostune/bandit.py",
