@@ -281,13 +281,14 @@ def test_retrieval_failure_is_journaled_and_never_retryable(tmp_path: Path) -> N
             "fc-failed",
             _rows(item),
             [],
-            failure=RuntimeError("remote exploded"),
+            failure=RuntimeError("\nremote exploded\n"),
         )
 
     with pytest.raises(ProtocolError, match="remote collection failed"):
         execute_call_plan(request, _BINDING, journal, spawn=spawn, now=_clock())
 
     assert [record.status for record in journal.records] == ["spawned", "failed"]
+    assert journal.records[-1].error == "RuntimeError: \nremote exploded"
     loaded = AttemptJournal.load(journal.path)
     with pytest.raises(ProtocolError, match="cannot retry"):
         execute_call_plan(

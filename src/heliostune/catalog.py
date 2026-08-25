@@ -201,6 +201,21 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
         "site/parhelion-v2-addendum.html",
         "self_contained_html_report",
     )
+    v3_protocol = _json_entry(
+        repository,
+        "benchmarks/parhelion-v3-development-protocol.json",
+        "parhelion-v3-development-protocol",
+    )
+    v3_failure = _json_entry(
+        repository,
+        "benchmarks/parhelion-v3-validation-failure.json",
+        "parhelion-v3-validation-failure",
+    )
+    v3_journal = _file_entry(
+        repository,
+        "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
+        "append_only_function_call_journal",
+    )
     return {
         "schema_version": 1,
         "catalog_id": "heliostune-research-artifacts-1",
@@ -292,6 +307,31 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                 "data": [v2_data],
                 "results": addendum_results,
                 "reports": [addendum_report],
+            },
+            {
+                "study_id": "parhelion-v3-h200-transfer",
+                "analysis_status": "terminated_pre_h200_after_pilot_failure",
+                "measurement_schema": "heliostune-measurement-v1",
+                "split_design": "predeclared held-out model family plus exact target shape",
+                "collector_commit": "c0cdf0e87713aff09ee5a66b23cd366d4bae7817",
+                "collection_runs": {
+                    "pilot": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-nWqf5qjkL9CdGVuL5lWcl6"
+                    ),
+                    "candidate": "not invoked",
+                    "a100_validation": "not invoked",
+                    "h200": "not invoked",
+                },
+                "protocol": v3_protocol,
+                "data": [],
+                "results": [v3_failure],
+                "files": [v3_journal],
+                "result_links": {
+                    "failure": "benchmarks/parhelion-v3-validation-failure.json",
+                    "attempt_journal": (
+                        "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl"
+                    ),
+                },
             },
         ],
         "absent_freeze_aliases": baseline["absent_freeze_aliases"],
@@ -452,6 +492,7 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
     data_rows = 0
     json_artifacts = 0
     html_reports = 0
+    file_artifacts = 0
     seen_data: set[str] = set()
     for raw_study in studies:
         study = exact_object(raw_study, context="catalog study")
@@ -479,6 +520,12 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
                 exact_object(raw_entry, context="catalog report entry"),
             )
             html_reports += 1
+        for raw_entry in cast(Sequence[object], study.get("files", ())):
+            _verify_file_entry(
+                root,
+                exact_object(raw_entry, context="catalog file entry"),
+            )
+            file_artifacts += 1
 
     aliases = exact_object(catalog["absent_freeze_aliases"], context="catalog aliases")
     _verify_aliases(root, aliases)
@@ -487,6 +534,7 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
         "measurement_rows": data_rows,
         "json_artifacts": json_artifacts,
         "html_reports": html_reports,
+        "file_artifacts": file_artifacts,
         "aliases": len(aliases),
     }
 

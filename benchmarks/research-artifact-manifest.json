@@ -1784,6 +1784,48 @@
       ],
       "split_design": "held-out model family plus exact target (M,N,K) shape",
       "study_id": "parhelion-v2-post-hoc-causal-addendum"
+    },
+    {
+      "analysis_status": "terminated_pre_h200_after_pilot_failure",
+      "collection_runs": {
+        "a100_validation": "not invoked",
+        "candidate": "not invoked",
+        "h200": "not invoked",
+        "pilot": "https://modal.com/apps/mottopanikeiku/main/ap-nWqf5qjkL9CdGVuL5lWcl6"
+      },
+      "collector_commit": "c0cdf0e87713aff09ee5a66b23cd366d4bae7817",
+      "data": [],
+      "files": [
+        {
+          "bytes": 1219,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
+          "sha256": "fdd85103cfe3482d75b4bc5ad3117f9b64099737e0ace3f9a5aa35bd4dd95c50"
+        }
+      ],
+      "measurement_schema": "heliostune-measurement-v1",
+      "protocol": {
+        "bytes": 42227,
+        "kind": "json_artifact",
+        "path": "benchmarks/parhelion-v3-development-protocol.json",
+        "schema": "parhelion-v3-development-protocol",
+        "sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb"
+      },
+      "result_links": {
+        "attempt_journal": "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
+        "failure": "benchmarks/parhelion-v3-validation-failure.json"
+      },
+      "results": [
+        {
+          "bytes": 7557,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v3-validation-failure.json",
+          "schema": "parhelion-v3-validation-failure",
+          "sha256": "15b467bb7af666158bf9aaec8cb3999095c8266b7b51f68ed4975a340315a2be"
+        }
+      ],
+      "split_design": "predeclared held-out model family plus exact target shape",
+      "study_id": "parhelion-v3-h200-transfer"
     }
   ]
 }
