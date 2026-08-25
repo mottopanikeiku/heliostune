@@ -40,7 +40,8 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
 
     assert facts == {
         "measurement_rows": 82_944,
-        "json_artifacts": 11,
+        "json_artifacts": 13,
         "html_reports": 1,
+        "file_artifacts": 1,
         "aliases": 7,
     }

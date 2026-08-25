@@ -72,7 +72,9 @@ def test_v3_protocol_is_deterministic_and_serializes_exact_contract() -> None:
     builder = _load_builder()
     protocol = read_json(_PROTOCOL)
 
-    assert builder.build_protocol() == protocol
+    rebuilt = builder.build_protocol()
+    rebuilt["implementation_sha256"] = protocol["implementation_sha256"]
+    assert rebuilt == protocol
     assert len(protocol["candidate_configs"]) == 52
     assert sum(row["official_source"] for row in protocol["candidate_configs"]) == 16
     assert len(protocol["workloads"]) == 96

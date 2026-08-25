@@ -43,6 +43,7 @@ image = (
     )
     .add_local_file(_MODAL_WHEEL, remote_path=_REMOTE_WHEEL, copy=True)
     .run_commands(f"python -m pip install --no-deps {_REMOTE_WHEEL}")
+    .env({"HELIOSTUNE_MODAL_WHEEL": _REMOTE_WHEEL})
 )
 
 
