@@ -1,0 +1,474 @@
+{
+  "budgets": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "candidate_scores": {
+    "multisource_retrieval": [
+      {
+        "auc1_8": 0.912285703702951,
+        "k": 1,
+        "temperature": 0.2
+      },
+      {
+        "auc1_8": 0.912285703702951,
+        "k": 1,
+        "temperature": 0.7
+      },
+      {
+        "auc1_8": 0.912285703702951,
+        "k": 1,
+        "temperature": 2.0
+      },
+      {
+        "auc1_8": 0.9212391749689408,
+        "k": 3,
+        "temperature": 0.2
+      },
+      {
+        "auc1_8": 0.9210642737491116,
+        "k": 3,
+        "temperature": 0.7
+      },
+      {
+        "auc1_8": 0.9213918788917685,
+        "k": 3,
+        "temperature": 2.0
+      },
+      {
+        "auc1_8": 0.9173620470566615,
+        "k": 8,
+        "temperature": 0.2
+      },
+      {
+        "auc1_8": 0.9181412824264745,
+        "k": 8,
+        "temperature": 0.7
+      },
+      {
+        "auc1_8": 0.9182803716394522,
+        "k": 8,
+        "temperature": 2.0
+      },
+      {
+        "auc1_8": 0.9169639383626247,
+        "k": 16,
+        "temperature": 0.2
+      },
+      {
+        "auc1_8": 0.9164134022360302,
+        "k": 16,
+        "temperature": 0.7
+      },
+      {
+        "auc1_8": 0.9159909452866337,
+        "k": 16,
+        "temperature": 2.0
+      }
+    ],
+    "parhelion_thompson": [
+      {
+        "auc1_8": 0.9417268125989031,
+        "k": 1,
+        "temperature": 0.2,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9332887574707242,
+        "k": 1,
+        "temperature": 0.2,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9314247275128168,
+        "k": 1,
+        "temperature": 0.2,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9313757191502264,
+        "k": 1,
+        "temperature": 0.2,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9417268125989031,
+        "k": 1,
+        "temperature": 0.7,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9332887574707242,
+        "k": 1,
+        "temperature": 0.7,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9314247275128168,
+        "k": 1,
+        "temperature": 0.7,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9313757191502264,
+        "k": 1,
+        "temperature": 0.7,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9417268125989031,
+        "k": 1,
+        "temperature": 2.0,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9332887574707242,
+        "k": 1,
+        "temperature": 2.0,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9314247275128168,
+        "k": 1,
+        "temperature": 2.0,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9313757191502264,
+        "k": 1,
+        "temperature": 2.0,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.941481191543472,
+        "k": 3,
+        "temperature": 0.2,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9335246142069078,
+        "k": 3,
+        "temperature": 0.2,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.930416796343356,
+        "k": 3,
+        "temperature": 0.2,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9298055422951652,
+        "k": 3,
+        "temperature": 0.2,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9412389432111908,
+        "k": 3,
+        "temperature": 0.7,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9337517861318259,
+        "k": 3,
+        "temperature": 0.7,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.930778929973574,
+        "k": 3,
+        "temperature": 0.7,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.929864476330564,
+        "k": 3,
+        "temperature": 0.7,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9412367538102344,
+        "k": 3,
+        "temperature": 2.0,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9336168207904608,
+        "k": 3,
+        "temperature": 2.0,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9306039278317342,
+        "k": 3,
+        "temperature": 2.0,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9296747208858719,
+        "k": 3,
+        "temperature": 2.0,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9410816163709552,
+        "k": 8,
+        "temperature": 0.2,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9359042815733282,
+        "k": 8,
+        "temperature": 0.2,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9358232868117565,
+        "k": 8,
+        "temperature": 0.2,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9350642172251548,
+        "k": 8,
+        "temperature": 0.2,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9415628387416763,
+        "k": 8,
+        "temperature": 0.7,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9363878458802757,
+        "k": 8,
+        "temperature": 0.7,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9358226295466182,
+        "k": 8,
+        "temperature": 0.7,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9352180189530663,
+        "k": 8,
+        "temperature": 0.7,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9417202380567637,
+        "k": 8,
+        "temperature": 2.0,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9358098570410911,
+        "k": 8,
+        "temperature": 2.0,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9355681904910189,
+        "k": 8,
+        "temperature": 2.0,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9352632467915877,
+        "k": 8,
+        "temperature": 2.0,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.942155784371683,
+        "k": 16,
+        "temperature": 0.2,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9357621612526763,
+        "k": 16,
+        "temperature": 0.2,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9370609811007238,
+        "k": 16,
+        "temperature": 0.2,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9366833305814135,
+        "k": 16,
+        "temperature": 0.2,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9419750197227156,
+        "k": 16,
+        "temperature": 0.7,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9367825926885919,
+        "k": 16,
+        "temperature": 0.7,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.938291778791573,
+        "k": 16,
+        "temperature": 0.7,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9406231760057627,
+        "k": 16,
+        "temperature": 0.7,
+        "transfer_strength": 0.2
+      },
+      {
+        "auc1_8": 0.9422864652671942,
+        "k": 16,
+        "temperature": 2.0,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.9368435895517984,
+        "k": 16,
+        "temperature": 2.0,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.9388852119807505,
+        "k": 16,
+        "temperature": 2.0,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.9413201760237009,
+        "k": 16,
+        "temperature": 2.0,
+        "transfer_strength": 0.2
+      }
+    ],
+    "pooled_source_thompson": [
+      {
+        "auc1_8": 0.9091987837846616,
+        "transfer_strength": 0.0
+      },
+      {
+        "auc1_8": 0.8833051125566329,
+        "transfer_strength": 0.02
+      },
+      {
+        "auc1_8": 0.8441520344827645,
+        "transfer_strength": 0.08
+      },
+      {
+        "auc1_8": 0.8568564379318736,
+        "transfer_strength": 0.2
+      }
+    ]
+  },
+  "jobs": 1,
+  "primary_budgets": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "runtime": {
+    "distributions": {
+      "heliostune": "0.4.0",
+      "modal": "1.5.4",
+      "numpy": "2.4.6",
+      "rich": "14.3.4",
+      "torch": null,
+      "triton": null,
+      "zstandard": "0.25.0"
+    },
+    "implementation": "CPython",
+    "numpy": "2.4.6",
+    "python": "3.11.15",
+    "python_executable": "/tmp/heliostune-engineering/.venv-v3/bin/python"
+  },
+  "schema_version": 1,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29
+  ],
+  "selected": {
+    "multisource_retrieval": {
+      "auc1_8": 0.9213918788917685,
+      "k": 3,
+      "temperature": 2.0
+    },
+    "parhelion_thompson": {
+      "auc1_8": 0.9422864652671942,
+      "k": 16,
+      "temperature": 2.0,
+      "transfer_strength": 0.0
+    },
+    "pooled_source_thompson": {
+      "auc1_8": 0.9091987837846616,
+      "transfer_strength": 0.0
+    }
+  },
+  "selection_gpu": "A100-80GB",
+  "source_gpus": [
+    "L4",
+    "A10"
+  ],
+  "study_id": "parhelion-v3-a100-selection"
+}
