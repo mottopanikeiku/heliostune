@@ -2,7 +2,7 @@
 
 A measured study of retrieval, Bayesian adaptation, and source-to-target launch selection for FP16 Triton matrix multiplication.
 
-**Live evidence:** [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json) · [H100 freeze](benchmarks/parhelion-v2-h100-freeze.json)
+**Live evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
 ## Result
 
@@ -27,11 +27,30 @@ The [post-hoc causal addendum](site/parhelion-v2-addendum.html) does not alter t
 
 ## Parhelion v3 campaign outcome
 
-The predeclared H200 campaign terminated at its single L4 pilot FunctionCall, before any timing row was returned. The remote container failed while importing `modal_bench.py` because it searched a container-relative local wheel directory. Under the protocol's pre-H200 failure rule, that FunctionCall was not retried; the candidate matrix, A100 validation, freeze, H200 invocation, and v3 performance report were not produced. This is the complete v3 campaign outcome, not a hardware-performance result.
+The predeclared H200 campaign, as closed and released in v0.4.0, terminated at its single L4 pilot FunctionCall before any timing row was returned. The remote container failed while importing `modal_bench.py` because it searched a container-relative local wheel directory. Under that campaign's pre-H200 failure rule, the FunctionCall was not retried and no downstream artifact belonged to the frozen study. This remains the complete original campaign outcome, not a hardware-performance result.
 
 The [validation-failure manifest](benchmarks/parhelion-v3-validation-failure.json) binds the frozen development protocol, failed commit and wheel, Modal app and FunctionCall IDs, two-record append-only journal, observed import error, zero-spawn recovery, and every absent downstream artifact. Release 0.4.0 publishes the software, existing causal addendum, protocol, and failure evidence. It also corrects remote wheel discovery for future independent campaigns without changing the failed protocol bytes or assigning a result retroactively.
 
-Values above are fractions of a bank-1-selected, bank-2-scored best configuration from the curated 36-action Triton manifest. They are not fractions of a hardware ceiling. `torch.matmul` can exceed 1.0 because it is outside that manifest and is evaluation-only.
+### Operator-authorized H200 engineering benchmark
+
+After v0.4.0, the operator explicitly overrode the no-retry rule and authorized a separate engineering run. The fixed pilot, three-GPU candidate collection, A100 validation, and five-bank H200 collection completed with bound call journals. This run is labeled `operator_authorized_engineering_protocol_deviation`; it does not reopen the original campaign or carry a confirmatory superiority claim.
+
+On H200, Parhelion reached **0.94772 AUC** over budgets 1–8 and **99.89%** of the retained-config reference at budget eight. Anchored cold Thompson reached **0.94497 AUC** and **99.84%** at budget eight. The paired 50-seed Parhelion-minus-anchored-cold AUC difference was **+0.00275**, with a conditional two-sided 95% Student-t interval **[+0.00062, +0.00487]**. Banks 3 and 4 produced similarly positive engineering contrasts, but the protocol deviation precludes a confirmatory claim.
+
+| H200 engineering method | AUC, budgets 1–8 | Fraction at budget 8 | Median queries to 95% |
+|---|---:|---:|---:|
+| Random | 74.26% | 83.95% | — |
+| Single-source nearest | 74.76% | 81.94% | — |
+| Cold Thompson | 88.29% | 98.15% | 6 |
+| Pooled-source Thompson | 88.29% | 98.15% | 6 |
+| Parhelion without forced anchor | 89.04% | 99.05% | 6 |
+| Multi-source retrieval | 94.40% | 99.84% | 4 |
+| Anchored cold Thompson | 94.50% | 99.84% | 4 |
+| **Parhelion** | **94.77%** | **99.89%** | **4** |
+
+The selected transfer strength was zero, and Parhelion exactly matched its no-transfer ablation. The observed gain therefore comes from the retrieval representation and forced first query, not a transferred source posterior. A100 bank 0 landed on PCIe while banks 1–4 landed on SXM; the raw bytes are preserved and the derived archive explicitly canonicalizes only `device_name`. That mixed-subvariant selection domain is a material validity limit. See the [engineering result](benchmarks/results/parhelion-v3-h200-engineering.json) and [self-contained report](site/parhelion-v3-engineering.html).
+
+The H100 values in the first table are fractions of a bank-1-selected, bank-2-scored best configuration from the curated 36-action Triton manifest. They are not fractions of a hardware ceiling. `torch.matmul` can exceed 1.0 because it is outside that manifest and is evaluation-only.
 
 ## What changed from v1
 
@@ -81,7 +100,7 @@ Parhelion and retrieval-only make the same paid query at budget one: both score 
 
 The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact historical runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests. The [research artifact catalog](benchmarks/research-artifact-manifest.json) verifies every historical and published alias digest; the separate [addendum manifest](benchmarks/parhelion-v2-addendum-manifest.json) binds the immutable input, implementation, exploratory result, and new report without touching historical bytes.
 
-The v3 [development protocol](benchmarks/parhelion-v3-development-protocol.json), [terminal failure manifest](benchmarks/parhelion-v3-validation-failure.json), and [attempt journal](benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl) preserve the stopped H200 campaign. The catalog binds all three; no candidate, A100, or H200 performance artifact exists.
+The v3 [development protocol](benchmarks/parhelion-v3-development-protocol.json), [terminal failure manifest](benchmarks/parhelion-v3-validation-failure.json), and [failed attempt journal](benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl) preserve the original stopped campaign. The separate engineering chain binds the [successful pilot](benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst), [mixed-A100 validation archive](benchmarks/data/parhelion-v3-validation.jsonl.zst), [H200 freeze](benchmarks/parhelion-v3-h200-freeze.json), [final archive](benchmarks/data/parhelion-v3-final.jsonl.zst), and [engineering result](benchmarks/results/parhelion-v3-h200-engineering.json) without rewriting the v0.4.0 failure evidence.
 
 ## Run locally
 

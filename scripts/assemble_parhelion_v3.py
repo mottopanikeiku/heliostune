@@ -29,6 +29,7 @@ from heliostune.v3_artifacts import (
 
 _REPO = Path(__file__).resolve().parents[1]
 _DEVELOPMENT_PROTOCOL = _REPO / "benchmarks/parhelion-v3-development-protocol.json"
+_H200_FREEZE = _REPO / "benchmarks/parhelion-v3-h200-freeze.json"
 _CONFIG_MANIFEST = _REPO / "artifacts/parhelion-v3-config-manifest.json"
 _CANDIDATE_INPUT = _REPO / "artifacts/parhelion-v3-candidate-bank0.jsonl.zst"
 _VALIDATION_BANKS_INPUT = _REPO / "artifacts/parhelion-v3-validation-banks1-4.jsonl.zst"
@@ -373,25 +374,32 @@ def _write_failure(path: Path, phase: str, error: BaseException, inputs: list[Pa
     )
 
 
+def _phase_protocol(phase: str, explicit: Path | None) -> Path:
+    if explicit is not None:
+        return explicit
+    return _DEVELOPMENT_PROTOCOL if phase == "validation" else _H200_FREEZE
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=("validation", "final"), required=True)
-    parser.add_argument("--protocol", type=Path, default=_DEVELOPMENT_PROTOCOL)
+    parser.add_argument("--protocol", type=Path)
     parser.add_argument("--config-manifest", type=Path, default=_CONFIG_MANIFEST)
     parser.add_argument("--candidate-input", type=Path, default=_CANDIDATE_INPUT)
     parser.add_argument("--validation-banks-input", type=Path, default=_VALIDATION_BANKS_INPUT)
     parser.add_argument("--h200-input", type=Path, default=_H200_INPUT)
     args = parser.parse_args(argv)
+    protocol = _phase_protocol(args.phase, args.protocol)
     try:
         if args.phase == "validation":
             _assemble_validation(
-                args.protocol,
+                protocol,
                 args.config_manifest,
                 args.candidate_input,
                 args.validation_banks_input,
             )
         else:
-            _assemble_final(args.protocol, args.config_manifest, args.h200_input)
+            _assemble_final(protocol, args.config_manifest, args.h200_input)
     except BaseException as exc:
         failure_path = (
             _REPO / "benchmarks/parhelion-v3-validation-failure.json"
@@ -403,7 +411,7 @@ def main(argv: list[str] | None = None) -> int:
             args.phase,
             exc,
             [
-                args.protocol,
+                protocol,
                 args.config_manifest,
                 args.candidate_input,
                 Path(f"{args.candidate_input}.attempts.jsonl"),

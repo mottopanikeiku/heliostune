@@ -1,0 +1,41 @@
+{
+  "attempt_journal": {
+    "path": "/tmp/heliostune-engineering/benchmarks/data/parhelion-v3-h200.jsonl.zst.attempts.jsonl",
+    "sha256": "ea3d782b3d50ae475c249474b4af40017694907651c468e4f1a8015552921c48"
+  },
+  "call_ids": [
+    "fc-01M0V9XKFXXEY35F43ZZN6GP5B",
+    "fc-01M0V9XKMAVBNA2TP43EK4R79Q",
+    "fc-01M0V9XKRFVKQQ8JXJQNFFEPJ9",
+    "fc-01M0V9XKWSC9DTH7ACX54KR620",
+    "fc-01M0V9XM19FY3XK02T67JFKX0N"
+  ],
+  "data": {
+    "path": "/tmp/heliostune-engineering/benchmarks/data/parhelion-v3-h200.jsonl.zst",
+    "rows": 22560,
+    "sha256": "285c0a045b23e5725341b0477f267d3903c801f5e4527634a795ccc95884a740"
+  },
+  "freeze_sha256": "2fb12d53f6cdef72c22c25087241930bf7d8e0f06fbe8e338bd900f1edcfaf10",
+  "head_commit": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
+  "runtime": {
+    "distributions": {
+      "heliostune": "0.4.0",
+      "modal": "1.5.4",
+      "numpy": "2.4.6",
+      "rich": "14.3.4",
+      "torch": null,
+      "triton": null,
+      "zstandard": "0.25.0"
+    },
+    "implementation": "CPython",
+    "numpy": "2.4.6",
+    "python": "3.11.15",
+    "python_executable": "/tmp/heliostune-engineering/.venv-v3/bin/python"
+  },
+  "schema_version": 1,
+  "source_sidecar": {
+    "path": "/tmp/heliostune-engineering/artifacts/parhelion-v3-h200.jsonl.zst.manifest.json",
+    "sha256": "4172266f7fc1a974d16ec45fb7d2c04b38db88fd9fe0a335ada491020ab60955"
+  },
+  "study_id": "parhelion-v3-h200-target"
+}

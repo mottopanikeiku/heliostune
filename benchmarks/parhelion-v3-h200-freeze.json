@@ -1,0 +1,1705 @@
+{
+  "a100_selection": {
+    "path": "benchmarks/results/parhelion-v3-a100-selection.json",
+    "selected": {
+      "multisource_retrieval": {
+        "auc1_8": 0.9213918788917685,
+        "k": 3,
+        "temperature": 2.0
+      },
+      "parhelion_thompson": {
+        "auc1_8": 0.9422864652671942,
+        "k": 16,
+        "temperature": 2.0,
+        "transfer_strength": 0.0
+      },
+      "pooled_source_thompson": {
+        "auc1_8": 0.9091987837846616,
+        "transfer_strength": 0.0
+      }
+    },
+    "sha256": "e4a9bbe1c75e17ed865b27531e6f6583367341c9c6fb063343f3aaa86c8ae71e"
+  },
+  "analysis_runtime": {
+    "implementation": "CPython",
+    "numpy": "2.4.6",
+    "python_major_minor": [
+      3,
+      11
+    ]
+  },
+  "banks": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "budgets": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16
+  ],
+  "candidate_configs": [
+    {
+      "block_k": 128,
+      "block_m": 128,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m128n128k128-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m128n128k32-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m128n128k32-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 128,
+      "group_m": 4,
+      "key": "m128n128k32-w8s4g4",
+      "num_stages": 4,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m128n128k64-w8s2g8",
+      "num_stages": 2,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 128,
+      "block_m": 128,
+      "block_n": 256,
+      "group_m": 8,
+      "key": "m128n256k128-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": true
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 256,
+      "group_m": 8,
+      "key": "m128n256k64-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m128n32k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 32,
+      "group_m": 4,
+      "key": "m128n32k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m128n32k32-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m128n32k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m128n32k64-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m128n64k32-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m128n64k32-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 128,
+      "block_n": 64,
+      "group_m": 4,
+      "key": "m128n64k32-w8s4g4",
+      "num_stages": 4,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m128n64k64-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 64,
+      "block_m": 128,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m128n64k64-w8s2g8",
+      "num_stages": 2,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m16n128k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 128,
+      "group_m": 4,
+      "key": "m16n128k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 16,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m16n128k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m16n32k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 32,
+      "group_m": 4,
+      "key": "m16n32k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 16,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m16n32k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m16n64k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 16,
+      "block_n": 64,
+      "group_m": 4,
+      "key": "m16n64k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 16,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m16n64k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 128,
+      "block_m": 256,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m256n128k128-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": true
+    },
+    {
+      "block_k": 128,
+      "block_m": 256,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m256n64k128-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m32n128k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 128,
+      "group_m": 4,
+      "key": "m32n128k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 32,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m32n128k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m32n32k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 32,
+      "group_m": 4,
+      "key": "m32n32k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 32,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m32n32k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m32n64k32-w2s5g8",
+      "num_stages": 5,
+      "num_warps": 2,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m32n64k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 32,
+      "block_n": 64,
+      "group_m": 4,
+      "key": "m32n64k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 32,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m32n64k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m64n128k32-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m64n128k32-w8s3g8",
+      "num_stages": 3,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 128,
+      "group_m": 4,
+      "key": "m64n128k32-w8s4g4",
+      "num_stages": 4,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 64,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m64n128k64-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 64,
+      "block_m": 64,
+      "block_n": 128,
+      "group_m": 8,
+      "key": "m64n128k64-w8s2g8",
+      "num_stages": 2,
+      "num_warps": 8,
+      "official_source": false
+    },
+    {
+      "block_k": 128,
+      "block_m": 64,
+      "block_n": 256,
+      "group_m": 8,
+      "key": "m64n256k128-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 256,
+      "group_m": 8,
+      "key": "m64n256k32-w4s4g8",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m64n32k32-w2s5g8",
+      "num_stages": 5,
+      "num_warps": 2,
+      "official_source": true
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m64n32k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 32,
+      "group_m": 4,
+      "key": "m64n32k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 64,
+      "block_n": 32,
+      "group_m": 8,
+      "key": "m64n32k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m64n64k32-w4s3g8",
+      "num_stages": 3,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 32,
+      "block_m": 64,
+      "block_n": 64,
+      "group_m": 4,
+      "key": "m64n64k32-w4s4g4",
+      "num_stages": 4,
+      "num_warps": 4,
+      "official_source": false
+    },
+    {
+      "block_k": 64,
+      "block_m": 64,
+      "block_n": 64,
+      "group_m": 8,
+      "key": "m64n64k64-w4s2g8",
+      "num_stages": 2,
+      "num_warps": 4,
+      "official_source": false
+    }
+  ],
+  "candidate_merge_sha": "7f24ec04ecf96e4b969c3c9110d1845bf0b315ab",
+  "commands": {
+    "assembly": ".venv-v3/bin/python scripts/assemble_parhelion_v3.py --phase final",
+    "collection": ".venv-v3/bin/modal run modal_bench.py --protocol benchmarks/parhelion-v3-h200-freeze.json --config-manifest benchmarks/parhelion-v3-config-manifest.json --gpus H200 --banks 0,1,2,3,4 --output artifacts/parhelion-v3-h200.jsonl.zst",
+    "comparison": ".venv-v3/bin/heliostune compare-v3 benchmarks/data/parhelion-v3-final.jsonl.zst --freeze benchmarks/parhelion-v3-h200-freeze.json",
+    "wheel": ".venv-v3/bin/python scripts/build_modal_wheel.py"
+  },
+  "config_manifest": {
+    "official_config_keys": [
+      "m128n128k32-w4s4g8",
+      "m128n256k64-w8s3g8",
+      "m128n32k32-w4s4g8",
+      "m128n32k64-w4s4g8",
+      "m128n64k32-w4s4g8",
+      "m128n64k64-w4s4g8",
+      "m32n64k32-w2s5g8",
+      "m64n128k32-w4s4g8",
+      "m64n128k64-w4s4g8",
+      "m64n256k32-w4s4g8",
+      "m64n32k32-w2s5g8"
+    ],
+    "path": "benchmarks/parhelion-v3-config-manifest.json",
+    "retained_config_keys": [
+      "m128n128k32-w4s4g8",
+      "m128n128k32-w8s3g8",
+      "m128n128k32-w8s4g4",
+      "m128n128k64-w8s2g8",
+      "m128n256k64-w8s3g8",
+      "m128n32k32-w4s3g8",
+      "m128n32k32-w4s4g4",
+      "m128n32k32-w4s4g8",
+      "m128n32k64-w4s2g8",
+      "m128n32k64-w4s4g8",
+      "m128n64k32-w4s4g8",
+      "m128n64k32-w8s3g8",
+      "m128n64k32-w8s4g4",
+      "m128n64k64-w4s4g8",
+      "m128n64k64-w8s2g8",
+      "m16n128k32-w4s3g8",
+      "m16n128k32-w4s4g4",
+      "m16n128k64-w4s2g8",
+      "m16n32k32-w4s3g8",
+      "m16n32k32-w4s4g4",
+      "m16n32k64-w4s2g8",
+      "m16n64k32-w4s3g8",
+      "m16n64k32-w4s4g4",
+      "m16n64k64-w4s2g8",
+      "m32n128k32-w4s3g8",
+      "m32n128k32-w4s4g4",
+      "m32n128k64-w4s2g8",
+      "m32n32k32-w4s3g8",
+      "m32n32k32-w4s4g4",
+      "m32n32k64-w4s2g8",
+      "m32n64k32-w2s5g8",
+      "m32n64k32-w4s3g8",
+      "m32n64k32-w4s4g4",
+      "m32n64k64-w4s2g8",
+      "m64n128k32-w4s4g8",
+      "m64n128k32-w8s3g8",
+      "m64n128k32-w8s4g4",
+      "m64n128k64-w4s4g8",
+      "m64n128k64-w8s2g8",
+      "m64n256k32-w4s4g8",
+      "m64n32k32-w2s5g8",
+      "m64n32k32-w4s3g8",
+      "m64n32k32-w4s4g4",
+      "m64n32k64-w4s2g8",
+      "m64n64k32-w4s3g8",
+      "m64n64k32-w4s4g4",
+      "m64n64k64-w4s2g8"
+    ],
+    "sha256": "7e8e31c56fdadcf0f4be382c0717d9d9cc0155941bf7669aca4267586b2dfb50"
+  },
+  "development_protocol": {
+    "path": "benchmarks/parhelion-v3-development-protocol.json",
+    "sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb"
+  },
+  "evaluation_contract": {
+    "deterministic_uncertainty": "four equal-weight fold values, minimum, maximum, sample SD; no interval",
+    "primary_bank": 2,
+    "queries_to_95": "first sequential budget 1-16 at fraction >= 0.95; null when unattained; statistics.median_low over successful seeds only",
+    "sensitivity_banks": [
+      3,
+      4
+    ],
+    "sensitivity_rule": "score unchanged bank-0 incumbent and bank-1 reference separately on each bank; never average sensitivity banks or use them for selection",
+    "stochastic_uncertainty": "policy-seed Student-t Monte Carlo interval conditional on fixed data/campaign"
+  },
+  "failure_rules": {
+    "identity_or_completeness_failure": "publish benchmarks/parhelion-v3-h200-failure-manifest.json; no performance report, substitution, or rerun",
+    "invocation_limit": 1,
+    "negative_or_null_result": "publish as complete"
+  },
+  "final_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49
+  ],
+  "freeze_status": "predates_h200_and_permits_one_target_invocation",
+  "h200_identity_gate": {
+    "compute_capability": [
+      9,
+      0
+    ],
+    "excluded_names": [
+      "H100",
+      "B200"
+    ],
+    "memory_gb": [
+      135,
+      145
+    ],
+    "required_name": "H200",
+    "selector": "H200"
+  },
+  "implementation_sha256": {
+    "modal_bench.py": "e8bfff7ee239627781e03741eed452960052568f97708c3dcaa3d4b8eaa6743d",
+    "scripts/assemble_parhelion_v3.py": "5508f48b2d1358ad477925ae476996ab687036b29b4041d773c07e7c104c0f7b",
+    "scripts/canonicalize_parhelion_v3_a100.py": "9f57eaa5e095366466e7e68be08443e71d7738b475f21cbcd2d8cf0c95353f24",
+    "scripts/freeze_parhelion_v3.py": "9411dc4be8df1e1646ba7b32c68b29dedacef4a8d8c2128d8094bbca5abbe71b",
+    "scripts/prune_parhelion_v3_configs.py": "410e64890c0ea92a5df6af00ed91d61684ee948a128d447919baaa6758a549d7",
+    "src/heliostune/bandit.py": "bf672659215f2115e78ee8c6d832f3458ef1e4015393ea26e4075b0b0b48425a",
+    "src/heliostune/collection.py": "14f950ae59e68c918a26096d5a07e1b99626050f65bbea1da62356d88169d2b3",
+    "src/heliostune/configs.py": "5aa075756f4bba433372db81b0da2520828fa02fefd95879cefb120994e8d752",
+    "src/heliostune/features.py": "d9226093fd9384842a1481ff4c16fa98ee98295b978ec80a5bb2ba80c67e2c80",
+    "src/heliostune/kernel.py": "815aef748b343e1fe45419d4f7c982a639f4ef4e006400e68b4618f6a59e6cca",
+    "src/heliostune/protocol.py": "02f7ebfe672153adc342b525fbb522d40da88c3c5f9bc4585b5fb5d1a9f4cc16",
+    "src/heliostune/retrieval.py": "486c858f122c2d8378ab0ec6fde91bbf360380aae7c294a53bf74351c7da4b4a",
+    "src/heliostune/schema.py": "eced722598c4c0e61f09b4dc902628e2113ca5148f054ed8baec8b25608a82e8",
+    "src/heliostune/v3_artifacts.py": "2c2ec031bc334a421239f447ed88ee016e7e9ceb8840e1e7f1dbdfc7ad5b846e",
+    "src/heliostune/v3_engine.py": "61ad0c2bbcd9f63466fc6069fa868b47557f5bf2f51daf26bc47acaf05201a6e"
+  },
+  "policy_contract": {
+    "choice": "one Thompson draw over all currently unqueried actions; without replacement; update selected bank-0 reward only",
+    "independent_sensitivity": "separate target posteriors from the same fold source likelihood/prior",
+    "noise_variance": 0.05,
+    "primary": "50 same-seed equal-four-fold Parhelion-minus-anchored-cold AUC1-8 effects; superiority only when the two-sided 95% Student-t lower bound > 0",
+    "prior_precision": 1.0,
+    "recommendation": "lowest-latency paid bank-0 incumbent with ascending config-key ties",
+    "reward": "log_tflops_reward on bank-0 latency",
+    "source_update_order": "declared GPU order, ascending workload key, ascending retained config key after family/exact-shape exclusion"
+  },
+  "primary_auc_budgets": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "runtime_at_freeze": {
+    "distributions": {
+      "heliostune": "0.4.0",
+      "modal": "1.5.4",
+      "numpy": "2.4.6",
+      "rich": "14.3.4",
+      "torch": null,
+      "triton": null,
+      "zstandard": "0.25.0"
+    },
+    "implementation": "CPython",
+    "numpy": "2.4.6",
+    "python": "3.11.15",
+    "python_executable": "/tmp/heliostune-engineering/.venv-v3/bin/python"
+  },
+  "schema_version": 1,
+  "seed_contract": {
+    "derivation": "first eight SHA-256 bytes interpreted as a big-endian integer",
+    "preimage": "parhelion-v3\\0{gpu-or-na}\\0{bank-or-na}\\0{heldout-model-or-na}\\0{workload-key-or-all}\\0{policy-seed-decimal-or-na}\\0{round-decimal-or-na}\\0{purpose}",
+    "purposes": [
+      "anchored-cold-thompson",
+      "cold-thompson",
+      "collector-config-order",
+      "collector-workload-order",
+      "parhelion-no-anchor",
+      "parhelion-thompson",
+      "random-policy",
+      "replay-workload-order",
+      "tensor"
+    ],
+    "stream_reuse": {
+      "parhelion_no_transfer": "parhelion-thompson",
+      "pooled_source_thompson": "cold-thompson"
+    }
+  },
+  "study_id": "parhelion-v3-h200-freeze",
+  "validation_archive": {
+    "attempt_journal_path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.attempts.jsonl",
+    "attempt_journal_sha256": "99bba6cea41b51ecbdfa8e197c74165c2a73db992755593b21fa57e02e7a018e",
+    "call_ids": [
+      "fc-01M0V6V0QN93054H2S71EG7RGK",
+      "fc-01M0V6V0VXVV2CX8M117N54VEX",
+      "fc-01M0V6V10MQ2DR7TYTYK9F4Z7D",
+      "fc-01M0V7JEYDMHG2N91T5RTHTS87",
+      "fc-01M0V7JF3QKPSREPJ5N16GKXGC",
+      "fc-01M0V7JF889Q0NNC8596PGNAQC",
+      "fc-01M0V7JFDN3T2C03BF70S5MWZ5",
+      "fc-01M0V7JFJCPZHVP8WTMVHMZ9XH",
+      "fc-01M0V7JFPT1J8B74QFXY16HV6J",
+      "fc-01M0V7JFW7F4AWWRY3D6GVY2Q2",
+      "fc-01M0V7JG0JA2HQTNM9KP640JAN",
+      "fc-01M0V7JG4PQEEPBW67V6MN0A01",
+      "fc-01M0V7JG9DX2D9VSE2N0S6C1TT",
+      "fc-01M0V7JGDAGGSYVSXHD3HPMNBD",
+      "fc-01M0V7JGHQ0V755J70S40RDFQQ"
+    ],
+    "head_commit": "7f24ec04ecf96e4b969c3c9110d1845bf0b315ab",
+    "manifest_path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+    "manifest_sha256": "2e62cbbd7a6fe02e06792663f9b6bc11e9dc222316c88406b74e81114c473b2d",
+    "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst",
+    "sha256": "14972601dc4f0e212187e9a116894a4423ff34133c8d1bc7d65f3aa77faa0a74"
+  },
+  "workloads": [
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+      "m": 1,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096",
+      "m": 7,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "m": 31,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "m": 96,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "m": 257,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "m": 1024,
+      "model": "mistral-7b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-decode-1-m1-n4096-k4096",
+      "m": 1,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-decode-7-m7-n4096-k4096",
+      "m": 7,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-mixed-31-m31-n4096-k4096",
+      "m": 31,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-mixed-96-m96-n4096-k4096",
+      "m": 96,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-prefill-257-m257-n4096-k4096",
+      "m": 257,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "m": 1024,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-decode-1-m1-n14336-k4096",
+      "m": 1,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-decode-7-m7-n14336-k4096",
+      "m": 7,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096",
+      "m": 31,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096",
+      "m": 96,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096",
+      "m": 257,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096",
+      "m": 1024,
+      "model": "mistral-7b",
+      "n": 14336,
+      "projection": "ffn-up",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-decode-1-m1-n4096-k14336",
+      "m": 1,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "decode-1"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-decode-7-m7-n4096-k14336",
+      "m": 7,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "decode-7"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336",
+      "m": 31,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336",
+      "m": 96,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336",
+      "m": 257,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 14336,
+      "key": "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336",
+      "m": 1024,
+      "model": "mistral-7b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584",
+      "m": 1,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584",
+      "m": 7,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584",
+      "m": 31,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584",
+      "m": 96,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584",
+      "m": 257,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584",
+      "m": 1024,
+      "model": "qwen2.5-7b",
+      "n": 4608,
+      "projection": "attention-qkv",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584",
+      "m": 1,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584",
+      "m": 7,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584",
+      "m": 31,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584",
+      "m": 96,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584",
+      "m": 257,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584",
+      "m": 1024,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "attention-out",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584",
+      "m": 1,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584",
+      "m": 7,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584",
+      "m": 31,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584",
+      "m": 96,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584",
+      "m": 257,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3584,
+      "key": "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584",
+      "m": 1024,
+      "model": "qwen2.5-7b",
+      "n": 18944,
+      "projection": "ffn-up",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "m": 1,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "decode-1"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "m": 7,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "decode-7"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "m": 31,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944",
+      "m": 96,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944",
+      "m": 257,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 18944,
+      "key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "m": 1024,
+      "model": "qwen2.5-7b",
+      "n": 3584,
+      "projection": "ffn-down",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072",
+      "m": 1,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072",
+      "m": 7,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072",
+      "m": 31,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072",
+      "m": 96,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072",
+      "m": 257,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072",
+      "m": 1024,
+      "model": "phi-3-mini",
+      "n": 9216,
+      "projection": "attention-qkv",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-decode-1-m1-n3072-k3072",
+      "m": 1,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-decode-7-m7-n3072-k3072",
+      "m": 7,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072",
+      "m": 31,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072",
+      "m": 96,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072",
+      "m": 257,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072",
+      "m": 1024,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "attention-out",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072",
+      "m": 1,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "decode-1"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072",
+      "m": 7,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "decode-7"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072",
+      "m": 31,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072",
+      "m": 96,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072",
+      "m": 257,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 3072,
+      "key": "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072",
+      "m": 1024,
+      "model": "phi-3-mini",
+      "n": 8192,
+      "projection": "ffn-up",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192",
+      "m": 1,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "decode-1"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192",
+      "m": 7,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "decode-7"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192",
+      "m": 31,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192",
+      "m": 96,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192",
+      "m": 257,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 8192,
+      "key": "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192",
+      "m": 1024,
+      "model": "phi-3-mini",
+      "n": 3072,
+      "projection": "ffn-down",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096",
+      "m": 1,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096",
+      "m": 7,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096",
+      "m": 31,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096",
+      "m": 96,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096",
+      "m": 257,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096",
+      "m": 1024,
+      "model": "granite-3.1-8b",
+      "n": 6144,
+      "projection": "attention-qkv",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096",
+      "m": 1,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096",
+      "m": 7,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096",
+      "m": 31,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096",
+      "m": 96,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096",
+      "m": 257,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096",
+      "m": 1024,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "attention-out",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096",
+      "m": 1,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "decode-1"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096",
+      "m": 7,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "decode-7"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096",
+      "m": 31,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096",
+      "m": 96,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096",
+      "m": 257,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 4096,
+      "key": "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096",
+      "m": 1024,
+      "model": "granite-3.1-8b",
+      "n": 12800,
+      "projection": "ffn-up",
+      "regime": "prefill-1024"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800",
+      "m": 1,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "decode-1"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800",
+      "m": 7,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "decode-7"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800",
+      "m": 31,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "mixed-31"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800",
+      "m": 96,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "mixed-96"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800",
+      "m": 257,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "prefill-257"
+    },
+    {
+      "k": 12800,
+      "key": "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800",
+      "m": 1024,
+      "model": "granite-3.1-8b",
+      "n": 4096,
+      "projection": "ffn-down",
+      "regime": "prefill-1024"
+    }
+  ]
+}

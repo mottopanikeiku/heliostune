@@ -1,0 +1,67 @@
+{
+  "config_manifest_sha256": "7e8e31c56fdadcf0f4be382c0717d9d9cc0155941bf7669aca4267586b2dfb50",
+  "data": {
+    "banks": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "gpus": [
+      "L4",
+      "A10",
+      "A100-80GB",
+      "H200"
+    ],
+    "path": "/tmp/heliostune-engineering/benchmarks/data/parhelion-v3-final.jsonl.zst",
+    "rows": 90240,
+    "sha256": "e6ccb1399fc64e841a2e9611832d67feea8b61252841075ebd83f93e94f54d6f"
+  },
+  "freeze_sha256": "2fb12d53f6cdef72c22c25087241930bf7d8e0f06fbe8e338bd900f1edcfaf10",
+  "head_commit": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
+  "official_config_keys": [
+    "m128n128k32-w4s4g8",
+    "m128n256k64-w8s3g8",
+    "m128n32k32-w4s4g8",
+    "m128n32k64-w4s4g8",
+    "m128n64k32-w4s4g8",
+    "m128n64k64-w4s4g8",
+    "m32n64k32-w2s5g8",
+    "m64n128k32-w4s4g8",
+    "m64n128k64-w4s4g8",
+    "m64n256k32-w4s4g8",
+    "m64n32k32-w2s5g8"
+  ],
+  "rank_gate": {
+    "folds": {
+      "granite-3.1-8b": 20,
+      "mistral-7b": 20,
+      "phi-3-mini": 20,
+      "qwen2.5-7b": 20
+    },
+    "minimum": 20
+  },
+  "runtime": {
+    "distributions": {
+      "heliostune": "0.4.0",
+      "modal": "1.5.4",
+      "numpy": "2.4.6",
+      "rich": "14.3.4",
+      "torch": null,
+      "triton": null,
+      "zstandard": "0.25.0"
+    },
+    "implementation": "CPython",
+    "numpy": "2.4.6",
+    "python": "3.11.15",
+    "python_executable": "/tmp/heliostune-engineering/.venv-v3/bin/python"
+  },
+  "schema_version": 1,
+  "sources": {
+    "h200_manifest_sha256": "fa033d570d773982508bdcb4fea1bbf0129da8e6b38ca60c7705d9c218fcff81",
+    "validation_manifest_sha256": "2e62cbbd7a6fe02e06792663f9b6bc11e9dc222316c88406b74e81114c473b2d"
+  },
+  "study_id": "parhelion-v3-final-archive",
+  "validation_head_commit": "7f24ec04ecf96e4b969c3c9110d1845bf0b315ab"
+}

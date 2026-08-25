@@ -23,10 +23,19 @@ from heliostune.protocol import (
 _REPO = Path(__file__).resolve().parents[1]
 _PROTOCOL = _REPO / "benchmarks/parhelion-v3-development-protocol.json"
 _SCRIPT = _REPO / "scripts/build_parhelion_v3_protocol.py"
+_ASSEMBLER = _REPO / "scripts/assemble_parhelion_v3.py"
 
 
 def _load_builder() -> ModuleType:
     spec = importlib.util.spec_from_file_location("build_parhelion_v3_protocol", _SCRIPT)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_assembler() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("assemble_parhelion_v3", _ASSEMBLER)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -88,6 +97,17 @@ def test_v3_protocol_is_deterministic_and_serializes_exact_contract() -> None:
     assert protocol["pruning"]["rank_gate_l4_a10"] == 18
     assert protocol["pruning"]["rank_gate_with_a100"] == 19
     assert protocol["pruning"]["rank_gate_with_h200"] == 20
+
+
+def test_v3_assembly_uses_phase_specific_default_protocol(tmp_path: Path) -> None:
+    assembler = _load_assembler()
+    explicit = tmp_path / "explicit.json"
+
+    assert assembler._phase_protocol("validation", None).name == (
+        "parhelion-v3-development-protocol.json"
+    )
+    assert assembler._phase_protocol("final", None).name == "parhelion-v3-h200-freeze.json"
+    assert assembler._phase_protocol("final", explicit) == explicit
 
 
 def test_v3_runtime_gate_runs_before_campaign_data_access() -> None:

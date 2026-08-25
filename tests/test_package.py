@@ -9,7 +9,7 @@ import heliostune
 
 
 def test_root_api_and_version_come_from_installed_metadata() -> None:
-    assert heliostune.__version__ == importlib.metadata.version("heliostune") == "0.4.0"
+    assert heliostune.__version__ == importlib.metadata.version("heliostune") == "0.4.1"
     assert set(heliostune.__all__) == {
         "DEFAULT_CONFIGS",
         "DEFAULT_WORKLOADS",
