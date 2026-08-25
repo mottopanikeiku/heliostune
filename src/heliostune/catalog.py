@@ -59,7 +59,11 @@ def _relative(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def _data_entry(root: Path, relative: str) -> dict[str, object]:
+def _data_entry(
+    root: Path,
+    relative: str,
+    schema: str = "heliostune-measurement-v1",
+) -> dict[str, object]:
     path = root / relative
     rows = read_measurements(path)
     if not rows:
@@ -74,7 +78,7 @@ def _data_entry(root: Path, relative: str) -> dict[str, object]:
     return {
         "kind": "measurement_archive",
         "path": relative,
-        "schema": "heliostune-measurement-v1",
+        "schema": schema,
         "compression": "zstd",
         "compressed_bytes": path.stat().st_size,
         "compressed_sha256": _sha256(path),
@@ -216,6 +220,127 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
         "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
         "append_only_function_call_journal",
     )
+    v3_engineering_data = [
+        _data_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst",
+            "heliostune-measurement-v2",
+        ),
+        _data_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst",
+            "heliostune-measurement-v2",
+        ),
+        _data_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation.jsonl.zst",
+            "heliostune-measurement-v2",
+        ),
+        _data_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-h200.jsonl.zst",
+            "heliostune-measurement-v2",
+        ),
+        _data_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-final.jsonl.zst",
+            "heliostune-measurement-v2",
+        ),
+    ]
+    v3_engineering_results = [
+        _json_entry(
+            repository,
+            "benchmarks/parhelion-v3-config-manifest.json",
+            "parhelion-v3-retained-configs",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/results/parhelion-v3-a100-selection.json",
+            "parhelion-v3-a100-selection",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/results/parhelion-v3-h200-engineering.json",
+            "parhelion-v3-h200-engineering",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.manifest.json",
+            "parhelion-v3-candidate-publication",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+            "parhelion-v3-validation-publication",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.json",
+            "parhelion-v3-h200-publication",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json",
+            "parhelion-v3-final-publication",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.source-manifest.json",
+            "parhelion-v3-pilot-source-manifest",
+        ),
+        _json_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.source-manifest.json",
+            "parhelion-v3-raw-validation-source-manifest",
+        ),
+    ]
+    v3_engineering_freeze = _json_entry(
+        repository,
+        "benchmarks/parhelion-v3-h200-freeze.json",
+        "parhelion-v3-h200-engineering-freeze",
+    )
+    v3_engineering_files = [
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.attempts.jsonl",
+            "append_only_function_call_journal",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.attempts.jsonl",
+            "append_only_function_call_journal",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation.jsonl.zst.attempts.jsonl",
+            "append_only_function_call_journal",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst",
+            "raw_mixed_hardware_measurement_archive",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.attempts.jsonl",
+            "append_only_function_call_journal",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/data/parhelion-v3-h200.jsonl.zst.attempts.jsonl",
+            "append_only_function_call_journal",
+        ),
+        _file_entry(
+            repository,
+            "benchmarks/parhelion-v3-h200-freeze.sha256",
+            "sha256_sidecar",
+        ),
+    ]
+    v3_engineering_report = _file_entry(
+        repository,
+        "site/parhelion-v3-engineering.html",
+        "self_contained_html_report",
+    )
     return {
         "schema_version": 1,
         "catalog_id": "heliostune-research-artifacts-1",
@@ -333,6 +458,46 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                     ),
                 },
             },
+            {
+                "study_id": "parhelion-v3-operator-authorized-engineering",
+                "analysis_status": "operator_authorized_engineering_protocol_deviation",
+                "measurement_schema": "heliostune-measurement-v2",
+                "split_design": "held-out model family plus exact target shape",
+                "input_study_id": "parhelion-v3-h200-transfer",
+                "collector_commits": {
+                    "pilot_candidate_validation": ("3833181ae0b87c9b7bafb839f1ea4a608cd432f7"),
+                    "h200": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
+                },
+                "collection_runs": {
+                    "pilot_retry": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-8TUfMQNoH4lzXJ1uOI5n2x"
+                    ),
+                    "candidate_bank0": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-a2tRHcReiUYfLwZ4iCN5Pu"
+                    ),
+                    "validation_banks1_4": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-Ba9FkS0Ax7i6cmjUIVh1Qi"
+                    ),
+                    "h200": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-dKaK5ML43S2EqbaW33OTtA"
+                    ),
+                },
+                "validity_limits": [
+                    "explicitly overrides the original pre-H200 no-retry rule",
+                    "A100 selection uses a declared mixed PCIe/SXM engineering domain",
+                    "no confirmatory superiority claim",
+                ],
+                "protocol_chain": [v3_engineering_freeze],
+                "data": v3_engineering_data,
+                "results": v3_engineering_results,
+                "files": v3_engineering_files,
+                "reports": [v3_engineering_report],
+                "result_links": {
+                    "selection": "benchmarks/results/parhelion-v3-a100-selection.json",
+                    "final": "benchmarks/results/parhelion-v3-h200-engineering.json",
+                    "report": "site/parhelion-v3-engineering.html",
+                },
+            },
         ],
         "absent_freeze_aliases": baseline["absent_freeze_aliases"],
     }
@@ -345,7 +510,11 @@ def _require_equal(actual: object, expected: object, *, context: str) -> None:
 
 def _verify_data_entry(root: Path, entry: Mapping[str, object]) -> int:
     relative = nonblank_string(entry.get("path"), context="catalog data path")
-    actual = _data_entry(root, relative)
+    actual = _data_entry(
+        root,
+        relative,
+        nonblank_string(entry.get("schema"), context="catalog data schema"),
+    )
     for key in (
         "schema",
         "compression",
@@ -361,7 +530,8 @@ def _verify_data_entry(root: Path, entry: Mapping[str, object]) -> int:
     ):
         _require_equal(actual[key], entry.get(key), context=f"{relative} {key}")
     rows = read_measurements(root / relative)
-    BenchmarkTable(rows)
+    if actual["failures"] == 0:
+        BenchmarkTable(rows)
     return len(rows)
 
 

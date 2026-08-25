@@ -39,9 +39,9 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
     facts = verify_research_catalog(_CATALOG)
 
     assert facts == {
-        "measurement_rows": 82_944,
-        "json_artifacts": 13,
-        "html_reports": 1,
-        "file_artifacts": 1,
+        "measurement_rows": 278_406,
+        "json_artifacts": 23,
+        "html_reports": 2,
+        "file_artifacts": 8,
         "aliases": 7,
     }

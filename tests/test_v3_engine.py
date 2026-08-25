@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+from dataclasses import replace
+from pathlib import Path
+from types import ModuleType
+
 import pytest
 
 import heliostune.v3_engine as engine
@@ -22,6 +27,28 @@ _HARDWARE = (
     HardwareProfile("A10", "NVIDIA A10", (8, 6), 72, 22.0),
     HardwareProfile("A100-80GB", "NVIDIA A100-SXM4-80GB", (8, 0), 108, 80.0),
 )
+_CANONICALIZER = Path(__file__).resolve().parents[1] / "scripts/canonicalize_parhelion_v3_a100.py"
+_RESULT_BUILDER = (
+    Path(__file__).resolve().parents[1] / "scripts/build_parhelion_v3_engineering_result.py"
+)
+
+
+def _load_canonicalizer() -> ModuleType:
+    spec = importlib.util.spec_from_file_location("canonicalize_parhelion_v3_a100", _CANONICALIZER)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _load_result_builder() -> ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        "build_parhelion_v3_engineering_result", _RESULT_BUILDER
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _matrix() -> tuple[Measurement, ...]:
@@ -56,6 +83,33 @@ def _matrix() -> tuple[Measurement, ...]:
     return tuple(rows)
 
 
+def test_mixed_a100_normalization_changes_device_name_only() -> None:
+    canonicalizer = _load_canonicalizer()
+    original = _matrix()
+    mixed = tuple(
+        replace(
+            row,
+            hardware=replace(row.hardware, device_name="NVIDIA A100 80GB PCIe"),
+        )
+        if row.hardware.gpu == "A100-80GB" and row.bank == 0
+        else row
+        for row in original
+    )
+
+    normalized, counts = canonicalizer.canonicalize_rows(mixed)
+
+    assert counts == {
+        "NVIDIA A100 80GB PCIe": 64,
+        "NVIDIA A100-SXM4-80GB": 256,
+    }
+    for before, after in zip(mixed, normalized, strict=True):
+        if before.hardware.gpu == "A100-80GB":
+            assert after.hardware.device_name == canonicalizer._CANONICAL_DEVICE_NAME
+            assert replace(after, hardware=before.hardware) == before
+        else:
+            assert after is before
+
+
 @pytest.fixture
 def prepared(monkeypatch: pytest.MonkeyPatch) -> engine.V3Prepared:
     monkeypatch.setattr(engine, "require_v3_runtime", lambda _protocol: None)
@@ -70,6 +124,22 @@ def prepared(monkeypatch: pytest.MonkeyPatch) -> engine.V3Prepared:
         ),
         seeds=(0, 1),
     )
+
+
+def test_engineering_summary_keeps_primary_and_sensitivity_banks_separate(
+    prepared: engine.V3Prepared,
+) -> None:
+    builder = _load_result_builder()
+    summary, vectors = builder.summarize_evaluation(
+        prepared,
+        engine.evaluate_v3_cold(prepared),
+    )
+
+    assert summary["method"] == "cold_thompson"
+    assert set(summary["banks"]) == {"2", "3", "4"}
+    assert set(vectors) == {2, 3, 4}
+    assert all(len(values) == 2 for values in vectors.values())
+    assert all(len(bank["mean_curve"]) == 16 for bank in summary["banks"].values())
 
 
 def test_v3_zero_strength_stream_invariants(prepared: engine.V3Prepared) -> None:
