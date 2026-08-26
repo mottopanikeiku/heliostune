@@ -140,10 +140,15 @@ uv run heliostune compare-multisource \
   --k 16 --temperature 2.0 --transfer-strength 0.0 \
   --retrieval-k 8 --retrieval-temperature 0.2 \
   --pooled-transfer-strength 0.0 --primary-comparator torch \
-  --protocol-role final --output artifacts/h100-final-summary.json
-uv run heliostune report artifacts/h100-final-summary.json \
-  --output artifacts/h100-report.html
+  --protocol-role final \
+  --release-provenance benchmarks/parhelion-h100-release-provenance.json \
+  --output artifacts/replay/h100-final-summary.json
+cmp artifacts/replay/h100-final-summary.json benchmarks/results/parhelion-h100-final.json
+uv run heliostune report artifacts/replay/h100-final-summary.json \
+  --output artifacts/replay/h100-report.html
 ```
+
+The replay writes under `artifacts/replay/` because the research artifact catalog binds `artifacts/h100-final-summary.json` and `artifacts/h100-report.html` as historical freeze-only aliases that must stay absent, so writing to those exact paths would make `heliostune verify-catalog` fail.
 
 The local `heliostune demo` is synthetic and supports no hardware claim.
 
