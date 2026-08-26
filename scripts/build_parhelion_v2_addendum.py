@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import subprocess
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
@@ -35,6 +36,8 @@ _IMPLEMENTATION_PATHS = (
     "src/heliostune/report.css",
     "scripts/build_parhelion_v2_addendum.py",
 )
+# Commit that published the addendum; provenance digests are read from it, not the work tree.
+_ADDENDUM_IMPLEMENTATION_COMMIT = "b60db72b67eba94b0575ff25006a2587d05e72ac"
 
 
 def _sha256(path: Path) -> str:
@@ -51,8 +54,27 @@ def _historical_digests() -> dict[str, str]:
     return {relative: _sha256(_REPO / relative) for relative in present}
 
 
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _implementation_digests() -> dict[str, str]:
-    return {relative: _sha256(_REPO / relative) for relative in _IMPLEMENTATION_PATHS}
+    digests: dict[str, str] = {}
+    for relative in _IMPLEMENTATION_PATHS:
+        try:
+            blob = subprocess.run(
+                ["git", "cat-file", "blob", f"{_ADDENDUM_IMPLEMENTATION_COMMIT}:{relative}"],
+                cwd=_REPO,
+                check=True,
+                capture_output=True,
+            ).stdout
+        except (OSError, subprocess.CalledProcessError) as exc:
+            raise RuntimeError(
+                "addendum provenance requires a full git clone containing "
+                f"{_ADDENDUM_IMPLEMENTATION_COMMIT}: cannot read {relative}"
+            ) from exc
+        digests[relative] = _sha256_bytes(blob)
+    return digests
 
 
 def _assert_frozen_values(summary: Mapping[str, object]) -> None:
