@@ -1,0 +1,9 @@
+{
+  "algorithm_commit": "811b05bb65bc978e44ca8fa32ceeeab315acf391",
+  "final_archive_sha256": "f417bd7e8167d277e39678266c84e405bbf7606485b916e363c0feb7d418be5d",
+  "freeze_commit": "c395630b9bcb4ef6a501d9a34696783620381c3c",
+  "freeze_sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+  "post_run_manifest_path": "benchmarks/parhelion-v2-post-run-manifest.json",
+  "raw_h100_sha256": "747f30a97711e549c886aedf5a93d4386d53def7c65f93f3ef5b8dd112bc1dd8",
+  "sole_h100_run": "https://modal.com/apps/mottopanikeiku/main/ap-y68ldw4RUmTotSEIxGdqPz"
+}

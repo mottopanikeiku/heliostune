@@ -138,6 +138,11 @@ def _compare(args: argparse.Namespace) -> int:
 def _compare_multisource(args: argparse.Namespace) -> int:
     _reject_output_collisions(args.output)
     measurements = read_measurements(args.input)
+    release_provenance = (
+        None
+        if args.release_provenance is None
+        else exact_object(read_json(args.release_provenance), context="release provenance")
+    )
     summary = _protocol_call(
         "multi-source replay protocol violation",
         lambda: compare_multisource(
@@ -154,6 +159,7 @@ def _compare_multisource(args: argparse.Namespace) -> int:
             pooled_transfer_strength=args.pooled_transfer_strength,
             primary_comparator=args.primary_comparator,
             protocol_role=args.protocol_role,
+            release_provenance=release_provenance,
         ),
     )
     write_json_atomic(args.output, summary)
@@ -394,6 +400,12 @@ def build_parser() -> argparse.ArgumentParser:
     multisource.add_argument("--retrieval-temperature", type=_positive_float)
     multisource.add_argument("--pooled-transfer-strength", type=_unit_float)
     multisource.add_argument("--primary-comparator", type=_strict_identifier)
+    multisource.add_argument(
+        "--release-provenance",
+        type=str,
+        default=None,
+        help="JSON file whose object is embedded as release_provenance",
+    )
     multisource.add_argument(
         "--protocol-role",
         choices=("development", "validation", "final"),

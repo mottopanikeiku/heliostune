@@ -7,9 +7,11 @@ import pytest
 
 from heliostune.errors import ProtocolError
 from heliostune.uncertainty import (
+    _exact_student_t_critical_95,
     deterministic_fold_summary,
     paired_contrast,
     stochastic_interval,
+    student_t_critical_95,
 )
 
 _CONDITIONAL = "fixed H100 matrix, corpus, archive, and campaign"
@@ -38,6 +40,34 @@ def test_thirty_seed_interval_uses_frozen_student_t_critical_value() -> None:
         "low": pytest.approx(mean - half_width),
         "high": pytest.approx(mean + half_width),
     }
+
+
+def test_frozen_table_values_are_returned_exactly() -> None:
+    assert student_t_critical_95(11) == 2.200985160
+    assert student_t_critical_95(29) == 2.045229642
+    assert student_t_critical_95(49) == 2.009575237
+
+
+def test_frozen_table_values_are_the_real_quantiles() -> None:
+    for degrees_of_freedom in (11, 29, 49):
+        assert _exact_student_t_critical_95(degrees_of_freedom) == pytest.approx(
+            student_t_critical_95(degrees_of_freedom), abs=5e-10
+        )
+
+
+def test_offprotocol_dof_uses_the_exact_quantile_not_the_normal_approximation() -> None:
+    assert student_t_critical_95(19) == pytest.approx(2.0930240544, abs=1e-9)
+
+
+def test_quantile_extremes_and_normal_convergence() -> None:
+    assert student_t_critical_95(1) == pytest.approx(12.7062047362, abs=1e-9)
+    assert student_t_critical_95(100000) == pytest.approx(1.959988, abs=1e-5)
+
+
+@pytest.mark.parametrize("degrees_of_freedom", [0, -1, True])
+def test_invalid_degrees_of_freedom_are_rejected(degrees_of_freedom: int) -> None:
+    with pytest.raises(ProtocolError, match="positive integer"):
+        student_t_critical_95(degrees_of_freedom)
 
 
 def test_nonprotocol_seed_count_cannot_emit_confirmatory_interval() -> None:
