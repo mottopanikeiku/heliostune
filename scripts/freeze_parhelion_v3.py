@@ -128,7 +128,7 @@ def main() -> int:
         },
         "workloads": protocol["workloads"],
         "candidate_configs": protocol["candidate_configs"],
-        "banks": protocol["benchmark"]["banks"],
+        "banks": cast(Mapping[str, object], protocol["benchmark"])["banks"],
         "budgets": protocol["budgets"],
         "primary_auc_budgets": protocol["primary_auc_budgets"],
         "final_seeds": protocol["final_seeds"],
