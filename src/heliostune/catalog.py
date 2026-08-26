@@ -30,6 +30,15 @@ _MODEL_CONFIG_BYTES = {
     "granite-3.1-8b": 790,
 }
 
+_EXPECTED_STUDY_REGISTRY = (
+    ("heliostune-v1-l4-a10-transfer", "historical_confirmatory"),
+    ("parhelion-v2-staged-transfer", "historical_confirmatory_primary"),
+    ("parhelion-v2-post-hoc-causal-addendum", "post_hoc_exploratory"),
+    ("parhelion-v3-h200-transfer", "terminated_pre_h200_after_pilot_failure"),
+    ("h100-fp16-reduction-probe", "post_hoc_exploratory"),
+    ("hopper-h100-engineering-benchmark", "post_hoc_exploratory"),
+)
+
 
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
@@ -88,28 +97,88 @@ def _data_entry(root: Path, relative: str) -> dict[str, object]:
     }
 
 
-def _json_entry(root: Path, relative: str, schema: str) -> dict[str, object]:
+def _json_entry(
+    root: Path,
+    relative: str,
+    schema: str,
+    *,
+    status: str | None = None,
+) -> dict[str, object]:
     path = root / relative
     read_json(path)
-    return {
+    entry: dict[str, object] = {
         "kind": "json_artifact",
         "path": relative,
         "schema": schema,
         "bytes": path.stat().st_size,
         "sha256": _sha256(path),
     }
+    if status is not None:
+        entry["status"] = status
+    return entry
 
 
-def _file_entry(root: Path, relative: str, kind: str) -> dict[str, object]:
+def _file_entry(
+    root: Path,
+    relative: str,
+    kind: str,
+    *,
+    schema: str | None = None,
+    status: str | None = None,
+) -> dict[str, object]:
     path = root / relative
     if not path.is_file():
         raise ArtifactError(f"catalog artifact is missing: {relative}")
-    return {
+    entry: dict[str, object] = {
         "kind": kind,
         "path": relative,
         "bytes": path.stat().st_size,
         "sha256": _sha256(path),
     }
+    if schema is not None:
+        entry["schema"] = schema
+    if status is not None:
+        entry["status"] = status
+    return entry
+
+
+def _compressed_json_entry(
+    root: Path,
+    relative: str,
+    schema: str,
+    *,
+    status: str,
+) -> dict[str, object]:
+    path = root / relative
+    uncompressed_bytes, uncompressed_sha256 = _decompressed_facts(path)
+    return {
+        "kind": "compressed_json_artifact",
+        "path": relative,
+        "schema": schema,
+        "status": status,
+        "compression": "zstd",
+        "compressed_bytes": path.stat().st_size,
+        "compressed_sha256": _sha256(path),
+        "uncompressed_bytes": uncompressed_bytes,
+        "uncompressed_sha256": uncompressed_sha256,
+    }
+
+
+def _registered_studies(studies: Sequence[dict[str, object]]) -> list[dict[str, object]]:
+    by_id = {
+        nonblank_string(study.get("study_id"), context="built study_id"): study for study in studies
+    }
+    expected_ids = tuple(study_id for study_id, _status in _EXPECTED_STUDY_REGISTRY)
+    if len(by_id) != len(studies) or set(by_id) != set(expected_ids):
+        raise ProtocolError(
+            f"built study registry mismatch: expected {expected_ids!r}, got {tuple(by_id)!r}"
+        )
+    ordered: list[dict[str, object]] = []
+    for study_id, analysis_status in _EXPECTED_STUDY_REGISTRY:
+        study = by_id[study_id]
+        study["analysis_status"] = analysis_status
+        ordered.append(study)
+    return ordered
 
 
 def _model_catalog() -> list[dict[str, object]]:
@@ -216,7 +285,83 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
         "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
         "append_only_function_call_journal",
     )
-    return {
+    precision_manifest = _json_entry(
+        repository,
+        "benchmarks/h100-precision-probe-manifest.json",
+        "h100-precision-probe-manifest-v1",
+        status="published_complete",
+    )
+    precision_summary = _json_entry(
+        repository,
+        "benchmarks/results/h100-precision-probe-summary.json",
+        "h100-precision-probe-summary-v1",
+        status="published_does_not_explain",
+    )
+    precision_raw = _compressed_json_entry(
+        repository,
+        "benchmarks/data/h100-precision-probe.json.zst",
+        "h100-precision-probe-raw-v2",
+        status="published_complete",
+    )
+    precision_journal = _file_entry(
+        repository,
+        "benchmarks/data/h100-precision-probe.attempts.jsonl",
+        "append_only_function_call_journal",
+        schema="modal-function-call-attempt-journal-v1",
+        status="published_complete",
+    )
+    precision_report = _file_entry(
+        repository,
+        "site/h100-precision-probe.html",
+        "self_contained_html_report",
+        schema="html5",
+        status="published",
+    )
+    hopper_manifest_v1 = _json_entry(
+        repository,
+        "benchmarks/hopper-h100-engineering-manifest.json",
+        "hopper-h100-engineering-manifest-v1",
+        status="published_negative_stop_immutable",
+    )
+    hopper_summary_v1 = _json_entry(
+        repository,
+        "benchmarks/results/hopper-h100-engineering-summary.json",
+        "hopper-h100-engineering-summary-v1",
+        status="published_negative_stop_immutable",
+    )
+    hopper_manifest_v2 = _json_entry(
+        repository,
+        "benchmarks/hopper-h100-engineering-manifest-v2.json",
+        "hopper-h100-engineering-manifest-v2",
+        status="published_negative_stop_methodology_compatible_derivation",
+    )
+    hopper_summary_v2 = _json_entry(
+        repository,
+        "benchmarks/results/hopper-h100-engineering-summary-v2.json",
+        "hopper-h100-engineering-summary-v2",
+        status="published_negative_stop_methodology_compatible_derivation",
+    )
+    hopper_raw = _compressed_json_entry(
+        repository,
+        "benchmarks/data/hopper-h100-engineering.json.zst",
+        "hopper-h100-engineering-raw-v1",
+        status="published_negative_stop",
+    )
+    hopper_journal = _file_entry(
+        repository,
+        "benchmarks/data/hopper-h100-engineering.attempts.jsonl",
+        "append_only_function_call_journal",
+        schema="modal-function-call-attempt-journal-v1",
+        status="published_complete",
+    )
+    hopper_report = _file_entry(
+        repository,
+        "site/hopper-h100-engineering.html",
+        "self_contained_html_report",
+        schema="html5",
+        status="published_negative_stop_methodology_compatible_derivation",
+    )
+    catalog = {
         "schema_version": 1,
         "catalog_id": "heliostune-research-artifacts-1",
         "historical_baseline": {
@@ -333,9 +478,46 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                     ),
                 },
             },
+            {
+                "study_id": "h100-fp16-reduction-probe",
+                "analysis_status": "post_hoc_exploratory",
+                "outcome_status": "does_not_explain",
+                "measurement_schema": "h100-precision-probe-raw-v2",
+                "split_design": "three fixed legacy banks across the 96-workload corpus",
+                "collection_run": (
+                    "https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4"
+                ),
+                "manifests": [precision_manifest],
+                "raw_artifacts": [precision_raw],
+                "results": [precision_summary],
+                "attempt_journals": [precision_journal],
+                "reports": [precision_report],
+            },
+            {
+                "study_id": "hopper-h100-engineering-benchmark",
+                "analysis_status": "post_hoc_exploratory",
+                "outcome_status": "STOP",
+                "measurement_schema": "hopper-h100-engineering-raw-v1",
+                "split_design": "single-bank post-hoc engineering screen",
+                "collection_runs": {
+                    "correctness": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-yvSdUddrJrfljamxVa4CZI"
+                    ),
+                    "engineering": (
+                        "https://modal.com/apps/mottopanikeiku/main/ap-ryV3BXdW1g2TGp5LIg6MDH"
+                    ),
+                },
+                "manifests": [hopper_manifest_v1, hopper_manifest_v2],
+                "raw_artifacts": [hopper_raw],
+                "results": [hopper_summary_v1, hopper_summary_v2],
+                "attempt_journals": [hopper_journal],
+                "reports": [hopper_report],
+            },
         ],
         "absent_freeze_aliases": baseline["absent_freeze_aliases"],
     }
+    catalog["studies"] = _registered_studies(cast(Sequence[dict[str, object]], catalog["studies"]))
+    return catalog
 
 
 def _require_equal(actual: object, expected: object, *, context: str) -> None:
@@ -367,7 +549,18 @@ def _verify_data_entry(root: Path, entry: Mapping[str, object]) -> int:
 
 def _verify_json_entry(root: Path, entry: Mapping[str, object]) -> None:
     relative = nonblank_string(entry.get("path"), context="catalog JSON path")
-    actual = _json_entry(root, relative, nonblank_string(entry.get("schema"), context="schema"))
+    raw_status = entry.get("status")
+    status = (
+        nonblank_string(raw_status, context="catalog JSON status")
+        if raw_status is not None
+        else None
+    )
+    actual = _json_entry(
+        root,
+        relative,
+        nonblank_string(entry.get("schema"), context="schema"),
+        status=status,
+    )
     for key in ("bytes", "sha256"):
         _require_equal(actual[key], entry.get(key), context=f"{relative} {key}")
 
@@ -375,8 +568,39 @@ def _verify_json_entry(root: Path, entry: Mapping[str, object]) -> None:
 def _verify_file_entry(root: Path, entry: Mapping[str, object]) -> None:
     relative = nonblank_string(entry.get("path"), context="catalog file path")
     kind = nonblank_string(entry.get("kind"), context="catalog file kind")
-    actual = _file_entry(root, relative, kind)
+    raw_schema = entry.get("schema")
+    raw_status = entry.get("status")
+    schema = (
+        nonblank_string(raw_schema, context="catalog file schema")
+        if raw_schema is not None
+        else None
+    )
+    status = (
+        nonblank_string(raw_status, context="catalog file status")
+        if raw_status is not None
+        else None
+    )
+    actual = _file_entry(root, relative, kind, schema=schema, status=status)
     for key in ("bytes", "sha256"):
+        _require_equal(actual[key], entry.get(key), context=f"{relative} {key}")
+
+
+def _verify_compressed_json_entry(root: Path, entry: Mapping[str, object]) -> None:
+    relative = nonblank_string(entry.get("path"), context="catalog compressed JSON path")
+    actual = _compressed_json_entry(
+        root,
+        relative,
+        nonblank_string(entry.get("schema"), context="catalog compressed JSON schema"),
+        status=nonblank_string(entry.get("status"), context="catalog compressed JSON status"),
+    )
+    for key in (
+        "kind",
+        "compression",
+        "compressed_bytes",
+        "compressed_sha256",
+        "uncompressed_bytes",
+        "uncompressed_sha256",
+    ):
         _require_equal(actual[key], entry.get(key), context=f"{relative} {key}")
 
 
@@ -471,11 +695,15 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
     )
     if exact_int(catalog["schema_version"], context="catalog schema_version") != 1:
         raise SchemaError("unsupported research catalog schema version")
-    _require_equal(
-        catalog["inventories"],
-        build_research_catalog(root)["inventories"],
-        context="catalog inventories",
-    )
+    expected = build_research_catalog(root)
+    for key in (
+        "catalog_id",
+        "historical_baseline",
+        "inventories",
+        "studies",
+        "absent_freeze_aliases",
+    ):
+        _require_equal(catalog[key], expected[key], context=f"catalog {key}")
     baseline = exact_object(catalog["historical_baseline"], context="historical_baseline")
     baseline_path = root / nonblank_string(baseline.get("path"), context="baseline path")
     _require_equal(_sha256(baseline_path), baseline.get("sha256"), context="baseline sha256")
@@ -493,6 +721,7 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
     json_artifacts = 0
     html_reports = 0
     file_artifacts = 0
+    compressed_raw_artifacts = 0
     seen_data: set[str] = set()
     for raw_study in studies:
         study = exact_object(raw_study, context="catalog study")
@@ -514,6 +743,21 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
         for raw_entry in cast(Sequence[object], study.get("protocol_chain", ())):
             _verify_json_entry(root, exact_object(raw_entry, context="protocol-chain entry"))
             json_artifacts += 1
+        for raw_entry in cast(Sequence[object], study.get("manifests", ())):
+            _verify_json_entry(root, exact_object(raw_entry, context="catalog manifest entry"))
+            json_artifacts += 1
+        for raw_entry in cast(Sequence[object], study.get("raw_artifacts", ())):
+            _verify_compressed_json_entry(
+                root,
+                exact_object(raw_entry, context="catalog compressed raw entry"),
+            )
+            compressed_raw_artifacts += 1
+        for raw_entry in cast(Sequence[object], study.get("attempt_journals", ())):
+            _verify_file_entry(
+                root,
+                exact_object(raw_entry, context="catalog attempt journal entry"),
+            )
+            file_artifacts += 1
         for raw_entry in cast(Sequence[object], study.get("reports", ())):
             _verify_file_entry(
                 root,
@@ -535,6 +779,7 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
         "json_artifacts": json_artifacts,
         "html_reports": html_reports,
         "file_artifacts": file_artifacts,
+        "compressed_raw_artifacts": compressed_raw_artifacts,
         "aliases": len(aliases),
     }
 
