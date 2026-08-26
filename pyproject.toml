@@ -42,6 +42,7 @@ modal = [
 ]
 dev = [
   "coverage>=7.10,<8",
+  "hypothesis>=6.112,<7",
   "mypy>=1.17,<2",
   "pytest>=8.4,<9",
   "ruff>=0.12,<0.17",
