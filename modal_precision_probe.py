@@ -26,6 +26,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import random
 import re
 import statistics
 import subprocess
@@ -83,6 +84,15 @@ _FROZEN_ARCHIVE_ENDPOINT = 0.627266
 _DEFAULT_ARCHIVE = "benchmarks/data/parhelion-v2-measurements.jsonl.zst"
 _DEFAULT_OUTPUT = "artifacts/h100-precision-probe.json"
 _DEFAULT_GATE_OUTPUT = "artifacts/hopper-correctness.json"
+_BENCHMARK_STUDY_ID = "hopper-h100-engineering-benchmark"
+_BENCHMARK_SCHEMA_VERSION = 1
+_BENCHMARK_TIMEOUT_SECONDS = 60 * 60
+_BENCHMARK_BANK = 0
+_BENCHMARK_WARMUP_MS = 25
+_BENCHMARK_REP_MS = 100
+_BENCHMARK_QUANTILES = (0.2, 0.5, 0.8)
+_BENCHMARK_EXPECTED_ROWS = 32 * 48 + 64 * 23
+_DEFAULT_BENCHMARK_OUTPUT = "artifacts/hopper-h100-engineering.json"
 
 
 def _sha256_file(path: Path) -> str:
@@ -91,6 +101,13 @@ def _sha256_file(path: Path) -> str:
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _serialized_json_sha256(value: object) -> str:
+    """Hash the exact bytes that ``write_json_atomic`` will publish."""
+    from heliostune.artifacts import strict_json_dumps
+
+    return hashlib.sha256(strict_json_dumps(value).encode("utf-8")).hexdigest()
 
 
 def _source_digest(repository: Path) -> str:
@@ -554,6 +571,21 @@ def hopper_correctness_h100() -> dict[str, Any]:
         "candidate_summaries": candidate_summaries,
         "validation_results": validation_results,
     }
+
+
+@app.function(image=image, gpu=_MODAL_SELECTOR, timeout=_BENCHMARK_TIMEOUT_SECONDS)
+def hopper_benchmark_h100() -> dict[str, object]:
+    """Benchmark the frozen one-bank Hopper candidate cross-product."""
+    from heliostune.configs import DEFAULT_WORKLOADS
+    from heliostune.hopper_benchmark import benchmark_hopper_candidates
+
+    return benchmark_hopper_candidates(
+        gpu=_GPU,
+        bank=_BENCHMARK_BANK,
+        warmup_ms=_BENCHMARK_WARMUP_MS,
+        rep_ms=_BENCHMARK_REP_MS,
+        workload_keys=tuple(workload.key for workload in DEFAULT_WORKLOADS),
+    )
 
 
 def _sha256_payload(payload: str) -> str:
@@ -1257,6 +1289,576 @@ def _validated_wheel_provenance(
     }
 
 
+def _validated_correctness_gate(
+    gate_path: Path,
+    *,
+    wheel_provenance: dict[str, str],
+    head_sha256: str,
+) -> dict[str, str]:
+    """Validate and bind the completed correctness gate before any paid spawn."""
+    from heliostune.artifacts import strict_json_dumps
+    from heliostune.collection import AttemptJournal, attempt_journal_path, manifest_path
+    from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
+    from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
+
+    if not gate_path.is_file():
+        raise ValueError(f"Hopper correctness gate does not exist: {gate_path}")
+    sidecar_path = manifest_path(gate_path)
+    if not sidecar_path.is_file():
+        raise ValueError(f"Hopper correctness gate manifest does not exist: {sidecar_path}")
+
+    artifact = exact_fields(
+        _manifest_object(gate_path),
+        required=(
+            "schema_version",
+            "gate",
+            "study_status",
+            "analysis_status",
+            "verified",
+            "correctness_only",
+            "performance_validated",
+            "protocol",
+            "gpu",
+            "gpu_selector",
+            "hardware",
+            "config_counts",
+            "config_manifest",
+            "validation_workload_count",
+            "validation_check_count",
+            "candidate_summaries",
+            "validation_results",
+            "remote_call",
+        ),
+        context="Hopper correctness artifact",
+    )
+    if exact_int(artifact["schema_version"], context="gate schema_version", minimum=1) != 1:
+        raise ValueError("Hopper correctness gate has the wrong schema version")
+    if artifact["gate"] != _GATE_NAME:
+        raise ValueError("Hopper correctness gate has the wrong gate name")
+    if artifact["study_status"] != _GATE_STATUS or artifact["analysis_status"] != _GATE_STATUS:
+        raise ValueError("Hopper correctness gate has the wrong analysis status")
+    if not exact_bool(artifact["verified"], context="gate verified"):
+        raise ValueError("Hopper correctness gate is not verified")
+    if not exact_bool(artifact["correctness_only"], context="gate correctness_only"):
+        raise ValueError("Hopper correctness gate is not correctness-only")
+    if exact_bool(artifact["performance_validated"], context="gate performance_validated"):
+        raise ValueError("Hopper correctness gate must not claim performance validation")
+    if artifact["gpu"] != _GPU or artifact["gpu_selector"] != _MODAL_SELECTOR:
+        raise ValueError("Hopper correctness gate is not bound to H100!")
+
+    config_manifest = exact_fields(
+        artifact["config_manifest"],
+        required=("sha256", "hopper_gemm", "skinny_gemv"),
+        context="Hopper correctness config manifest",
+    )
+    expected_configs = _gate_config_manifest()
+    expected_config_sha256 = _gate_config_manifest_sha256(expected_configs)
+    if config_manifest["sha256"] != expected_config_sha256:
+        raise ValueError("Hopper correctness gate config digest differs from local source")
+    if config_manifest["hopper_gemm"] != expected_configs["hopper_gemm"]:
+        raise ValueError("Hopper correctness gate Hopper config manifest differs from local source")
+    if config_manifest["skinny_gemv"] != expected_configs["skinny_gemv"]:
+        raise ValueError("Hopper correctness gate skinny config manifest differs from local source")
+
+    protocol = exact_fields(
+        artifact["protocol"],
+        required=(
+            "schema_version",
+            "gate",
+            "study_status",
+            "analysis_status",
+            "correctness_only",
+            "performance_validated",
+            "timing_operations",
+            "gpu",
+            "gpu_selector",
+            "remote_function",
+            "remote_call_count",
+            "timeout_seconds",
+            "operator_sequence",
+        ),
+        context="Hopper correctness protocol",
+    )
+    expected_gate_protocol = {
+        "schema_version": _GATE_SCHEMA_VERSION,
+        "gate": _GATE_NAME,
+        "study_status": _GATE_STATUS,
+        "analysis_status": _GATE_STATUS,
+        "correctness_only": True,
+        "performance_validated": False,
+        "timing_operations": 0,
+        "gpu": _GPU,
+        "gpu_selector": _MODAL_SELECTOR,
+        "remote_function": "hopper_correctness_h100",
+        "remote_call_count": 1,
+        "timeout_seconds": _GATE_TIMEOUT_SECONDS,
+        "operator_sequence": [
+            "precision_probe",
+            "hopper_correctness_gate",
+            "full_collection",
+        ],
+    }
+    if protocol != expected_gate_protocol:
+        raise ValueError("Hopper correctness gate protocol differs from the frozen gate")
+
+    remote_payload = {
+        "schema_version": artifact["schema_version"],
+        "gate": artifact["gate"],
+        "study_status": artifact["study_status"],
+        "analysis_status": artifact["analysis_status"],
+        "gpu_selector": artifact["gpu_selector"],
+        "gpu": artifact["gpu"],
+        "hardware": artifact["hardware"],
+        "config_counts": artifact["config_counts"],
+        "config_manifest_sha256": config_manifest["sha256"],
+        "validation_workload_count": artifact["validation_workload_count"],
+        "validation_check_count": artifact["validation_check_count"],
+        "candidate_summaries": artifact["candidate_summaries"],
+        "validation_results": artifact["validation_results"],
+    }
+    _data, summaries, results = _validated_gate_payload(remote_payload)
+    if len(summaries) != len(HOPPER_GEMM_CONFIGS) + len(SKINNY_GEMV_CONFIGS):
+        raise ValueError("Hopper correctness gate must contain exactly 71 candidate summaries")
+    if len(results) != 633:
+        raise ValueError("Hopper correctness gate must contain exactly 633 validation checks")
+
+    remote_call = exact_fields(
+        artifact["remote_call"],
+        required=("call_id", "payload_sha256"),
+        context="Hopper correctness remote call",
+    )
+    nonblank_string(remote_call["call_id"], context="Hopper correctness call ID")
+    nonblank_string(remote_call["payload_sha256"], context="Hopper correctness payload digest")
+
+    artifact_sha256 = _sha256_file(gate_path)
+    sidecar = exact_fields(
+        _manifest_object(sidecar_path),
+        required=(
+            "schema_version",
+            "gate",
+            "verified",
+            "request",
+            "binding",
+            "protocol",
+            "data",
+            "attempt_journal",
+            "inputs",
+            "facts",
+            "analysis_runtime",
+        ),
+        context="Hopper correctness manifest",
+    )
+    if exact_int(sidecar["schema_version"], context="gate manifest schema_version", minimum=1) != 1:
+        raise ValueError("Hopper correctness manifest has the wrong schema version")
+    if sidecar["gate"] != _GATE_NAME or not exact_bool(
+        sidecar["verified"], context="gate manifest verified"
+    ):
+        raise ValueError("Hopper correctness manifest is not verified")
+    if sidecar["protocol"] != artifact["protocol"]:
+        raise ValueError("Hopper correctness manifest protocol differs from the artifact")
+    request = exact_fields(
+        sidecar["request"],
+        required=(
+            "schema_version",
+            "gate",
+            "gpu",
+            "gpu_selector",
+            "remote_call_count",
+            "resume",
+            "retry",
+        ),
+        context="Hopper correctness manifest request",
+    )
+    expected_gate_request: dict[str, object] = {
+        "schema_version": _GATE_SCHEMA_VERSION,
+        "gate": _GATE_NAME,
+        "gpu": _GPU,
+        "gpu_selector": _MODAL_SELECTOR,
+        "remote_call_count": 1,
+        "resume": False,
+        "retry": False,
+    }
+    if (
+        exact_int(
+            request["schema_version"],
+            context="gate manifest request schema_version",
+            minimum=1,
+        )
+        != _GATE_SCHEMA_VERSION
+        or request["gate"] != _GATE_NAME
+        or request["gpu"] != _GPU
+        or request["gpu_selector"] != _MODAL_SELECTOR
+        or exact_int(
+            request["remote_call_count"],
+            context="gate manifest request remote_call_count",
+            minimum=1,
+        )
+        != 1
+        or exact_bool(request["resume"], context="gate manifest request resume")
+        or exact_bool(request["retry"], context="gate manifest request retry")
+    ):
+        raise ValueError("Hopper correctness manifest request differs from the frozen gate")
+
+    binding = exact_fields(
+        sidecar["binding"],
+        required=(
+            "protocol_sha256",
+            "config_manifest_sha256",
+            "wheel_sha256",
+            "head_sha256",
+        ),
+        context="Hopper correctness manifest binding",
+    )
+    if binding["config_manifest_sha256"] != expected_config_sha256:
+        raise ValueError("Hopper correctness manifest is stale for the config manifest")
+    if binding["wheel_sha256"] != wheel_provenance["wheel_sha256"]:
+        raise ValueError("Hopper correctness manifest is stale for the wheel")
+    if binding["head_sha256"] != head_sha256:
+        raise ValueError("Hopper correctness manifest is stale for the current HEAD")
+    if binding["protocol_sha256"] != _sha256_payload(
+        strict_json_dumps(expected_gate_protocol, compact=True)
+    ):
+        raise ValueError("Hopper correctness manifest protocol digest is invalid")
+
+    data = exact_fields(
+        sidecar["data"],
+        required=("path", "sha256", "candidate_summaries", "validation_results"),
+        context="Hopper correctness manifest data",
+    )
+    if data["sha256"] != artifact_sha256:
+        raise ValueError("Hopper correctness artifact digest does not match its manifest")
+    if (
+        Path(nonblank_string(data["path"], context="gate data path")).resolve()
+        != gate_path.resolve()
+    ):
+        raise ValueError("Hopper correctness manifest points at a different artifact")
+    if exact_int(data["candidate_summaries"], context="gate summary count", minimum=0) != 71:
+        raise ValueError("Hopper correctness manifest must report 71 candidate summaries")
+    if exact_int(data["validation_results"], context="gate result count", minimum=0) != 633:
+        raise ValueError("Hopper correctness manifest must report 633 validation checks")
+    attempt = exact_fields(
+        sidecar["attempt_journal"],
+        required=("path", "sha256"),
+        context="Hopper correctness attempt journal",
+    )
+    attempt_path = Path(nonblank_string(attempt["path"], context="gate attempt journal path"))
+    canonical_attempt_path = attempt_journal_path(gate_path)
+    if attempt_path != canonical_attempt_path:
+        raise ValueError("Hopper correctness attempt journal path is not canonical")
+    if not attempt_path.is_file() or attempt["sha256"] != _sha256_file(attempt_path):
+        raise ValueError("Hopper correctness attempt journal digest is invalid")
+    journal_records = AttemptJournal.load(attempt_path).records
+
+    inputs = exact_fields(
+        sidecar["inputs"],
+        required=("wheel", "wheel_manifest", "source"),
+        context="Hopper correctness manifest inputs",
+    )
+    wheel_input = exact_fields(
+        inputs["wheel"], required=("path", "sha256"), context="gate wheel input"
+    )
+    wheel_manifest_input = exact_fields(
+        inputs["wheel_manifest"],
+        required=("path", "sha256"),
+        context="gate wheel manifest input",
+    )
+    source_input = exact_fields(inputs["source"], required=("sha256",), context="gate source input")
+    if wheel_input["sha256"] != wheel_provenance["wheel_sha256"]:
+        raise ValueError("Hopper correctness gate input wheel digest is stale")
+    if wheel_manifest_input["sha256"] != wheel_provenance["manifest_sha256"]:
+        raise ValueError("Hopper correctness gate wheel manifest digest is stale")
+    if source_input["sha256"] != wheel_provenance["source_sha256"]:
+        raise ValueError("Hopper correctness gate source digest is stale")
+    facts = exact_fields(
+        sidecar["facts"],
+        required=(
+            "head_commit",
+            "call_id",
+            "operator_command",
+            "correctness_only",
+            "performance_validated",
+            "modal",
+            "python",
+            "numpy",
+            "rich",
+            "zstandard",
+            "torch",
+            "triton",
+        ),
+        context="Hopper correctness manifest facts",
+    )
+    if facts["head_commit"] != wheel_provenance["head_commit"]:
+        raise ValueError("Hopper correctness manifest facts are stale for the current HEAD")
+    if facts["call_id"] != remote_call["call_id"]:
+        raise ValueError("Hopper correctness manifest and artifact call IDs differ")
+    if len(journal_records) != 2:
+        raise ValueError("Hopper correctness attempt journal must contain exactly two records")
+    spawned, completed = journal_records
+    if (
+        spawned.key != (_GPU, 0)
+        or completed.key != spawned.key
+        or spawned.status != "spawned"
+        or completed.status != "completed"
+    ):
+        raise ValueError(
+            "Hopper correctness attempt journal must contain one spawned/completed call"
+        )
+    expected_request_sha256 = _sha256_payload(
+        strict_json_dumps(expected_gate_request, compact=True)
+    )
+    expected_journal_digests = {
+        "request_sha256": expected_request_sha256,
+        "protocol_sha256": binding["protocol_sha256"],
+        "config_manifest_sha256": binding["config_manifest_sha256"],
+        "wheel_sha256": binding["wheel_sha256"],
+        "head_sha256": binding["head_sha256"],
+    }
+    for record in journal_records:
+        if any(
+            getattr(record, field) != expected
+            for field, expected in expected_journal_digests.items()
+        ):
+            raise ValueError("Hopper correctness attempt journal request or binding digest differs")
+        if record.call_id != remote_call["call_id"]:
+            raise ValueError("Hopper correctness attempt journal call ID differs")
+    if completed.chunk_sha256 != remote_call["payload_sha256"]:
+        raise ValueError("Hopper correctness attempt journal payload digest differs")
+
+    return {
+        "artifact": str(gate_path),
+        "artifact_sha256": artifact_sha256,
+        "manifest": str(sidecar_path),
+        "manifest_sha256": _sha256_file(sidecar_path),
+    }
+
+
+def _validated_benchmark_timing(value: object, *, context: str) -> dict[str, float]:
+    from heliostune.validation import exact_fields, finite_float
+
+    timing = exact_fields(
+        value,
+        required=("p20_ms", "median_ms", "p80_ms", "wall_ms"),
+        context=context,
+    )
+    validated = {
+        field: finite_float(timing[field], context=f"{context} {field}", minimum=0)
+        for field in ("p20_ms", "median_ms", "p80_ms", "wall_ms")
+    }
+    if not (validated["p20_ms"] <= validated["median_ms"] <= validated["p80_ms"]):
+        raise ValueError(f"{context} quantiles are not ordered")
+    if validated["median_ms"] <= 0 or validated["wall_ms"] <= 0:
+        raise ValueError(f"{context} median_ms and wall_ms must be positive")
+    return validated
+
+
+def _validated_benchmark_payload(
+    payload: object,
+) -> tuple[
+    dict[str, object],
+    dict[str, list[dict[str, object]]],
+    list[dict[str, int | str]],
+    list[dict[str, object]],
+]:
+    """Validate the exact one-bank remote benchmark result and cross-product."""
+    from heliostune.configs import (
+        DEFAULT_WORKLOADS,
+        HOPPER_GEMM_CONFIGS,
+        SKINNY_GEMV_CONFIGS,
+    )
+    from heliostune.hardware import expectation_for_gpu, validate_hardware
+    from heliostune.schema import HardwareProfile
+    from heliostune.validation import (
+        exact_bool,
+        exact_fields,
+        exact_int,
+        finite_float,
+        nonblank_string,
+    )
+
+    data = exact_fields(
+        payload,
+        required=("hardware", "protocol", "configs", "workloads", "rows"),
+        context="Hopper benchmark payload",
+    )
+    hardware = HardwareProfile.from_dict(data["hardware"])
+    if hardware.gpu != _GPU:
+        raise ValueError("Hopper benchmark payload hardware is not H100")
+    validate_hardware(hardware, expectation_for_gpu(_GPU))
+
+    protocol = exact_fields(
+        data["protocol"],
+        required=(
+            "warmup_ms",
+            "rep_ms",
+            "quantiles",
+            "candidate_policy",
+            "expected_workloads",
+            "expected_skinny_workloads",
+            "expected_hopper_workloads",
+            "expected_skinny_rows",
+            "expected_hopper_rows",
+            "expected_candidate_rows",
+            "torch_measurements",
+        ),
+        context="Hopper benchmark protocol",
+    )
+    expected_protocol_scalars = {
+        "warmup_ms": _BENCHMARK_WARMUP_MS,
+        "rep_ms": _BENCHMARK_REP_MS,
+        "expected_workloads": 96,
+        "expected_skinny_workloads": 32,
+        "expected_hopper_workloads": 64,
+        "expected_skinny_rows": 32 * 48,
+        "expected_hopper_rows": 64 * 23,
+        "expected_candidate_rows": _BENCHMARK_EXPECTED_ROWS,
+        "torch_measurements": 96,
+    }
+    for field, expected in expected_protocol_scalars.items():
+        if exact_int(protocol[field], context=f"benchmark protocol {field}", minimum=0) != expected:
+            raise ValueError(f"Hopper benchmark payload reports the wrong protocol {field}")
+    if protocol["quantiles"] != list(_BENCHMARK_QUANTILES):
+        raise ValueError("Hopper benchmark payload reports the wrong quantiles")
+    expected_policy = {
+        "skinny_gemv": {
+            "condition": "m <= 8",
+            "config_set": "SKINNY_GEMV_CONFIGS",
+            "config_count": 48,
+        },
+        "hopper_gemm": {
+            "condition": "m > 8",
+            "config_set": "HOPPER_GEMM_CONFIGS",
+            "config_count": 23,
+        },
+    }
+    if protocol["candidate_policy"] != expected_policy:
+        raise ValueError("Hopper benchmark payload reports the wrong candidate policy")
+
+    expected_configs = _gate_config_manifest()
+    configs_data = exact_fields(
+        data["configs"],
+        required=("hopper_gemm", "skinny_gemv"),
+        context="Hopper benchmark configs",
+    )
+    configs = {
+        "hopper_gemm": cast(list[dict[str, object]], configs_data["hopper_gemm"]),
+        "skinny_gemv": cast(list[dict[str, object]], configs_data["skinny_gemv"]),
+    }
+    if configs != expected_configs:
+        raise ValueError("Hopper benchmark config manifest differs from local source")
+
+    expected_workloads = [workload.to_dict() for workload in DEFAULT_WORKLOADS]
+    if data["workloads"] != expected_workloads:
+        raise ValueError("Hopper benchmark workload list differs from DEFAULT_WORKLOADS")
+    workloads = cast(list[dict[str, int | str]], data["workloads"])
+    workload_by_key = {workload.key: workload for workload in DEFAULT_WORKLOADS}
+    shuffled_workloads = list(DEFAULT_WORKLOADS)
+    random.Random(_BENCHMARK_BANK).shuffle(shuffled_workloads)
+    expected_seed_by_workload = {
+        workload.key: seed for seed, workload in enumerate(shuffled_workloads)
+    }
+    expected_pairs = {
+        (workload.key, config.key)
+        for workload in DEFAULT_WORKLOADS
+        for config in (SKINNY_GEMV_CONFIGS if workload.m <= 8 else HOPPER_GEMM_CONFIGS)
+    }
+
+    raw_rows = data["rows"]
+    if type(raw_rows) is not list:
+        raise ValueError("Hopper benchmark rows must be a list")
+    if len(raw_rows) != _BENCHMARK_EXPECTED_ROWS:
+        raise ValueError(
+            f"Hopper benchmark payload must contain exactly {_BENCHMARK_EXPECTED_ROWS} rows"
+        )
+    seen: set[tuple[str, str]] = set()
+    torch_by_workload: dict[str, dict[str, float]] = {}
+    rows: list[dict[str, object]] = []
+    for raw_row in raw_rows:
+        row = exact_fields(
+            raw_row,
+            required=(
+                "workload_key",
+                "workload",
+                "regime",
+                "config_kind",
+                "config_key",
+                "config",
+                "bank",
+                "seed",
+                "latency",
+                "torch",
+                "correct",
+                "max_abs_error",
+            ),
+            context="Hopper benchmark row",
+        )
+        workload_key = nonblank_string(row["workload_key"], context="benchmark workload_key")
+        workload = workload_by_key.get(workload_key)
+        if workload is None or row["workload"] != workload.to_dict():
+            raise ValueError(f"Hopper benchmark row has wrong workload {workload_key}")
+        expected_regime = "skinny_gemv" if workload.m <= 8 else "hopper_gemm"
+        regime = nonblank_string(row["regime"], context=f"{workload_key} regime")
+        config_kind = nonblank_string(row["config_kind"], context=f"{workload_key} config_kind")
+        if regime != expected_regime or config_kind != regime:
+            raise ValueError(
+                f"Hopper benchmark row has wrong or mismatched regime/config_kind for {workload_key}"
+            )
+        config_key = nonblank_string(row["config_key"], context=f"{workload_key} config_key")
+        if regime == "skinny_gemv":
+            config_body = next(
+                (
+                    candidate.to_dict()
+                    for candidate in SKINNY_GEMV_CONFIGS
+                    if candidate.key == config_key
+                ),
+                None,
+            )
+        else:
+            config_body = next(
+                (
+                    candidate.to_dict()
+                    for candidate in HOPPER_GEMM_CONFIGS
+                    if candidate.key == config_key
+                ),
+                None,
+            )
+        if config_body is None or row["config"] != config_body:
+            raise ValueError(f"Hopper benchmark row has wrong config {config_key}")
+        pair = (workload_key, config_key)
+        if pair in seen:
+            raise ValueError(f"Hopper benchmark payload duplicates row {pair}")
+        seen.add(pair)
+        if exact_int(row["bank"], context=f"{pair} bank", minimum=0) != _BENCHMARK_BANK:
+            raise ValueError(f"Hopper benchmark row has wrong bank for {pair}")
+        if (
+            exact_int(row["seed"], context=f"{pair} seed", minimum=0)
+            != expected_seed_by_workload[workload_key]
+        ):
+            raise ValueError(f"Hopper benchmark row has wrong seed for {pair}")
+        latency = _validated_benchmark_timing(row["latency"], context=f"{pair} latency")
+        torch_timing = _validated_benchmark_timing(row["torch"], context=f"{pair} torch")
+        prior_torch = torch_by_workload.setdefault(workload_key, torch_timing)
+        if prior_torch != torch_timing:
+            raise ValueError(
+                f"Hopper benchmark repeats inconsistent torch timing for {workload_key}"
+            )
+        if not exact_bool(row["correct"], context=f"{pair} correct"):
+            raise ValueError(f"Hopper benchmark contains an incorrect candidate {pair}")
+        maximum_error = finite_float(
+            row["max_abs_error"], context=f"{pair} max_abs_error", minimum=0
+        )
+        row["latency"] = latency
+        row["torch"] = torch_timing
+        row["max_abs_error"] = maximum_error
+        rows.append(row)
+    if seen != expected_pairs:
+        raise ValueError("Hopper benchmark rows are not the exact workload/config cross-product")
+    if len(torch_by_workload) != len(DEFAULT_WORKLOADS):
+        raise ValueError("Hopper benchmark payload is missing a torch workload baseline")
+
+    data["hardware"] = hardware.to_dict()
+    return data, configs, workloads, rows
+
+
 @app.local_entrypoint()
 def main(
     archive: str = _DEFAULT_ARCHIVE,
@@ -1411,22 +2013,20 @@ def main(
 
     _validate_cross_product(rows, banks=bank_values, workload_keys=workload_keys)
     rows.sort(key=lambda row: (str(row["workload_key"]), int(str(row["bank"]))))
-    write_json_atomic(
-        destination,
-        {
-            "schema_version": _PROBE_SCHEMA_VERSION,
-            "probe": _PROBE_NAME,
-            "question": (
-                "Does torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction "
-                "explain torch.matmul's H100 lead over the best archived Triton config?"
-            ),
-            "role": "post-hoc exploratory; not a confirmatory Parhelion endpoint",
-            "protocol": protocol,
-            "banks": banks_payload,
-            "archive_baseline": baseline,
-            "rows": rows,
-        },
-    )
+    artifact = {
+        "schema_version": _PROBE_SCHEMA_VERSION,
+        "probe": _PROBE_NAME,
+        "question": (
+            "Does torch.backends.cuda.matmul.allow_fp16_reduced_precision_reduction "
+            "explain torch.matmul's H100 lead over the best archived Triton config?"
+        ),
+        "role": "post-hoc exploratory; not a confirmatory Parhelion endpoint",
+        "protocol": protocol,
+        "banks": banks_payload,
+        "archive_baseline": baseline,
+        "rows": rows,
+    }
+    artifact_sha256 = _serialized_json_sha256(artifact)
     sidecar = manifest_path(destination)
     journal_path = attempt_journal_path(destination)
     write_json_atomic(
@@ -1442,7 +2042,7 @@ def main(
             # recognises the pair and refuses to overwrite a digest-valid probe.
             "data": {
                 "path": str(destination),
-                "sha256": sha256_file(destination),
+                "sha256": artifact_sha256,
                 "rows": len(rows),
             },
             "attempt_journal": {
@@ -1469,6 +2069,7 @@ def main(
             "analysis_runtime": runtime_manifest(),
         },
     )
+    write_json_atomic(destination, artifact)
     print(f"wrote {destination} ({sha256_file(destination)})")
     print(f"wrote {sidecar}")
 
@@ -1600,7 +2201,6 @@ def hopper_gate(
             "payload_sha256": payload_sha256,
         },
     }
-    write_json_atomic(destination, artifact)
 
     sidecar = manifest_path(destination)
     journal_path = attempt_journal_path(destination)
@@ -1615,7 +2215,7 @@ def hopper_gate(
             "protocol": protocol,
             "data": {
                 "path": str(destination),
-                "sha256": sha256_file(destination),
+                "sha256": _serialized_json_sha256(artifact),
                 "candidate_summaries": len(candidate_summaries),
                 "validation_results": len(validation_results),
             },
@@ -1651,5 +2251,178 @@ def hopper_gate(
             "analysis_runtime": runtime_manifest(),
         },
     )
+    write_json_atomic(destination, artifact)
+    print(f"wrote {destination} ({sha256_file(destination)})")
+    print(f"wrote {sidecar}")
+
+
+@app.local_entrypoint()
+def hopper_benchmark(
+    output: str = _DEFAULT_BENCHMARK_OUTPUT,
+    wheel: str = "",
+) -> None:
+    """Run the single-call, bank-zero H100 engineering benchmark."""
+    from heliostune.artifacts import strict_json_dumps, write_json_atomic
+    from heliostune.collection import (
+        AttemptRecord,
+        AttemptStatus,
+        CollectionBinding,
+        RemoteCall,
+        attempt_journal_path,
+        manifest_path,
+        preflight_collection,
+    )
+    from heliostune.protocol import runtime_manifest
+    from heliostune.v3_artifacts import sha256_file
+    from heliostune.validation import nonblank_string
+
+    destination = _resolved_gate_output(output)
+    gate_path = _resolved_gate_output(_DEFAULT_GATE_OUTPUT)
+    if destination == gate_path:
+        raise ValueError("benchmark output must differ from the correctness gate artifact")
+    wheel_path = _resolve_wheel(wheel)
+    head_commit, head_sha256 = _git_identity()
+    wheel_provenance = _validated_wheel_provenance(
+        wheel_path,
+        head_commit=head_commit,
+    )
+    correctness = _validated_correctness_gate(
+        gate_path,
+        wheel_provenance=wheel_provenance,
+        head_sha256=head_sha256,
+    )
+
+    config_manifest = _gate_config_manifest()
+    config_manifest_sha256 = _gate_config_manifest_sha256(config_manifest)
+    request = {
+        "schema_version": _BENCHMARK_SCHEMA_VERSION,
+        "study_id": _BENCHMARK_STUDY_ID,
+        "analysis_status": _GATE_STATUS,
+        "gpu": _GPU,
+        "gpu_selector": _MODAL_SELECTOR,
+        "bank": _BENCHMARK_BANK,
+        "remote_call_count": 1,
+        "resume": False,
+        "retry": False,
+    }
+    protocol_binding = {
+        "warmup_ms": _BENCHMARK_WARMUP_MS,
+        "rep_ms": _BENCHMARK_REP_MS,
+        "quantiles": list(_BENCHMARK_QUANTILES),
+        "expected_workloads": 96,
+        "expected_candidate_rows": _BENCHMARK_EXPECTED_ROWS,
+    }
+    request_sha256 = _sha256_payload(strict_json_dumps(request, compact=True))
+    binding = CollectionBinding(
+        protocol_sha256=_sha256_payload(strict_json_dumps(protocol_binding, compact=True)),
+        config_manifest_sha256=config_manifest_sha256,
+        wheel_sha256=wheel_provenance["wheel_sha256"],
+        head_sha256=head_sha256,
+    )
+    journal = preflight_collection(destination)
+
+    def record(
+        call_id: str,
+        status: AttemptStatus,
+        *,
+        chunk_sha256: str | None = None,
+        error: str | None = None,
+    ) -> AttemptRecord:
+        return AttemptRecord(
+            request_sha256=request_sha256,
+            **binding.to_dict(),
+            gpu=_GPU,
+            bank=_BENCHMARK_BANK,
+            call_id=call_id,
+            status=status,
+            timestamp_utc=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            chunk_sha256=chunk_sha256,
+            error=error,
+        )
+
+    call: RemoteCall = hopper_benchmark_h100.spawn()
+    call_id = nonblank_string(call.object_id, context="Hopper benchmark call ID")
+    # AttemptJournal.append flushes and fsyncs before retrieval.
+    journal.append(record(call_id, "spawned"))
+    try:
+        remote_payload = call.get()
+        data, configs, workloads, rows = _validated_benchmark_payload(remote_payload)
+    except Exception as exc:
+        journal.append(record(call_id, "failed", error=f"{type(exc).__name__}: {exc}".strip()))
+        raise
+
+    payload_sha256 = _sha256_payload(strict_json_dumps(remote_payload, compact=True))
+    journal.append(record(call_id, "completed", chunk_sha256=payload_sha256))
+    artifact = {
+        "schema_version": _BENCHMARK_SCHEMA_VERSION,
+        "study_id": _BENCHMARK_STUDY_ID,
+        "analysis_status": _GATE_STATUS,
+        "gpu": _GPU,
+        "gpu_selector": _MODAL_SELECTOR,
+        "hardware": data["hardware"],
+        "bank": _BENCHMARK_BANK,
+        "protocol": data["protocol"],
+        "correctness_gate": correctness,
+        "config_manifest_sha256": config_manifest_sha256,
+        "configs": configs,
+        "workloads": workloads,
+        "rows": rows,
+        "verified": True,
+    }
+
+    sidecar = manifest_path(destination)
+    journal_path = attempt_journal_path(destination)
+    write_json_atomic(
+        sidecar,
+        {
+            "schema_version": _BENCHMARK_SCHEMA_VERSION,
+            "study_id": _BENCHMARK_STUDY_ID,
+            "analysis_status": _GATE_STATUS,
+            "verified": True,
+            "request": request,
+            "binding": binding.to_dict(),
+            "protocol": data["protocol"],
+            "data": {
+                "path": str(destination),
+                "sha256": _serialized_json_sha256(artifact),
+                "rows": len(rows),
+                "workloads": len(workloads),
+            },
+            "attempt_journal": {
+                "path": str(journal_path),
+                "sha256": sha256_file(journal_path),
+            },
+            "inputs": {
+                "correctness_gate": correctness,
+                "wheel": {
+                    "path": str(wheel_path),
+                    "sha256": wheel_provenance["wheel_sha256"],
+                },
+                "wheel_manifest": {
+                    "path": wheel_provenance["manifest_path"],
+                    "sha256": wheel_provenance["manifest_sha256"],
+                },
+                "source": {"sha256": wheel_provenance["source_sha256"]},
+            },
+            "remote_call": {
+                "call_id": call_id,
+                "payload_sha256": payload_sha256,
+            },
+            "facts": {
+                "head_commit": head_commit,
+                "operator_command": "modal run modal_precision_probe.py::hopper_benchmark",
+                "remote_function": "hopper_benchmark_h100",
+                "modal": importlib.metadata.version("modal"),
+                "python": _PYTHON_VERSION,
+                "numpy": "2.4.6",
+                "rich": "14.3.4",
+                "zstandard": "0.25.0",
+                "torch": "2.8.0",
+                "triton": "3.4.0",
+            },
+            "analysis_runtime": runtime_manifest(),
+        },
+    )
+    write_json_atomic(destination, artifact)
     print(f"wrote {destination} ({sha256_file(destination)})")
     print(f"wrote {sidecar}")

@@ -16,7 +16,12 @@ from typing import Any
 
 import pytest
 
-from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
+from heliostune.configs import (
+    DEFAULT_CONFIGS,
+    DEFAULT_WORKLOADS,
+    HOPPER_GEMM_CONFIGS,
+    SKINNY_GEMV_CONFIGS,
+)
 
 _REPO = Path(__file__).resolve().parents[1]
 _PROBE_MODULE = _REPO / "modal_precision_probe.py"
@@ -537,6 +542,24 @@ def _configure_gate_run(
     return destination, journal, call, spawner
 
 
+def _fail_sidecar_write(
+    monkeypatch: pytest.MonkeyPatch,
+    destination: Path,
+) -> Path:
+    from heliostune import artifacts
+
+    sidecar = Path(f"{destination}.manifest.json")
+    write_json_atomic = artifacts.write_json_atomic
+
+    def fail_manifest(path: str | Path, value: object) -> None:
+        if Path(path) == sidecar:
+            raise RuntimeError("sidecar write failed")
+        write_json_atomic(path, value)
+
+    monkeypatch.setattr(artifacts, "write_json_atomic", fail_manifest)
+    return sidecar
+
+
 def test_gate_failed_get_is_journaled_and_writes_no_artifact(
     precision_probe: ModuleType,
     monkeypatch: pytest.MonkeyPatch,
@@ -589,6 +612,393 @@ def test_gate_success_writes_digest_valid_artifact_and_sidecar(
     assert sidecar["attempt_journal"]["sha256"] == hashlib.sha256(journal.read_bytes()).hexdigest()
 
 
+def test_gate_sidecar_failure_leaves_no_success_artifact(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination, journal, _call, _spawner = _configure_gate_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload=_gate_payload(precision_probe),
+    )
+    sidecar = _fail_sidecar_write(monkeypatch, destination)
+
+    with pytest.raises(RuntimeError, match="sidecar write failed"):
+        precision_probe.hopper_gate()
+
+    assert not destination.exists()
+    assert not sidecar.exists()
+    assert [json.loads(line)["status"] for line in journal.read_text().splitlines()] == [
+        "spawned",
+        "completed",
+    ]
+
+
+def _benchmark_payload() -> dict[str, object]:
+    protocol = {
+        "warmup_ms": 25,
+        "rep_ms": 100,
+        "quantiles": [0.2, 0.5, 0.8],
+        "candidate_policy": {
+            "skinny_gemv": {
+                "condition": "m <= 8",
+                "config_set": "SKINNY_GEMV_CONFIGS",
+                "config_count": 48,
+            },
+            "hopper_gemm": {
+                "condition": "m > 8",
+                "config_set": "HOPPER_GEMM_CONFIGS",
+                "config_count": 23,
+            },
+        },
+        "expected_workloads": 96,
+        "expected_skinny_workloads": 32,
+        "expected_hopper_workloads": 64,
+        "expected_skinny_rows": 32 * 48,
+        "expected_hopper_rows": 64 * 23,
+        "expected_candidate_rows": 3008,
+        "torch_measurements": 96,
+    }
+    rows: list[dict[str, object]] = []
+    timing = {"p20_ms": 0.1, "median_ms": 0.2, "p80_ms": 0.3, "wall_ms": 1.0}
+    shuffled_workloads = list(DEFAULT_WORKLOADS)
+    random.Random(0).shuffle(shuffled_workloads)
+    seed_by_workload = {workload.key: seed for seed, workload in enumerate(shuffled_workloads)}
+    for workload in DEFAULT_WORKLOADS:
+        regime = "skinny_gemv" if workload.m <= 8 else "hopper_gemm"
+        configs = SKINNY_GEMV_CONFIGS if regime == "skinny_gemv" else HOPPER_GEMM_CONFIGS
+        for config in configs:
+            rows.append(
+                {
+                    "workload_key": workload.key,
+                    "workload": workload.to_dict(),
+                    "regime": regime,
+                    "config_kind": regime,
+                    "config_key": config.key,
+                    "config": config.to_dict(),
+                    "bank": 0,
+                    "seed": seed_by_workload[workload.key],
+                    "latency": dict(timing),
+                    "torch": dict(timing),
+                    "correct": True,
+                    "max_abs_error": 0.0,
+                }
+            )
+    return {
+        "hardware": {
+            "gpu": "H100",
+            "device_name": "NVIDIA H100 80GB HBM3",
+            "compute_capability": [9, 0],
+            "multiprocessor_count": 120,
+            "total_memory_gb": 79.0,
+            "cuda_version": "12.8",
+            "torch_version": "2.8.0",
+            "triton_version": "3.4.0",
+        },
+        "protocol": protocol,
+        "configs": {
+            "hopper_gemm": [config.to_dict() for config in HOPPER_GEMM_CONFIGS],
+            "skinny_gemv": [config.to_dict() for config in SKINNY_GEMV_CONFIGS],
+        },
+        "workloads": [workload.to_dict() for workload in DEFAULT_WORKLOADS],
+        "rows": rows,
+    }
+
+
+def test_benchmark_payload_accepts_exact_3008_row_cross_product(
+    precision_probe: ModuleType,
+) -> None:
+    data, configs, workloads, rows = precision_probe._validated_benchmark_payload(
+        _benchmark_payload()
+    )
+    assert data["protocol"]["expected_candidate_rows"] == 3008
+    assert len(configs["skinny_gemv"]) == 48
+    assert len(configs["hopper_gemm"]) == 23
+    assert len(workloads) == 96
+    assert len(rows) == 32 * 48 + 64 * 23 == 3008
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        lambda payload: payload["rows"].pop(),
+        lambda payload: payload["rows"][0].__setitem__("config_key", "wrong"),
+        lambda payload: payload["rows"][0].__setitem__("workload_key", "wrong"),
+        lambda payload: payload["rows"][0].__setitem__("regime", "hopper_gemm"),
+        lambda payload: payload["rows"][0]["latency"].__setitem__("median_ms", 0.05),
+        lambda payload: payload["hardware"].__setitem__("compute_capability", [8, 0]),
+    ],
+)
+def test_benchmark_payload_rejects_wrong_cross_product_timing_or_hardware(
+    precision_probe: ModuleType,
+    mutation: Callable[[dict[str, Any]], None],
+) -> None:
+    payload = _benchmark_payload()
+    mutation(payload)
+    with pytest.raises((TypeError, ValueError)):
+        precision_probe._validated_benchmark_payload(payload)
+
+
+class _BenchmarkCall:
+    object_id = "fc-hopper-benchmark"
+
+    def __init__(self, payload: object, journal: Path, *, failure: Exception | None = None) -> None:
+        self.payload = payload
+        self.journal = journal
+        self.failure = failure
+        self.get_count = 0
+
+    def get(self) -> object:
+        self.get_count += 1
+        records = [json.loads(line) for line in self.journal.read_text().splitlines()]
+        assert [(record["call_id"], record["status"]) for record in records] == [
+            (self.object_id, "spawned")
+        ]
+        if self.failure is not None:
+            raise self.failure
+        return self.payload
+
+
+class _BenchmarkSpawner:
+    def __init__(self, call: _BenchmarkCall) -> None:
+        self.call = call
+        self.spawn_count = 0
+
+    def spawn(self) -> _BenchmarkCall:
+        self.spawn_count += 1
+        return self.call
+
+
+def _configure_benchmark_run(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    *,
+    payload: object,
+    failure: Exception | None = None,
+) -> tuple[Path, Path, Path, _BenchmarkCall, _BenchmarkSpawner]:
+    gate, _gate_journal, _gate_call, _gate_spawner = _configure_gate_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload=_gate_payload(precision_probe),
+    )
+    precision_probe.hopper_gate()
+    destination = tmp_path / "artifacts/hopper-h100-engineering.json"
+    journal = Path(f"{destination}.attempts.jsonl")
+    call = _BenchmarkCall(payload, journal, failure=failure)
+    spawner = _BenchmarkSpawner(call)
+
+    def resolve(value: str) -> Path:
+        if value == precision_probe._DEFAULT_GATE_OUTPUT:
+            return gate
+        return destination
+
+    monkeypatch.setattr(precision_probe, "_resolved_gate_output", resolve)
+    monkeypatch.setattr(precision_probe, "hopper_benchmark_h100", spawner)
+    return destination, gate, journal, call, spawner
+
+
+def test_benchmark_failed_get_writes_only_failed_journal(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination, _gate, journal, call, spawner = _configure_benchmark_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload={},
+        failure=RuntimeError("remote failed"),
+    )
+    with pytest.raises(RuntimeError, match="remote failed"):
+        precision_probe.hopper_benchmark()
+    assert spawner.spawn_count == 1
+    assert call.get_count == 1
+    assert [json.loads(line)["status"] for line in journal.read_text().splitlines()] == [
+        "spawned",
+        "failed",
+    ]
+    assert not destination.exists()
+    assert not Path(f"{destination}.manifest.json").exists()
+
+
+def test_benchmark_success_writes_digest_valid_artifact_manifest_and_journal(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination, gate, journal, call, spawner = _configure_benchmark_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload=_benchmark_payload(),
+    )
+    precision_probe.hopper_benchmark()
+    assert spawner.spawn_count == 1
+    assert call.get_count == 1
+    artifact = json.loads(destination.read_text())
+    sidecar_path = Path(f"{destination}.manifest.json")
+    sidecar = json.loads(sidecar_path.read_text())
+    assert set(artifact) == {
+        "schema_version",
+        "study_id",
+        "analysis_status",
+        "gpu",
+        "gpu_selector",
+        "hardware",
+        "bank",
+        "protocol",
+        "correctness_gate",
+        "config_manifest_sha256",
+        "configs",
+        "workloads",
+        "rows",
+        "verified",
+    }
+    assert set(artifact["correctness_gate"]) == {
+        "artifact",
+        "artifact_sha256",
+        "manifest",
+        "manifest_sha256",
+    }
+    assert artifact["config_manifest_sha256"] == precision_probe._gate_config_manifest_sha256(
+        precision_probe._gate_config_manifest()
+    )
+    assert artifact["verified"] is True
+    assert artifact["analysis_status"] == "post_hoc_exploratory"
+    assert len(artifact["rows"]) == 3008
+    assert (
+        artifact["correctness_gate"]["artifact_sha256"]
+        == hashlib.sha256(gate.read_bytes()).hexdigest()
+    )
+    assert sidecar["data"]["sha256"] == hashlib.sha256(destination.read_bytes()).hexdigest()
+    assert sidecar["attempt_journal"]["sha256"] == hashlib.sha256(journal.read_bytes()).hexdigest()
+    assert [json.loads(line)["status"] for line in journal.read_text().splitlines()] == [
+        "spawned",
+        "completed",
+    ]
+
+
+def test_benchmark_sidecar_failure_leaves_no_success_artifact(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    destination, _gate, journal, _call, _spawner = _configure_benchmark_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload=_benchmark_payload(),
+    )
+    sidecar = _fail_sidecar_write(monkeypatch, destination)
+
+    with pytest.raises(RuntimeError, match="sidecar write failed"):
+        precision_probe.hopper_benchmark()
+
+    assert not destination.exists()
+    assert not sidecar.exists()
+    assert [json.loads(line)["status"] for line in journal.read_text().splitlines()] == [
+        "spawned",
+        "completed",
+    ]
+
+
+@pytest.mark.parametrize(
+    "mode",
+    [
+        "partial",
+        "failed",
+        "extra",
+        "wrong-call",
+        "wrong-binding",
+        "wrong-payload",
+        "wrong-path",
+    ],
+)
+def test_benchmark_rejects_semantically_invalid_correctness_journal_before_spawn(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    mode: str,
+) -> None:
+    _destination, gate, _benchmark_journal, _call, spawner = _configure_benchmark_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload={},
+    )
+    journal = Path(f"{gate}.attempts.jsonl")
+    records: list[dict[str, Any]] = [json.loads(line) for line in journal.read_text().splitlines()]
+    mutated_journal = journal
+    if mode == "partial":
+        records.pop()
+    elif mode == "failed":
+        records[1]["status"] = "failed"
+        records[1]["chunk_sha256"] = None
+        records[1]["error"] = "remote failed"
+    elif mode == "extra":
+        extra = copy.deepcopy(records[0])
+        extra["bank"] = 1
+        extra["call_id"] = "fc-extra-gate"
+        records.append(extra)
+    elif mode == "wrong-call":
+        for record in records:
+            record["call_id"] = "fc-wrong-gate"
+    elif mode == "wrong-binding":
+        for record in records:
+            record["wheel_sha256"] = "0" * 64
+    elif mode == "wrong-payload":
+        records[1]["chunk_sha256"] = "0" * 64
+    else:
+        mutated_journal = journal.with_name("noncanonical-attempts.jsonl")
+
+    journal_payload = "".join(
+        json.dumps(record, separators=(",", ":")) + "\n" for record in records
+    ).encode()
+    mutated_journal.write_bytes(journal_payload)
+    sidecar_path = Path(f"{gate}.manifest.json")
+    sidecar = json.loads(sidecar_path.read_text())
+    sidecar["attempt_journal"] = {
+        "path": str(mutated_journal),
+        "sha256": hashlib.sha256(journal_payload).hexdigest(),
+    }
+    sidecar_path.write_text(json.dumps(sidecar), encoding="utf-8")
+
+    with pytest.raises((TypeError, ValueError)):
+        precision_probe.hopper_benchmark()
+    assert spawner.spawn_count == 0
+
+
+@pytest.mark.parametrize("mode", ["missing", "tampered", "stale"])
+def test_benchmark_rejects_invalid_correctness_gate_before_spawn(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    mode: str,
+) -> None:
+    _destination, gate, _journal, _call, spawner = _configure_benchmark_run(
+        precision_probe,
+        monkeypatch,
+        tmp_path,
+        payload=_benchmark_payload(),
+    )
+    if mode == "missing":
+        gate.unlink()
+    elif mode == "tampered":
+        gate.write_text(f"{gate.read_text()} ", encoding="utf-8")
+    else:
+        manifest_path = Path(f"{gate}.manifest.json")
+        manifest = json.loads(manifest_path.read_text())
+        manifest["binding"]["head_sha256"] = "0" * 64
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises((TypeError, ValueError)):
+        precision_probe.hopper_benchmark()
+    assert spawner.spawn_count == 0
+
+
 class _FailedCall:
     object_id = "call-0"
 
@@ -638,6 +1048,87 @@ def test_failure_prevents_later_bank_spawns(
     statuses = [json.loads(line)["status"] for line in journal.read_text().splitlines()]
     assert statuses == ["spawned", "failed"]
     assert not (tmp_path / "probe.json").exists()
+
+
+class _SuccessfulProbeCall:
+    def __init__(
+        self,
+        *,
+        object_id: str,
+        payload: object,
+        journal: Path,
+    ) -> None:
+        self.object_id = object_id
+        self.payload = payload
+        self.journal = journal
+
+    def get(self) -> object:
+        latest = json.loads(self.journal.read_text().splitlines()[-1])
+        assert (latest["call_id"], latest["status"]) == (self.object_id, "spawned")
+        return self.payload
+
+
+class _SuccessfulProbeSpawner:
+    def __init__(self, precision_probe: ModuleType, journal: Path) -> None:
+        self.precision_probe = precision_probe
+        self.journal = journal
+
+    def spawn(self, **kwargs: object) -> _SuccessfulProbeCall:
+        bank = int(kwargs["bank"])
+        payload, _workload_key, _config_key = _payload(self.precision_probe, bank)
+        return _SuccessfulProbeCall(
+            object_id=f"call-{bank}",
+            payload=payload,
+            journal=self.journal,
+        )
+
+
+def test_precision_probe_sidecar_failure_leaves_no_success_artifact(
+    precision_probe: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    workload = DEFAULT_WORKLOADS[0]
+    config = DEFAULT_CONFIGS[0]
+    archive = tmp_path / "archive.zst"
+    archive.write_bytes(b"archive")
+    wheel = tmp_path / _WHEEL_NAME
+    wheel.write_bytes(b"wheel")
+    destination = tmp_path / "probe.json"
+    journal = Path(f"{destination}.attempts.jsonl")
+    baseline = {
+        "workloads": {workload.key: {"best_triton_config_key": config.key}},
+        "selection_bank": 1,
+        "evaluation_bank": 2,
+    }
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(precision_probe, "archive_baseline", lambda *_args: baseline)
+    monkeypatch.setattr(precision_probe, "_resolve_wheel", lambda _value: wheel)
+    monkeypatch.setattr(precision_probe, "_git_identity", lambda: ("a" * 40, "b" * 64))
+    monkeypatch.setattr(
+        precision_probe,
+        "probe_h100",
+        _SuccessfulProbeSpawner(precision_probe, journal),
+    )
+    sidecar = _fail_sidecar_write(monkeypatch, destination)
+
+    with pytest.raises(RuntimeError, match="sidecar write failed"):
+        precision_probe.main(
+            archive=str(archive),
+            output="probe.json",
+            workloads=workload.key,
+        )
+
+    assert not destination.exists()
+    assert not sidecar.exists()
+    assert [json.loads(line)["status"] for line in journal.read_text().splitlines()] == [
+        "spawned",
+        "completed",
+        "spawned",
+        "completed",
+        "spawned",
+        "completed",
+    ]
 
 
 def _summary(
