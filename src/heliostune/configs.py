@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 
 from heliostune.errors import SchemaError
-from heliostune.validation import exact_fields, exact_int, nonblank_string
+from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
 
 
 @dataclass(frozen=True, slots=True)
@@ -248,4 +248,256 @@ DEFAULT_WORKLOADS: tuple[Workload, ...] = tuple(
     for model in MODEL_SPECS
     for projection, n, k in _projection_shapes(model)
     for regime, tokens in _TOKEN_REGIMES
+)
+
+
+#: A tensor descriptor needs 16-byte aligned leading strides, so every FP16 block
+#: dimension that sits innermost in a descriptor must be a multiple of eight
+#: elements, as must the row length of the tensor the descriptor is built over.
+TENSOR_DESCRIPTOR_ALIGNMENT = 8
+
+#: ``tl.dot`` requires every matrix-instruction dimension to be at least sixteen.
+TENSOR_CORE_MIN_DOT_DIMENSION = 16
+
+#: Largest broadcast product the skinny kernel may materialise, counted in
+#: float32 elements. ``a[:, :, None] * b[None, :, :]`` is one live
+#: ``BLOCK_M x BLOCK_K x BLOCK_N`` register tensor, so 8192 elements is 64 floats
+#: per thread across four warps and leaves room for the operands themselves.
+SKINNY_GEMV_PRODUCT_LIMIT = 8192
+
+
+@dataclass(frozen=True, slots=True)
+class HopperGemmConfig:
+    """A launch configuration for the persistent tensor-descriptor matmul.
+
+    A subtiled epilogue needs a flattened persistent loop and warp specialisation
+    forbids one on Hopper, so :data:`HOPPER_GEMM_CONFIGS` never sets both flags.
+    The pair is not rejected here: a later architecture can flatten a
+    warp-specialised loop, so the launcher decides against the live device.
+    """
+
+    block_m: int
+    block_n: int
+    block_k: int
+    num_warps: int
+    num_stages: int
+    group_m: int = 8
+    epilogue_subtile: bool = False
+    warp_specialize: bool = False
+
+    def __post_init__(self) -> None:
+        for name in ("block_m", "block_n", "block_k", "num_warps", "num_stages", "group_m"):
+            exact_int(getattr(self, name), context=f"hopper gemm config {name}", minimum=1)
+        for name in ("epilogue_subtile", "warp_specialize"):
+            exact_bool(getattr(self, name), context=f"hopper gemm config {name}")
+        for name in ("block_m", "block_n", "block_k"):
+            size = getattr(self, name)
+            if size & (size - 1):
+                raise SchemaError(f"{name} must be a power of two")
+        if self.num_warps not in {1, 2, 4, 8}:
+            raise SchemaError("num_warps must be one of 1, 2, 4, or 8")
+        for name in ("block_m", "block_n", "block_k"):
+            if getattr(self, name) < TENSOR_CORE_MIN_DOT_DIMENSION:
+                raise SchemaError(f"{name} must be at least {TENSOR_CORE_MIN_DOT_DIMENSION}")
+        for name in ("block_n", "block_k"):
+            if getattr(self, name) % TENSOR_DESCRIPTOR_ALIGNMENT:
+                raise SchemaError(
+                    f"{name} must be a multiple of {TENSOR_DESCRIPTOR_ALIGNMENT} elements"
+                )
+        if self.epilogue_subtile and (self.block_n // 2) % TENSOR_DESCRIPTOR_ALIGNMENT:
+            raise SchemaError(
+                "a subtiled epilogue stores block_n // 2 columns, which must be a "
+                f"multiple of {TENSOR_DESCRIPTOR_ALIGNMENT} elements"
+            )
+
+    @property
+    def key(self) -> str:
+        return (
+            f"hopper-m{self.block_m}n{self.block_n}k{self.block_k}"
+            f"-w{self.num_warps}s{self.num_stages}g{self.group_m}"
+            f"-sub{int(self.epilogue_subtile)}-ws{int(self.warp_specialize)}"
+        )
+
+    def to_dict(self) -> dict[str, int | bool]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, value: object) -> HopperGemmConfig:
+        fields = (
+            "block_m",
+            "block_n",
+            "block_k",
+            "num_warps",
+            "num_stages",
+            "group_m",
+            "epilogue_subtile",
+            "warp_specialize",
+        )
+        data = exact_fields(value, required=fields, context="hopper gemm config")
+        return cls(
+            block_m=exact_int(data["block_m"], context="hopper gemm config block_m", minimum=1),
+            block_n=exact_int(data["block_n"], context="hopper gemm config block_n", minimum=1),
+            block_k=exact_int(data["block_k"], context="hopper gemm config block_k", minimum=1),
+            num_warps=exact_int(
+                data["num_warps"], context="hopper gemm config num_warps", minimum=1
+            ),
+            num_stages=exact_int(
+                data["num_stages"], context="hopper gemm config num_stages", minimum=1
+            ),
+            group_m=exact_int(data["group_m"], context="hopper gemm config group_m", minimum=1),
+            epilogue_subtile=exact_bool(
+                data["epilogue_subtile"],
+                context="hopper gemm config epilogue_subtile",
+            ),
+            warp_specialize=exact_bool(
+                data["warp_specialize"],
+                context="hopper gemm config warp_specialize",
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SkinnyGemvConfig:
+    """A launch configuration for the split-``K`` skinny-``M`` GEMV candidate."""
+
+    block_m: int
+    block_n: int
+    block_k: int
+    num_warps: int
+    num_stages: int
+    split_k: int = 1
+
+    def __post_init__(self) -> None:
+        for name in ("block_m", "block_n", "block_k", "num_warps", "num_stages", "split_k"):
+            exact_int(getattr(self, name), context=f"skinny gemv config {name}", minimum=1)
+        for name in ("block_m", "block_n", "block_k"):
+            size = getattr(self, name)
+            if size & (size - 1):
+                raise SchemaError(f"{name} must be a power of two")
+        if self.num_warps not in {1, 2, 4, 8}:
+            raise SchemaError("num_warps must be one of 1, 2, 4, or 8")
+        product = self.block_m * self.block_n * self.block_k
+        if product > SKINNY_GEMV_PRODUCT_LIMIT:
+            raise SchemaError(
+                "block_m * block_n * block_k must not exceed "
+                f"{SKINNY_GEMV_PRODUCT_LIMIT}, got {product}"
+            )
+
+    @property
+    def key(self) -> str:
+        return (
+            f"gemv-m{self.block_m}n{self.block_n}k{self.block_k}"
+            f"-w{self.num_warps}s{self.num_stages}-split{self.split_k}"
+        )
+
+    def to_dict(self) -> dict[str, int]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, value: object) -> SkinnyGemvConfig:
+        fields = tuple(cls.__dataclass_fields__)
+        data = exact_fields(value, required=fields, context="skinny gemv config")
+        return cls(
+            **{
+                field: exact_int(
+                    data[field],
+                    context=f"skinny gemv config {field}",
+                    minimum=1,
+                )
+                for field in fields
+            }
+        )
+
+
+#: ``(block_m, block_n, block_k, num_warps, num_stages)`` tiles for the persistent
+#: kernel, modelled on the Hopper rows of the Triton tutorial autotune grid at
+#: :data:`TRITON_TUTORIAL_CONFIG_PATH`. Every tile keeps its staged FP16 operands
+#: inside Hopper's 228 KiB of shared memory per multiprocessor.
+_HOPPER_TILES: tuple[tuple[int, int, int, int, int], ...] = (
+    (64, 64, 64, 4, 4),
+    (64, 128, 64, 4, 4),
+    (128, 64, 64, 4, 4),
+    (128, 64, 128, 4, 3),
+    (128, 128, 64, 8, 3),
+    (128, 128, 128, 8, 3),
+    (128, 256, 64, 8, 3),
+    (256, 64, 64, 8, 3),
+    (256, 128, 64, 8, 3),
+)
+
+#: A subtiled epilogue drains the accumulator in two descriptor stores instead of
+#: one, which only pays for a tile wide enough to make a single store the burst.
+HOPPER_SUBTILE_MIN_BLOCK_N = 128
+
+
+def _hopper_flag_variants(block_n: int) -> tuple[tuple[bool, bool], ...]:
+    """Return the ``(epilogue_subtile, warp_specialize)`` variants for one tile."""
+    plain_and_specialised = ((False, False), (False, True))
+    if block_n < HOPPER_SUBTILE_MIN_BLOCK_N:
+        return plain_and_specialised
+    return (*plain_and_specialised, (True, False))
+
+
+HOPPER_GEMM_CONFIGS: tuple[HopperGemmConfig, ...] = tuple(
+    sorted(
+        (
+            HopperGemmConfig(
+                block_m=block_m,
+                block_n=block_n,
+                block_k=block_k,
+                num_warps=num_warps,
+                num_stages=num_stages,
+                epilogue_subtile=epilogue_subtile,
+                warp_specialize=warp_specialize,
+            )
+            for block_m, block_n, block_k, num_warps, num_stages in _HOPPER_TILES
+            for epilogue_subtile, warp_specialize in _hopper_flag_variants(block_n)
+        ),
+        key=lambda config: config.key,
+    )
+)
+
+
+#: Eight warps once the broadcast product reaches half its limit, so no thread
+#: ever holds more than thirty-two float32 elements of it.
+SKINNY_GEMV_WIDE_PRODUCT = SKINNY_GEMV_PRODUCT_LIMIT // 2
+
+#: The reduction is a plain load-and-accumulate chain, which the three-stage
+#: pipeline of the frozen kernel already covers.
+SKINNY_GEMV_STAGES = 3
+
+#: A decode projection is bandwidth bound, so the split factor -- the number of
+#: programs streaming disjoint ``K`` spans of ``B`` -- is the knob that matters.
+SKINNY_GEMV_SPLITS = (1, 4, 16)
+
+
+def _skinny_warps(block_m: int, block_n: int, block_k: int) -> int:
+    return 8 if block_m * block_n * block_k >= SKINNY_GEMV_WIDE_PRODUCT else 4
+
+
+#: Every power-of-two tile whose broadcast product fits the register budget.
+_SKINNY_TILES: tuple[tuple[int, int, int], ...] = tuple(
+    (block_m, block_n, block_k)
+    for block_m in (1, 2, 4, 8)
+    for block_n in (32, 64, 128, 256)
+    for block_k in (32, 64)
+    if block_m * block_n * block_k <= SKINNY_GEMV_PRODUCT_LIMIT
+)
+
+SKINNY_GEMV_CONFIGS: tuple[SkinnyGemvConfig, ...] = tuple(
+    sorted(
+        (
+            SkinnyGemvConfig(
+                block_m=block_m,
+                block_n=block_n,
+                block_k=block_k,
+                num_warps=_skinny_warps(block_m, block_n, block_k),
+                num_stages=SKINNY_GEMV_STAGES,
+                split_k=split_k,
+            )
+            for block_m, block_n, block_k in _SKINNY_TILES
+            for split_k in SKINNY_GEMV_SPLITS
+        ),
+        key=lambda config: config.key,
+    )
 )
