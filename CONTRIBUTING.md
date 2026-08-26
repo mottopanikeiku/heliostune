@@ -27,4 +27,6 @@ A tag matching `v*` runs the shared `checks.yml` workflow first; the release job
 
 ## Evidence changes
 
+The normative contract for new evidence is [HeliosTune methodology v1](METHODOLOGY.md). A new study must use the exact `heliostune.protocol/1` and `heliostune.bundle/1` schemas or be explicitly cataloged as legacy; wrapping older bytes never upgrades their eligibility.
+
 Files already present under `site/`, the historical benchmark manifest, frozen Parhelion v2 protocol/manifests, and existing compressed data/result artifacts are immutable. New analysis uses a new path, records input/source/output SHA-256 digests, distinguishes confirmatory from post-hoc work, and reports negative, null, or failed outcomes without substitution. Pull requests that alter evidence must state the study ID, analysis status, sampling unit, conditioning set, and chain of custody.

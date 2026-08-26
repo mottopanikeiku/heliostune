@@ -30,6 +30,7 @@ from heliostune.multisource_engine import (
     parameter_independent_evaluations,
     prepare_multisource,
     serialize_workload_endpoints,
+    validate_release_provenance,
 )
 from heliostune.replay import compare_methods
 from heliostune.schema import HardwareProfile, Measurement
@@ -71,13 +72,13 @@ _EXPECTED_METHODS = {
 }
 _CURVE_METHODS = _EXPECTED_METHODS - {"exhaustive", "heldout_reference"}
 _RELEASE_PROVENANCE: dict[str, object] = {
-    "algorithm_commit": "algorithm",
-    "freeze_commit": "freeze",
-    "freeze_sha256": "freeze-sha256",
-    "sole_h100_run": "run",
-    "raw_h100_sha256": "raw-sha256",
-    "final_archive_sha256": "archive-sha256",
-    "post_run_manifest_path": "manifest.json",
+    "algorithm_commit": "a" * 40,
+    "freeze_commit": "b" * 40,
+    "freeze_sha256": "c" * 64,
+    "sole_h100_run": "https://modal.com/apps/example/main/ap-release",
+    "raw_h100_sha256": "d" * 64,
+    "final_archive_sha256": "e" * 64,
+    "post_run_manifest_path": "benchmarks/post-run-manifest.json",
 }
 
 
@@ -651,6 +652,9 @@ def test_release_provenance_accepts_mapping_and_serializes_plain_dict() -> None:
 
     assert type(result["release_provenance"]) is dict
     assert result["release_provenance"] == _RELEASE_PROVENANCE
+    validated = validate_release_provenance(provenance)
+    assert dict(validated) == _RELEASE_PROVENANCE
+    assert tuple(validated) == tuple(_RELEASE_PROVENANCE)
 
 
 @pytest.mark.parametrize(
@@ -667,6 +671,46 @@ def test_release_provenance_accepts_mapping_and_serializes_plain_dict() -> None:
         (
             _RELEASE_PROVENANCE | {"algorithm_commit": ""},
             r"release_provenance\['algorithm_commit'\] must be nonblank",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"algorithm_commit": "A" * 40},
+            "algorithm_commit.*lowercase hexadecimal commit",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"freeze_commit": "b" * 39},
+            "freeze_commit.*40-character",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"freeze_sha256": "c" * 63},
+            "freeze_sha256.*64-character",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"raw_h100_sha256": "D" * 64},
+            "raw_h100_sha256.*lowercase hexadecimal",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"final_archive_sha256": "g" * 64},
+            "final_archive_sha256.*lowercase hexadecimal",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"sole_h100_run": "http://modal.com/apps/example"},
+            "sole_h100_run.*HTTPS Modal URL",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"sole_h100_run": "https://modal.com.evil/apps/example"},
+            "sole_h100_run.*HTTPS Modal URL",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "/benchmarks/manifest.json"},
+            "post_run_manifest_path.*normalized non-escaping",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "benchmarks/../outside.json"},
+            "post_run_manifest_path.*normalized non-escaping",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "benchmarks//manifest.json"},
+            "post_run_manifest_path.*normalized non-escaping",
         ),
     ],
 )

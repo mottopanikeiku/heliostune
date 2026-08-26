@@ -1,0 +1,36 @@
+{
+  "analysis": {
+    "analyzer_sha256": "ae74ac1210bbc65f3c4b190b915746c597fa19036f5d0ef61e8a2be1dc2f36eb",
+    "claims": []
+  },
+  "created_at": "2026-08-26T00:00:00Z",
+  "evidence_class": "exploratory",
+  "execution": {
+    "environment_predicate_sha256": "b934f58cf060a52ff4ff1e42aa71c40aac7bdc730764d716ef4b8cd2e8e617cc",
+    "executor_api": "heliostune.executor/template-reference",
+    "expected_cell_count": 0,
+    "expected_cells_sha256": "ecfcda0c3f0bd4aa96cca5dd91197d4e2dc8038e67c28a25feee0adfacbd3417",
+    "failure_policy_sha256": "87aa041f71dd2a029c633fac7618f444dd10c5da37395c0b18203fda3feaf7c3",
+    "max_physical_attempts": 1,
+    "paid_plan_sha256": null,
+    "retry_policy": "none",
+    "wall_limit_s": 300
+  },
+  "parent_protocol_sha256": null,
+  "plugin": {
+    "artifact_sha256": "2e641fc22d670f4d12bdfeb6a387d2dafde665ee86dd66e28f73ca4531239785",
+    "id": "methodology-template-reference",
+    "version": "1"
+  },
+  "revision": 1,
+  "schema": "heliostune.protocol/1",
+  "semantic": {
+    "candidates_sha256": "e07c860f8570d4e8993f191df6b2e862b6202cc544e2e92bc313edd50c1db3d1",
+    "comparators_sha256": "c142e6fa7d5ebe05327ee8eaaa51ff7c51e8051b3b8d2ded28175593fa7fba52",
+    "numerics_sha256": "f501fc5e8af530f7048a3be95ee0706e06b67dcdb0fdda0bd8cd340125ffc2ff",
+    "splits_sha256": "3eff0e039d619b5d396d7830aaa2cf3a47842f46b4f494fcb2d76295fd34bc58",
+    "timing_sha256": "68ebe52602b7a670d1f938cbef0b24cf69a7de1385a401ef031bdb7592ba50d8",
+    "workloads_sha256": "76ad0b55ed8f843a8dab2330e4a686ff6c46112c3650a5f4bdbb4dd03bb7d73d"
+  },
+  "study_id": "methodology-protocol-v1-template-reference-not-a-study-freeze"
+}

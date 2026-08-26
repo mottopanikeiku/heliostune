@@ -3,17 +3,20 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from functools import partial
+from pathlib import PurePosixPath
 from types import MappingProxyType
-from typing import Any
+from typing import Any, cast
+from urllib.parse import urlsplit
 
 import numpy as np
 from numpy.typing import NDArray
 
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, KernelConfig, Workload
+from heliostune.errors import SchemaError
 from heliostune.features import V2_FEATURE_NAMES, v2_joint_features
 from heliostune.replay import (
     PAIRED_SEED_STRIDE,
@@ -1479,16 +1482,141 @@ def _build_paired_primary_effect(
     }
 
 
-def _validated_release_provenance(value: Mapping[str, object]) -> dict[str, str]:
+@dataclass(frozen=True, slots=True)
+class ReleaseProvenance(Mapping[str, str]):
+    """Syntax-validated caller-supplied release provenance.
+
+    The serialized mapping carries exactly the seven published provenance
+    fields.  Validating those fields does not independently authenticate the
+    archive or manifest that a caller may associate with them.
+    """
+
+    algorithm_commit: str
+    freeze_commit: str
+    freeze_sha256: str
+    sole_h100_run: str
+    raw_h100_sha256: str
+    final_archive_sha256: str
+    post_run_manifest_path: str
+
+    def __getitem__(self, key: str) -> str:
+        if key not in RELEASE_PROVENANCE_FIELDS:
+            raise KeyError(key)
+        return cast(str, getattr(self, key))
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(RELEASE_PROVENANCE_FIELDS)
+
+    def __len__(self) -> int:
+        return len(RELEASE_PROVENANCE_FIELDS)
+
+    def to_dict(self) -> dict[str, str]:
+        return {key: self[key] for key in RELEASE_PROVENANCE_FIELDS}
+
+
+def _lowercase_hex(value: object, *, length: int, context: str, kind: str) -> str:
+    result = nonblank_string(value, context=context)
+    if len(result) != length or any(character not in "0123456789abcdef" for character in result):
+        raise SchemaError(f"{context} must be a {length}-character lowercase hexadecimal {kind}")
+    return result
+
+
+def _modal_https_url(value: object, *, context: str) -> str:
+    result = nonblank_string(value, context=context)
+    try:
+        parsed = urlsplit(result)
+        hostname = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise SchemaError(f"{context} must be an HTTPS Modal URL") from exc
+    if (
+        parsed.scheme != "https"
+        or hostname is None
+        or not (hostname == "modal.com" or hostname.endswith(".modal.com"))
+        or parsed.username is not None
+        or parsed.password is not None
+        or port not in {None, 443}
+        or not parsed.path.startswith("/")
+        or parsed.path == "/"
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise SchemaError(f"{context} must be an HTTPS Modal URL")
+    return result
+
+
+def _repository_manifest_path(value: object, *, context: str) -> str:
+    result = nonblank_string(value, context=context)
+    path = PurePosixPath(result)
+    if (
+        "\\" in result
+        or path.is_absolute()
+        or path.as_posix() != result
+        or len(path.parts) < 2
+        or path.parts[0] != "benchmarks"
+        or any(part in {"", ".", ".."} for part in path.parts)
+    ):
+        raise SchemaError(
+            f"{context} must be a normalized non-escaping path under repository benchmarks"
+        )
+    return result
+
+
+def validate_release_provenance(
+    value: Mapping[str, object],
+) -> ReleaseProvenance:
+    """Validate the exact caller-supplied release provenance syntax."""
     fields = exact_fields(
         dict(value),
         required=RELEASE_PROVENANCE_FIELDS,
         context="release_provenance",
     )
-    return {
-        key: nonblank_string(fields[key], context=f"release_provenance[{key!r}]")
-        for key in RELEASE_PROVENANCE_FIELDS
-    }
+    return ReleaseProvenance(
+        algorithm_commit=_lowercase_hex(
+            fields["algorithm_commit"],
+            length=40,
+            context="release_provenance['algorithm_commit']",
+            kind="commit",
+        ),
+        freeze_commit=_lowercase_hex(
+            fields["freeze_commit"],
+            length=40,
+            context="release_provenance['freeze_commit']",
+            kind="commit",
+        ),
+        freeze_sha256=_lowercase_hex(
+            fields["freeze_sha256"],
+            length=64,
+            context="release_provenance['freeze_sha256']",
+            kind="SHA-256 digest",
+        ),
+        sole_h100_run=_modal_https_url(
+            fields["sole_h100_run"],
+            context="release_provenance['sole_h100_run']",
+        ),
+        raw_h100_sha256=_lowercase_hex(
+            fields["raw_h100_sha256"],
+            length=64,
+            context="release_provenance['raw_h100_sha256']",
+            kind="SHA-256 digest",
+        ),
+        final_archive_sha256=_lowercase_hex(
+            fields["final_archive_sha256"],
+            length=64,
+            context="release_provenance['final_archive_sha256']",
+            kind="SHA-256 digest",
+        ),
+        post_run_manifest_path=_repository_manifest_path(
+            fields["post_run_manifest_path"],
+            context="release_provenance['post_run_manifest_path']",
+        ),
+    )
+
+
+def _validated_release_provenance(value: Mapping[str, object]) -> dict[str, str]:
+    if isinstance(value, ReleaseProvenance):
+        return value.to_dict()
+    return validate_release_provenance(value).to_dict()
 
 
 def assemble_multisource_summary(
@@ -1856,6 +1984,8 @@ def run_multisource(
     release_provenance: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
     """Prepare once, evaluate method-local parameters, and assemble one summary."""
+    if release_provenance is not None and not isinstance(release_provenance, ReleaseProvenance):
+        release_provenance = validate_release_provenance(release_provenance)
     parhelion_parameters_supplied = (
         k is not None and temperature is not None and transfer_strength is not None
     )
@@ -1939,6 +2069,7 @@ __all__ = [
     "MethodEvaluation",
     "PreparedFold",
     "PreparedReplay",
+    "ReleaseProvenance",
     "assemble_multisource_summary",
     "evaluate_anchored_cold",
     "evaluate_cold_thompson",
@@ -1950,6 +2081,7 @@ __all__ = [
     "evaluation_auc",
     "parameter_independent_evaluations",
     "prepare_multisource",
-    "serialize_workload_endpoints",
     "run_multisource",
+    "serialize_workload_endpoints",
+    "validate_release_provenance",
 ]
