@@ -95,9 +95,6 @@ def _load_evidence(
         raise ValueError("development protocol bytes changed after the paid pilot")
     if hashlib.sha256(_FAILED_HEAD.encode()).hexdigest() != _FAILED_HEAD_SHA256:
         raise AssertionError("failed campaign HEAD binding constant is invalid")
-    for relative in _ABSENT_ARTIFACTS:
-        if (_REPO / relative).exists():
-            raise ValueError(f"pre-H200 failure outcome forbids artifact {relative}")
     return protocol, (spawned, failed)
 
 

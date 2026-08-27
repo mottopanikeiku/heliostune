@@ -25,11 +25,107 @@ _EXPECTED_STUDY_IDS = {
     "parhelion-v3-h200-transfer",
     "h100-fp16-reduction-probe",
     "hopper-h100-engineering-benchmark",
+    "parhelion-v3-operator-authorized-engineering",
 }
+
+_EXPECTED_ARTIFACT_PATHS = {
+    "heliostune-v1-l4-a10-transfer": {
+        "benchmarks/data/measurements.jsonl.zst",
+        "benchmarks/manifest.json",
+        "benchmarks/results/a10-to-l4.json",
+        "benchmarks/results/l4-to-a10.json",
+    },
+    "parhelion-v2-staged-transfer": {
+        "benchmarks/data/h100-measurements.jsonl.zst",
+        "benchmarks/data/measurements.jsonl.zst",
+        "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+        "benchmarks/data/t4-measurements.jsonl.zst",
+        "benchmarks/parhelion-v2-development-protocol.json",
+        "benchmarks/parhelion-v2-h100-freeze.json",
+        "benchmarks/parhelion-v2-post-run-manifest.json",
+        "benchmarks/results/parhelion-h100-final.json",
+        "benchmarks/results/parhelion-t4-selection.json",
+        "benchmarks/results/parhelion-t4-validation.json",
+    },
+    "parhelion-v2-post-hoc-causal-addendum": {
+        "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+        "benchmarks/parhelion-v2-addendum-manifest.json",
+        "benchmarks/results/parhelion-v2-addendum.json",
+        "site/parhelion-v2-addendum.html",
+    },
+    "parhelion-v3-h200-transfer": {
+        "benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl",
+        "benchmarks/parhelion-v3-development-protocol.json",
+        "benchmarks/parhelion-v3-validation-failure.json",
+    },
+    "h100-fp16-reduction-probe": {
+        "benchmarks/data/h100-precision-probe.attempts.jsonl",
+        "benchmarks/data/h100-precision-probe.json.zst",
+        "benchmarks/h100-precision-probe-manifest.json",
+        "benchmarks/results/h100-precision-probe-summary.json",
+        "site/h100-precision-probe.html",
+    },
+    "hopper-h100-engineering-benchmark": {
+        "benchmarks/data/hopper-h100-engineering.attempts.jsonl",
+        "benchmarks/data/hopper-h100-engineering.json.zst",
+        "benchmarks/hopper-h100-engineering-manifest-v2.json",
+        "benchmarks/hopper-h100-engineering-manifest.json",
+        "benchmarks/results/hopper-h100-engineering-summary-v2.json",
+        "benchmarks/results/hopper-h100-engineering-summary.json",
+        "site/hopper-h100-engineering.html",
+    },
+    "parhelion-v3-operator-authorized-engineering": {
+        "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst",
+        "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.attempts.jsonl",
+        "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.manifest.json",
+        "benchmarks/data/parhelion-v3-final.jsonl.zst",
+        "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json",
+        "benchmarks/data/parhelion-v3-h200.jsonl.zst",
+        "benchmarks/data/parhelion-v3-h200.jsonl.zst.attempts.jsonl",
+        "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.json",
+        "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst",
+        "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.attempts.jsonl",
+        "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.source-manifest.json",
+        "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst",
+        "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.attempts.jsonl",
+        "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.source-manifest.json",
+        "benchmarks/data/parhelion-v3-validation.jsonl.zst",
+        "benchmarks/data/parhelion-v3-validation.jsonl.zst.attempts.jsonl",
+        "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+        "benchmarks/parhelion-v3-config-manifest.json",
+        "benchmarks/parhelion-v3-h200-freeze.json",
+        "benchmarks/parhelion-v3-h200-freeze.sha256",
+        "benchmarks/results/parhelion-v3-a100-selection.json",
+        "benchmarks/results/parhelion-v3-h200-engineering.json",
+        "site/parhelion-v3-engineering.html",
+    },
+}
+_ARTIFACT_SECTIONS = (
+    "data",
+    "results",
+    "protocol_chain",
+    "reports",
+    "files",
+    "manifests",
+    "raw_artifacts",
+    "attempt_journals",
+)
 
 
 def _study(catalog: dict[str, Any], study_id: str) -> dict[str, Any]:
     return next(study for study in catalog["studies"] if study["study_id"] == study_id)
+
+
+def _artifact_paths(study: dict[str, Any]) -> set[str]:
+    paths = {
+        entry["path"]
+        for section in _ARTIFACT_SECTIONS
+        for entry in cast(list[dict[str, Any]], study.get(section, ()))
+    }
+    protocol = cast(dict[str, Any] | None, study.get("protocol"))
+    if protocol is not None:
+        paths.add(protocol["path"])
+    return paths
 
 
 def _assert_mutation_fails(
@@ -64,6 +160,10 @@ def test_catalog_is_deterministic_and_serializes_exact_inventories() -> None:
     ]
 
     assert {study["study_id"] for study in committed["studies"]} == _EXPECTED_STUDY_IDS
+    assert {
+        study["study_id"]: _artifact_paths(study)
+        for study in cast(list[dict[str, Any]], committed["studies"])
+    } == _EXPECTED_ARTIFACT_PATHS
 
 
 def test_model_configs_use_audited_revisions_without_retroactive_claims() -> None:
@@ -81,10 +181,10 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
     facts = verify_research_catalog(_CATALOG)
 
     assert facts == {
-        "measurement_rows": 82_944,
-        "json_artifacts": 19,
-        "html_reports": 3,
-        "file_artifacts": 3,
+        "measurement_rows": 278_406,
+        "json_artifacts": 29,
+        "html_reports": 4,
+        "file_artifacts": 10,
         "compressed_raw_artifacts": 2,
         "aliases": 7,
     }
@@ -130,11 +230,8 @@ def test_catalog_command_reports_compressed_raw_artifacts_separately(
     assert "2 compressed raw artifacts" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize(
-    "study_id",
-    ["heliostune-v1-l4-a10-transfer", "h100-fp16-reduction-probe"],
-)
-def test_catalog_rejects_omitted_legacy_or_new_study(
+@pytest.mark.parametrize("study_id", sorted(_EXPECTED_STUDY_IDS))
+def test_catalog_rejects_omitted_registered_study(
     monkeypatch: pytest.MonkeyPatch,
     study_id: str,
 ) -> None:
@@ -202,24 +299,11 @@ def test_catalog_rejects_omitted_new_study_artifact(
 
 def test_every_registered_artifact_file_exists() -> None:
     catalog = build_research_catalog(_REPO)
-    registered_paths: set[str] = set()
-    sequence_sections = (
-        "data",
-        "results",
-        "protocol_chain",
-        "reports",
-        "files",
-        "manifests",
-        "raw_artifacts",
-        "attempt_journals",
-    )
-    for study in cast(list[dict[str, Any]], catalog["studies"]):
-        protocol = cast(dict[str, Any] | None, study.get("protocol"))
-        if protocol is not None:
-            registered_paths.add(protocol["path"])
-        for section in sequence_sections:
-            entries = cast(list[dict[str, Any]], study.get(section, ()))
-            registered_paths.update(entry["path"] for entry in entries)
+    registered_paths = {
+        path
+        for study in cast(list[dict[str, Any]], catalog["studies"])
+        for path in _artifact_paths(study)
+    }
 
     assert registered_paths
     assert all((_REPO / path).is_file() for path in registered_paths)

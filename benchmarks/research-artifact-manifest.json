@@ -1967,6 +1967,436 @@
       ],
       "split_design": "single-bank post-hoc engineering screen",
       "study_id": "hopper-h100-engineering-benchmark"
+    },
+    {
+      "analysis_status": "operator_authorized_engineering_protocol_deviation",
+      "collection_runs": {
+        "candidate_bank0": "https://modal.com/apps/mottopanikeiku/main/ap-a2tRHcReiUYfLwZ4iCN5Pu",
+        "h200": "https://modal.com/apps/mottopanikeiku/main/ap-dKaK5ML43S2EqbaW33OTtA",
+        "pilot_retry": "https://modal.com/apps/mottopanikeiku/main/ap-8TUfMQNoH4lzXJ1uOI5n2x",
+        "validation_banks1_4": "https://modal.com/apps/mottopanikeiku/main/ap-Ba9FkS0Ax7i6cmjUIVh1Qi"
+      },
+      "collector_commits": {
+        "h200": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
+        "pilot_candidate_validation": "3833181ae0b87c9b7bafb839f1ea4a608cd432f7"
+      },
+      "data": [
+        {
+          "banks": [
+            0
+          ],
+          "compressed_bytes": 839,
+          "compressed_sha256": "4dc9db33217bb9ed6283c975d02dea524f522a853e4095147c238b268a281e65",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "L4": 6
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst",
+          "rows": 6,
+          "schema": "heliostune-measurement-v2",
+          "uncompressed_bytes": 5200,
+          "uncompressed_sha256": "2c45386a263253f0fba228096dadfdb8f664a6703759a8715d87792cd5879dfe"
+        },
+        {
+          "banks": [
+            0
+          ],
+          "compressed_bytes": 498487,
+          "compressed_sha256": "77d015bc4b94fb86f0a9939b140305e72b6495204e770e4cbcfe9639cf282561",
+          "compression": "zstd",
+          "failures": 1440,
+          "gpus": {
+            "A10": 4992,
+            "A100-80GB": 4992,
+            "L4": 4992
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A100 80GB PCIe",
+              "gpu": "A100-80GB",
+              "multiprocessor_count": 108,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.250732421875,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst",
+          "rows": 14976,
+          "schema": "heliostune-measurement-v2",
+          "uncompressed_bytes": 13248475,
+          "uncompressed_sha256": "1d5e70949579236837f3f5f0de738153253a732232b9d065b4ccae2c937a1ebe"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "compressed_bytes": 2349783,
+          "compressed_sha256": "14972601dc4f0e212187e9a116894a4423ff34133c8d1bc7d65f3aa77faa0a74",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 22560,
+            "A100-80GB": 22560,
+            "L4": 22560
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A100 80GB (mixed PCIe/SXM engineering domain)",
+              "gpu": "A100-80GB",
+              "multiprocessor_count": 108,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.250732421875,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst",
+          "rows": 67680,
+          "schema": "heliostune-measurement-v2",
+          "uncompressed_bytes": 60176387,
+          "uncompressed_sha256": "890a567037fb5925539494481dbc57a6d70cb5847742dde4bf45bb42e9b2fced"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "compressed_bytes": 898429,
+          "compressed_sha256": "285c0a045b23e5725341b0477f267d3903c801f5e4527634a795ccc95884a740",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "H200": 22560
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                9,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA H200",
+              "gpu": "H200",
+              "multiprocessor_count": 132,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 139.80084228515625,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-h200.jsonl.zst",
+          "rows": 22560,
+          "schema": "heliostune-measurement-v2",
+          "uncompressed_bytes": 19912614,
+          "uncompressed_sha256": "42add641be258e1ea817830ddefb997c43a88ecb2d88dd0b91815c0b0bc48970"
+        },
+        {
+          "banks": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ],
+          "compressed_bytes": 3249518,
+          "compressed_sha256": "e6ccb1399fc64e841a2e9611832d67feea8b61252841075ebd83f93e94f54d6f",
+          "compression": "zstd",
+          "failures": 0,
+          "gpus": {
+            "A10": 22560,
+            "A100-80GB": 22560,
+            "H200": 22560,
+            "L4": 22560
+          },
+          "hardware": [
+            {
+              "compute_capability": [
+                8,
+                6
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A10",
+              "gpu": "A10",
+              "multiprocessor_count": 72,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0582275390625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA A100 80GB (mixed PCIe/SXM engineering domain)",
+              "gpu": "A100-80GB",
+              "multiprocessor_count": 108,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 79.250732421875,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                9,
+                0
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA H200",
+              "gpu": "H200",
+              "multiprocessor_count": 132,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 139.80084228515625,
+              "triton_version": "3.4.0"
+            },
+            {
+              "compute_capability": [
+                8,
+                9
+              ],
+              "cuda_version": "12.8",
+              "device_name": "NVIDIA L4",
+              "gpu": "L4",
+              "multiprocessor_count": 58,
+              "torch_version": "2.8.0+cu128",
+              "total_memory_gb": 22.0343017578125,
+              "triton_version": "3.4.0"
+            }
+          ],
+          "kind": "measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-final.jsonl.zst",
+          "rows": 90240,
+          "schema": "heliostune-measurement-v2",
+          "uncompressed_bytes": 80089001,
+          "uncompressed_sha256": "b1d6f2fd0e18e2fbd82105655ef34cef3f09474110155189cb82228be7180d20"
+        }
+      ],
+      "files": [
+        {
+          "bytes": 1274,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.attempts.jsonl",
+          "sha256": "595c5bce491f83b0757f7983fcb9de3b6ddfcd2ed3f7f98733d6b8748d38dd12"
+        },
+        {
+          "bytes": 3838,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.attempts.jsonl",
+          "sha256": "d860bf6f5a90b7ff3fe225adfe9e4e3bbf029971e99ade964e92b6c418a4d28b"
+        },
+        {
+          "bytes": 19190,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.attempts.jsonl",
+          "sha256": "99bba6cea41b51ecbdfa8e197c74165c2a73db992755593b21fa57e02e7a018e"
+        },
+        {
+          "bytes": 2348046,
+          "kind": "raw_mixed_hardware_measurement_archive",
+          "path": "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst",
+          "sha256": "f41a05c6c3d7be017ae06c047e89c5424eb9d6ffbc9b5fe2e0a3faed890cf70f"
+        },
+        {
+          "bytes": 19190,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.attempts.jsonl",
+          "sha256": "99bba6cea41b51ecbdfa8e197c74165c2a73db992755593b21fa57e02e7a018e"
+        },
+        {
+          "bytes": 6390,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/parhelion-v3-h200.jsonl.zst.attempts.jsonl",
+          "sha256": "ea3d782b3d50ae475c249474b4af40017694907651c468e4f1a8015552921c48"
+        },
+        {
+          "bytes": 96,
+          "kind": "sha256_sidecar",
+          "path": "benchmarks/parhelion-v3-h200-freeze.sha256",
+          "sha256": "cd683d064a67716f254d64511f963b78d80d54529dc6d7f7d2754edf3529dd8d"
+        }
+      ],
+      "input_study_id": "parhelion-v3-h200-transfer",
+      "measurement_schema": "heliostune-measurement-v2",
+      "protocol_chain": [
+        {
+          "bytes": 41882,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v3-h200-freeze.json",
+          "schema": "parhelion-v3-h200-engineering-freeze",
+          "sha256": "2fb12d53f6cdef72c22c25087241930bf7d8e0f06fbe8e338bd900f1edcfaf10"
+        }
+      ],
+      "reports": [
+        {
+          "bytes": 7259,
+          "kind": "self_contained_html_report",
+          "path": "site/parhelion-v3-engineering.html",
+          "sha256": "31c1b94ba2a7523328ed45f5d0146e5ca903c7456ee10e57d8e6b8f68b962911"
+        }
+      ],
+      "result_links": {
+        "final": "benchmarks/results/parhelion-v3-h200-engineering.json",
+        "report": "site/parhelion-v3-engineering.html",
+        "selection": "benchmarks/results/parhelion-v3-a100-selection.json"
+      },
+      "results": [
+        {
+          "bytes": 467095,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v3-config-manifest.json",
+          "schema": "parhelion-v3-retained-configs",
+          "sha256": "7e8e31c56fdadcf0f4be382c0717d9d9cc0155941bf7669aca4267586b2dfb50"
+        },
+        {
+          "bytes": 9420,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-v3-a100-selection.json",
+          "schema": "parhelion-v3-a100-selection",
+          "sha256": "e4a9bbe1c75e17ed865b27531e6f6583367341c9c6fb063343f3aaa86c8ae71e"
+        },
+        {
+          "bytes": 688884,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/parhelion-v3-h200-engineering.json",
+          "schema": "parhelion-v3-h200-engineering",
+          "sha256": "e8cd9819d4f3bcad2808ffdbaefac2cc238d8e98456077ff4b0cad5ef537604b"
+        },
+        {
+          "bytes": 1681,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-candidate-bank0.jsonl.zst.manifest.json",
+          "schema": "parhelion-v3-candidate-publication",
+          "sha256": "f8cdc31f82bd7451e281c7b4db46c9643443a2230ed22fc7e5cd0b83abde97a1"
+        },
+        {
+          "bytes": 18151,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+          "schema": "parhelion-v3-validation-publication",
+          "sha256": "2e62cbbd7a6fe02e06792663f9b6bc11e9dc222316c88406b74e81114c473b2d"
+        },
+        {
+          "bytes": 1416,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.json",
+          "schema": "parhelion-v3-h200-publication",
+          "sha256": "fa033d570d773982508bdcb4fea1bbf0129da8e6b38ca60c7705d9c218fcff81"
+        },
+        {
+          "bytes": 1797,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json",
+          "schema": "parhelion-v3-final-publication",
+          "sha256": "1617daa5d99b758eec2b11542403c3b8a1cdae3eba936e51838622fbb6ca3d01"
+        },
+        {
+          "bytes": 4427,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst.source-manifest.json",
+          "schema": "parhelion-v3-pilot-source-manifest",
+          "sha256": "5d3423261774ed94cc594077b8418673831aa047c55dcd15a2b3b17ec5f457ff"
+        },
+        {
+          "bytes": 16801,
+          "kind": "json_artifact",
+          "path": "benchmarks/data/parhelion-v3-validation-raw-mixed-a100.jsonl.zst.source-manifest.json",
+          "schema": "parhelion-v3-raw-validation-source-manifest",
+          "sha256": "bfdcc753f534da53c13c20f90b7a8b68d39ee49d3a57e719cd7a4ecca48f7b94"
+        }
+      ],
+      "split_design": "held-out model family plus exact target shape",
+      "study_id": "parhelion-v3-operator-authorized-engineering",
+      "validity_limits": [
+        "explicitly overrides the original pre-H200 no-retry rule",
+        "A100 selection uses a declared mixed PCIe/SXM engineering domain",
+        "no confirmatory superiority claim"
+      ]
     }
   ]
 }

@@ -1,0 +1,133 @@
+{
+  "attempt_journal": {
+    "path": "/tmp/parhelion-v3-pilot-operator-retry.jsonl.zst.attempts.jsonl",
+    "sha256": "595c5bce491f83b0757f7983fcb9de3b6ddfcd2ed3f7f98733d6b8748d38dd12"
+  },
+  "binding": {
+    "config_manifest_sha256": "9111111e5b65c4abbfcde3c8e7573c10573cf964297e01b2955b47f56a891955",
+    "head_sha256": "f087030940234722cda334fd8c863821ac448b9f27d2a1cbe39d0c981ba6ca01",
+    "protocol_sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+    "wheel_sha256": "1900ac69c73a22046d4989d64ec1f168fefb6f987415bffb4e472b6065f8c411"
+  },
+  "call_plan": [
+    {
+      "bank": 0,
+      "config_orders": [
+        {
+          "config_keys": [
+            "m16n32k32-w4s3g8",
+            "m16n128k32-w4s3g8",
+            "m16n64k32-w4s3g8"
+          ],
+          "workload": "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096"
+        },
+        {
+          "config_keys": [
+            "m16n64k32-w4s3g8",
+            "m16n128k32-w4s3g8",
+            "m16n32k32-w4s3g8"
+          ],
+          "workload": "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096"
+        }
+      ],
+      "gpu": "L4",
+      "seed": 2140483153580630236,
+      "workload_order": [
+        "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+        "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "bank": 0,
+      "call_id": "fc-01M0V6BD0YDWE1GAMDKQXZ3Y33",
+      "chunk_sha256": null,
+      "config_manifest_sha256": "9111111e5b65c4abbfcde3c8e7573c10573cf964297e01b2955b47f56a891955",
+      "error": null,
+      "gpu": "L4",
+      "head_sha256": "f087030940234722cda334fd8c863821ac448b9f27d2a1cbe39d0c981ba6ca01",
+      "protocol_sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+      "request_sha256": "6aa62ccd82de0c9fbd6d6d4c6b8f4a186445aef7b171b5eccdc118f84cd2e60f",
+      "schema_version": 1,
+      "status": "spawned",
+      "timestamp_utc": "2026-08-25T00:50:30.150109Z",
+      "wheel_sha256": "1900ac69c73a22046d4989d64ec1f168fefb6f987415bffb4e472b6065f8c411"
+    },
+    {
+      "bank": 0,
+      "call_id": "fc-01M0V6BD0YDWE1GAMDKQXZ3Y33",
+      "chunk_sha256": "2c45386a263253f0fba228096dadfdb8f664a6703759a8715d87792cd5879dfe",
+      "config_manifest_sha256": "9111111e5b65c4abbfcde3c8e7573c10573cf964297e01b2955b47f56a891955",
+      "error": null,
+      "gpu": "L4",
+      "head_sha256": "f087030940234722cda334fd8c863821ac448b9f27d2a1cbe39d0c981ba6ca01",
+      "protocol_sha256": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+      "request_sha256": "6aa62ccd82de0c9fbd6d6d4c6b8f4a186445aef7b171b5eccdc118f84cd2e60f",
+      "schema_version": 1,
+      "status": "completed",
+      "timestamp_utc": "2026-08-25T00:50:48.100494Z",
+      "wheel_sha256": "1900ac69c73a22046d4989d64ec1f168fefb6f987415bffb4e472b6065f8c411"
+    }
+  ],
+  "data": {
+    "failures": 0,
+    "path": "/tmp/parhelion-v3-pilot-operator-retry.jsonl.zst",
+    "rows": 6,
+    "sha256": "4dc9db33217bb9ed6283c975d02dea524f522a853e4095147c238b268a281e65"
+  },
+  "facts": {
+    "config_manifest_path": null,
+    "hardware_cache": null,
+    "head_commit": "3833181ae0b87c9b7bafb839f1ea4a608cd432f7",
+    "modal": "1.5.4",
+    "numpy": "2.4.6",
+    "nvidia_smi": null,
+    "protocol_path": "benchmarks/parhelion-v3-development-protocol.json",
+    "python": "3.11",
+    "rich": "14.3.4",
+    "seed_protocol": "parhelion-v3",
+    "torch": "2.8.0",
+    "triton": "3.4.0",
+    "wheel_path": "artifacts/modal-wheel/heliostune-0.4.0-py3-none-any.whl",
+    "zstandard": "0.25.0"
+  },
+  "hardware": [
+    {
+      "compute_capability": [
+        8,
+        9
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA L4",
+      "gpu": "L4",
+      "multiprocessor_count": 58,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 22.0343017578125,
+      "triton_version": "3.4.0"
+    }
+  ],
+  "request": {
+    "banks": [
+      0
+    ],
+    "config_keys": [
+      "m16n32k32-w4s3g8",
+      "m16n64k32-w4s3g8",
+      "m16n128k32-w4s3g8"
+    ],
+    "gpus": [
+      "L4"
+    ],
+    "pilot": true,
+    "repetition_ms": 100.0,
+    "seed_protocol": "parhelion-v3",
+    "warmup_ms": 25.0,
+    "workload_keys": [
+      "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096",
+      "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096"
+    ]
+  },
+  "request_sha256": "6aa62ccd82de0c9fbd6d6d4c6b8f4a186445aef7b171b5eccdc118f84cd2e60f",
+  "schema_version": 1
+}
