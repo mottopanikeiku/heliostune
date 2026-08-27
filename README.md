@@ -6,7 +6,7 @@ A measured study of retrieval, Bayesian adaptation, and source-to-target launch 
 
 **Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
 
 ## Result
 
@@ -103,6 +103,19 @@ uv run heliostune demo --output-dir /tmp/heliostune-demo --max-budget 2 --seeds 
 uv run heliostune inspect /tmp/heliostune-demo/measurements.jsonl
 ```
 
+Inspect the strict CPU-only plugin/suite declaration surface:
+
+```bash
+uv run heliostune verify-plugin path/to/plugin.json
+uv run heliostune verify-suite path/to/suite.json
+uv run heliostune list-scope
+```
+
+These commands validate declarations; they do not execute a backend, establish
+correctness or performance, verify transitive plugin → suite custody through a
+generic EvidenceBundle, or support a claim. Generic local and remote
+plugin/suite backends are currently unimplemented.
+
 Native zstandard inspection needs no external `zstd` executable:
 
 ```bash
@@ -180,6 +193,7 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 ## Repository map
 
 - `src/heliostune/artifacts.py` — strict JSON/JSONL decoding and atomic zstandard persistence
+- `src/heliostune/scope.py` — strict plugin/suite v1 declarations and standalone transitive verification
 - `src/heliostune/collection.py` — paid-call planning, fsynced attempt journals, resume, and commit
 - `src/heliostune/hardware.py` — pure fleet identity and memory gates
 - `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
@@ -197,11 +211,32 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 - `scripts/verify_research_artifacts.py` — full catalog, alias, count, and frozen-point verifier
 - `scripts/assemble_parhelion_final.py` — historical v2 archive verifier
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
+- `benchmarks/plugins/` and `benchmarks/suites/` — frozen reference declarations and suite hashes
+- `EXPERIMENT_SCOPE.md` — declaration state matrix, numeric/fusion scope, baselines, and promotion rules
 - `site/` — offline final report, downloadable JSON, and archived v1 report
 
 ## Scope
 
-This is a steady-state FP16 microkernel configuration-selection study over one fixed 96-workload corpus, one curated 36-arm space, and four Modal GPU fleets. It does not establish generalization to arbitrary GPUs or model families, global Triton optimality, Bayesian calibration, compilation-time savings, end-to-end serving gains, or production interference robustness. T4 is a validation domain, not independent final evidence. H100 is one untouched hardware domain, not proof of universal cross-architecture transfer.
+The published Parhelion/Hopper results are a steady-state FP16 microkernel
+configuration-selection study over one fixed 96-workload corpus, one curated
+36-arm space, and four Modal GPU fleets. They do not establish generalization
+to arbitrary GPUs or model families, global Triton optimality, Bayesian
+calibration, compilation-time savings, end-to-end serving gains, or production
+interference robustness. T4 is a validation domain, not independent final
+evidence. H100 is one untouched hardware domain, not proof of universal
+cross-architecture transfer.
+
+The new `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
+*representable* scope without broadening those historical claims. Only
+`gated_mlp_epilogue.v1` and `residual_rmsnorm.v1` are frozen initial fusion
+templates, constrained to FP16/BF16 input/storage, FP32 accumulation,
+FP16/BF16/FP32 output, null quantization, and disabled TF32. The next actual
+implementation is fused gated MLP first and residual RMSNorm second. Attention
+and KV cache, quantized linear, MoE, and FP8 remain staged catalog/design
+candidates requiring separate suite revisions and promotion review. No paid
+campaign is promised or authorized by that roadmap. See
+[Experiment scope](EXPERIMENT_SCOPE.md) for the state matrix, exact contracts,
+baseline requirements, hashes, and promotion rules.
 
 ## License
 

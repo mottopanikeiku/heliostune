@@ -709,10 +709,8 @@ def _display_value(value: str | int | Path) -> str:
     return json.dumps(str(value), ensure_ascii=True)[1:-1]
 
 
-def _print_structural_verification(
-    kind: str, facts: Sequence[tuple[str, str | int | Path]]
-) -> None:
-    lines = [f"{kind} structurally verified"]
+def _print_facts(heading: str, facts: Sequence[tuple[str, str | int | Path]]) -> None:
+    lines = [heading]
     lines.extend(f"{name}: {_display_value(value)}" for name, value in facts)
     _CONSOLE.print(
         "\n".join(lines),
@@ -720,6 +718,103 @@ def _print_structural_verification(
         highlight=False,
         soft_wrap=True,
     )
+
+
+def _print_structural_verification(
+    kind: str, facts: Sequence[tuple[str, str | int | Path]]
+) -> None:
+    _print_facts(f"{kind} structurally verified", facts)
+
+
+def _list_scope(_args: argparse.Namespace) -> int:
+    from heliostune.scope import (
+        DOMAIN_VOCABULARY,
+        DTYPE_VOCABULARY,
+        EXECUTABLE_TEMPLATE_IDS,
+    )
+
+    _print_facts(
+        "Scope vocabulary and execution status",
+        (
+            ("dtype_schema_vocabulary", ",".join(DTYPE_VOCABULARY)),
+            ("domain_schema_vocabulary", ",".join(DOMAIN_VOCABULARY)),
+            ("frozen_executable_suite_templates", ",".join(EXECUTABLE_TEMPLATE_IDS)),
+            ("template_input_storage_dtypes", "fp16,bf16"),
+            ("template_domains", "fused_mlp,rmsnorm_residual"),
+            (
+                "suite_template_status",
+                "available only for fp16/bf16 input/storage in fused_mlp,rmsnorm_residual",
+            ),
+            ("generic_local_runtime_backend", "unimplemented"),
+            ("generic_remote_runtime_backend", "unimplemented"),
+            (
+                "limitation",
+                "Schema vocabulary and frozen templates do not claim runtime "
+                "availability, correctness, or performance.",
+            ),
+        ),
+    )
+    return 0
+
+
+def _verify_plugin(args: argparse.Namespace) -> int:
+    from heliostune.scope import verify_plugin
+
+    verified = verify_plugin(args.path)
+    plugin = verified.plugin
+    arms = [arm for suite in verified.suites for arm in suite.suite.arms]
+    local_states = [arm.local_capability.state for arm in arms]
+    remote_states = [arm.remote_capability.state for arm in arms]
+    _print_structural_verification(
+        "Plugin",
+        (
+            ("path", verified.path),
+            ("plugin", plugin.plugin_id),
+            ("version", plugin.version),
+            ("domains", len(plugin.domains)),
+            ("arms", len(plugin.arm_ids)),
+            ("suites", len(verified.suites)),
+            ("local.unprobed", local_states.count("unprobed")),
+            ("local.available", local_states.count("available")),
+            ("local.unavailable", local_states.count("unavailable")),
+            ("remote.unprobed", remote_states.count("unprobed")),
+            ("remote.available", remote_states.count("available")),
+            ("remote.unavailable", remote_states.count("unavailable")),
+            (
+                "limitation",
+                "Structural verification does not validate executability, "
+                "correctness, or performance.",
+            ),
+        ),
+    )
+    return 0
+
+
+def _verify_suite(args: argparse.Namespace) -> int:
+    from heliostune.scope import verify_suite
+
+    verified = verify_suite(args.path)
+    suite = verified.suite
+    _print_structural_verification(
+        "Suite",
+        (
+            ("path", verified.path),
+            ("suite", suite.suite_id),
+            ("template", suite.template_id),
+            ("revision", suite.revision),
+            ("domain", suite.domain),
+            ("cases", len(suite.cases)),
+            ("arms", len(suite.arms)),
+            ("cells", len(suite.expected_cells)),
+            ("numeric_contracts", len(suite.numeric_contracts)),
+            (
+                "limitation",
+                "Correctness passage and execution are not observed; no "
+                "performance validation is claimed.",
+            ),
+        ),
+    )
+    return 0
 
 
 def _verify_protocol(args: argparse.Namespace) -> int:
@@ -930,6 +1025,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify_bundle.add_argument("path", type=Path, metavar="PATH")
     verify_bundle.set_defaults(handler=_verify_bundle)
+
+    verify_plugin = subparsers.add_parser(
+        "verify-plugin",
+        help="structurally verify a plugin and its transitively referenced suites",
+        description=(
+            "Legacy plugin artifacts are rejected. Strict structural verification "
+            "of a heliostune.plugin/1 artifact and the relative suite paths and "
+            "SHA-256 digests it references. This does not validate execution, "
+            "correctness, or performance."
+        ),
+    )
+    verify_plugin.add_argument("path", type=Path, metavar="PATH")
+    verify_plugin.set_defaults(handler=_verify_plugin)
+
+    verify_suite = subparsers.add_parser(
+        "verify-suite",
+        help="structurally verify a frozen suite declaration",
+        description=(
+            "Legacy suite artifacts are rejected. Strict structural verification "
+            "of a heliostune.suite/1 artifact. Correctness passage and execution "
+            "are not observed."
+        ),
+    )
+    verify_suite.add_argument("path", type=Path, metavar="PATH")
+    verify_suite.set_defaults(handler=_verify_suite)
+
+    list_scope = subparsers.add_parser(
+        "list-scope",
+        help="list schema vocabulary, frozen templates, and runtime implementation status",
+        description=(
+            "List schema vocabulary, the narrow frozen suite templates, and "
+            "unimplemented generic runtime backend status."
+        ),
+    )
+    list_scope.set_defaults(handler=_list_scope)
     return parser
 
 

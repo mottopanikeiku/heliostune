@@ -1190,10 +1190,7 @@ def test_incomplete_exploratory_journal_accepts_the_next_running_prefix_cell(
         terminal_cells=1,
         physical_attempts=2,
     )
-    running = (
-        b'{"cell_id":"cell-1","status":"pending"}\n'
-        b'{"cell_id":"cell-1","status":"running"}\n'
-    )
+    running = b'{"cell_id":"cell-1","status":"pending"}\n{"cell_id":"cell-1","status":"running"}\n'
     journal_path = tmp_path / "attempts/journal.jsonl"
     journal_payload = journal_path.read_bytes() + running
     journal_path.write_bytes(journal_payload)
@@ -1218,10 +1215,7 @@ def test_incomplete_exploratory_journal_cannot_skip_a_prefix_cell(tmp_path: Path
         terminal_cells=1,
         physical_attempts=2,
     )
-    skipped = (
-        b'{"cell_id":"cell-2","status":"pending"}\n'
-        b'{"cell_id":"cell-2","status":"running"}\n'
-    )
+    skipped = b'{"cell_id":"cell-2","status":"pending"}\n{"cell_id":"cell-2","status":"running"}\n'
     journal_path = tmp_path / "attempts/journal.jsonl"
     journal_payload = journal_path.read_bytes() + skipped
     journal_path.write_bytes(journal_payload)

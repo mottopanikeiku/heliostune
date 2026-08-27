@@ -2,7 +2,7 @@
 
 ## Status and normative language
 
-This document specifies the evidence contract targeted by HeliosTune methodology v1. It is normative for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts, and it is not a statement that the current CLI or every current study implements the contract; see [Implementation status](#implementation-status).
+This document specifies the evidence contract targeted by HeliosTune methodology v1. It is normative for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts, and it is not a statement that the current CLI or every current study implements the contract; see [Implementation status](#implementation-status). The additive plugin/suite declaration scope and its deliberately narrower implementation status are described in [Experiment scope](EXPERIMENT_SCOPE.md).
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as described by RFC 2119. Each mandatory rule below states both the failure it prevents and the machine check that enforces it. A verifier has no warning-only path for a failed mandatory rule.
 
@@ -157,6 +157,77 @@ Candidate and comparator arms share the same prepare/execute/result boundary. Ex
 | PL2 | Candidate and comparator adapters **MUST** implement the same declared input, prepare, execute, output, numerics, and timing boundaries. | Measuring hidden setup for one arm but not another. | Compiled call-plan comparison requires one shared boundary contract ID for every arm in a ratio or contrast. |
 | PL3 | An executor **MUST** return the compiled semantic envelope digest without reinterpretation. | Local/remote semantic drift. | Independent local and remote compilation fixture compares semantic call-plan hashes; returned rows bind the envelope hash. |
 | PL4 | An analyzer **MUST** be deterministic and pure over the frozen protocol plus sealed bundle. | Outcome-dependent external inputs and irreproducible headlines. | Network-disabled replay with fixed locale/time zone regenerates ClaimSet and report bytes and compares digests. |
+
+#### 3.1.1 Plugin and suite declarations
+
+`heliostune.plugin/1` and `heliostune.suite/1` are strict, additive declaration
+schemas. They close an initial operation vocabulary and make plugin identity,
+suite custody, case semantics, arm applicability, numeric contracts, reference
+arms, and expected-cell order inspectable without importing or executing
+plugin code. The narrow reference templates do not encode or claim a complete
+performance-baseline hierarchy; that remains a promotion and evidence
+requirement under §3.4. The schemas do not alter the exact
+`heliostune.protocol/1` field map. A protocol can bind the exact plugin root
+through `plugin.artifact_sha256`; the plugin root, in turn, binds normalized
+relative suite paths and their exact SHA-256 values.
+
+Standalone plugin validation resolves plugin → suite references. The current
+generic EvidenceBundle verifier does not yet traverse this new edge, so its
+existing plugin byte binding must not be described as transitive suite custody.
+
+Declaration status is multi-axis:
+
+| Axis | Meaning |
+|---|---|
+| Vocabulary | A closed domain/dtype/case token may appear in a declaration. |
+| Schema | Exact fields, types, cross-rules, references, and hashes validate. |
+| Template | A named suite has frozen cases, arms, contracts, and expected cells. |
+| Backend capability | Local and remote probes separately record `unprobed`, `available`, or `unavailable`. |
+| Correctness observation | Retained output evidence passed the frozen contract for an exact cell key. |
+| Performance observation | Retained timing evidence was collected after that passing gate. |
+
+The axes are not implications. Capability states `available` and `unavailable`
+require an evidence SHA-256; `unprobed` requires null evidence. Availability
+does not establish correctness. Correctness does not establish performance.
+Schema or template validation establishes neither.
+
+The closed domain vocabulary may name `dense_gemm`, `fused_mlp`,
+`rmsnorm_residual`, `attention`, `kv_cache`, `moe`, and `quantized_linear`.
+The closed dtype vocabulary may name `fp32`, `tf32`, `fp16`, `bf16`,
+`fp8_e4m3fn`, `fp8_e5m2`, `int8`, `int4`, and `uint4`. Vocabulary membership
+is not backend support.
+
+Only `gated_mlp_epilogue.v1` and `residual_rmsnorm.v1` are frozen initial
+executable-suite templates. Their numeric contracts permit FP16/BF16
+input/storage, FP32 accumulation, FP16/BF16/FP32 stored output, null
+quantization, and disabled TF32. The schema can represent advanced dtype names,
+exact four-bit packing order/axis, scale dtype/layout/granularity, and
+calibration metadata, but those dtypes cannot appear in either initial
+template. Missing zero-point, dequantization, rounding/saturation,
+instruction-readback, reference, and error-policy choices must be closed in a
+separate reviewed schema/suite revision before promotion.
+The committed declarations are explicitly labeled
+`reference_template_not_execution_freeze`; their template identity and hashes
+are frozen, but no runtime capability or dispatch authorization follows.
+
+Gated-MLP cases close activation (`silu | gelu`), gate/up layout
+(`separate | packed`), bias and residual booleans, output arity one, and the
+ordered fusion boundary. Residual-RMSNorm cases close finite positive epsilon,
+gamma presence, residual position (`pre | post`), output arity one or two, and
+the ordered fusion boundary. Arm shape constraints are inline triples of
+dimension, operation (`divisible_by | min | max | equal`), and integer value.
+
+The expected-cell list is a plan rather than an observation. It must place a
+correctness-stage cell before every timing-stage cell having the same case,
+arm, and input seed. An executor must additionally require a retained passing
+correctness observation for that exact key before dispatching timing. It may
+not treat static order, capability availability, or a pass on another seed as
+the runtime gate.
+
+The complete declaration fields, baseline/promotion requirements, staged
+attention/KV-cache, quantized-linear, MoE and FP8 candidates, template
+identities, hashes, implementation order, and inspection commands are in
+[Experiment scope](EXPERIMENT_SCOPE.md).
 
 ### 3.2 Workloads
 
@@ -431,7 +502,22 @@ Each publication declares a retention policy ID, expiry or indefinite retention,
 
 ## 8. CLI lifecycle: local exploration to strict evidence
 
-The intended lifecycle is explicit rather than a mode flag that silently changes benchmark semantics:
+The currently implemented CPU-only declaration inspection surface is:
+
+```bash
+heliostune verify-plugin PATH
+heliostune verify-suite PATH
+heliostune list-scope
+```
+
+`verify-plugin` validates the strict plugin root and resolves its relative suite
+paths and SHA-256 values. `verify-suite` validates one strict standalone suite.
+`list-scope` reports the closed vocabularies, initial suite template IDs, and
+the fact that generic runtime backends are unimplemented. These commands make
+no execution, correctness, performance, generic bundle-custody, or
+claim-eligibility assertion.
+
+The intended full evidence lifecycle is explicit rather than a mode flag that silently changes benchmark semantics:
 
 ```bash
 heliostune plugin list
@@ -454,7 +540,7 @@ heliostune publish bundle/ --registry REGISTRY --policy POLICY
 heliostune verify-catalog CATALOG
 ```
 
-These commands describe the contract, not a claim that all commands exist today. `plugin validate` checks deterministic resolution and interface compatibility. `resolve` materializes every implicit choice. `plan --mode explore` creates the non-promotable child. `diff` displays the semantic allowlist. `freeze` assigns immutable identity. `collect` uses one envelope on either backend. `seal`, `verify`, and `analyze` are separate so collection cannot declare itself valid. `publish` checks a registry and policy profile before the atomic root switch.
+The lifecycle commands in the preceding block describe the contract, not a claim that all of them exist today; they are distinct from the implemented declaration commands above. The prospective `plugin validate` step checks deterministic resolution and interface compatibility. `resolve` materializes every implicit choice. `plan --mode explore` creates the non-promotable child. `diff` displays the semantic allowlist. `freeze` assigns immutable identity. `collect` uses one envelope on either backend. `seal`, `verify`, and `analyze` are separate so collection cannot declare itself valid. `publish` checks a registry and policy profile before the atomic root switch.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
@@ -467,7 +553,7 @@ These commands describe the contract, not a claim that all commands exist today.
 
 Anything without the exact schema literal `heliostune.protocol/1` or `heliostune.bundle/1` is legacy. Legacy bytes and their original claims remain immutable and are interpreted only under their original protocol and known limitations. An importer may inventory a legacy artifact as `legacy_unverified`, recording original bytes, source identity, known fields, unknown fields, and field-loss report. It cannot invent target exposure history, raw timing samples, telemetry, attempts, numerical checks, margins, multiplicity, provenance, or stronger claim eligibility.
 
-Current Parhelion policy-seed intervals remain conditional on their fixed matrices and campaigns; they do not become workload-, timing-, family-, session-, GPU-, or SKU-population intervals. Existing Hopper evidence remains a one-instance, fixed-corpus, same-bank engineering STOP; selection optimism is explicit and no superiority claim follows. Neither case is backfilled into v1 eligibility.
+Current Parhelion policy-seed intervals remain conditional on their fixed matrices and campaigns; they do not become workload-, timing-, family-, session-, GPU-, or SKU-population intervals. Existing Hopper evidence remains a one-instance, fixed-corpus, same-bank engineering STOP; selection optimism is explicit and no superiority claim follows. Both studies remain legacy plugins rather than `heliostune.plugin/1` or `heliostune.suite/1` migrations. Neither case is backfilled into v1 eligibility.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
@@ -504,7 +590,8 @@ This table separates normative target from repository reality. “Partial” is 
 |---|---|---|
 | Strict JSON and exact-type validation primitives | Implemented for existing artifact families; coverage varies by historical schema. | Useful building block, not proof of protocol/bundle closure. |
 | `heliostune.protocol/1` and `heliostune.bundle/1` exact schemas | Strict frozen/slotted value objects and file loaders parse the field maps above with exact validators. They do not resolve referenced bytes or verify custody. | Parsing a v1 root is not bundle closure, and no historical artifact is automatically a v1 artifact. |
-| Generic study-plugin contracts and deterministic resolver | Not implemented end to end. Existing studies use study-specific modules and manifests. | The plugin and CLI examples above are target interfaces. |
+| `heliostune.plugin/1` and `heliostune.suite/1` declarations | Strict structural loaders and standalone verification are implemented for the closed initial scope. Plugin verification resolves relative suite paths and hashes. | Declaration validation establishes vocabulary/schema/template identity only. Generic bundle transitive plugin → suite custody is not implemented. |
+| Generic study-plugin resolver and runtime contracts | Not implemented end to end. Existing studies use study-specific modules and manifests. | The full lifecycle plugin commands and interfaces above remain targets; no generic local or remote backend exists. |
 | Eight-state immutable lifecycle and revision registry | Not implemented end to end. | Existing manifests retain their own state models and legacy interpretation. |
 | Local/remote canonical semantic envelope | Partial in study-specific collectors; no generic v1 executor contract. | Executor parity is not yet generally established. |
 | GPU raw randomized paired blocks and full telemetry | Not implemented for published Parhelion/Hopper timing artifacts, which retain aggregate quantiles and limited state. | Those timings remain legacy, fixed-protocol evidence and do not support new timing-population inference. |

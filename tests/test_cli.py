@@ -883,3 +883,269 @@ def test_version_is_installed_metadata(capsys: pytest.CaptureFixture[str]) -> No
         cli.build_parser().parse_args(["--version"])
     assert raised.value.code == 0
     assert capsys.readouterr().out.strip() == f"heliostune {version('heliostune')}"
+
+
+def _copy_scope_templates(tmp_path: Path) -> tuple[Path, Path, Path]:
+    repository = Path(__file__).resolve().parents[1]
+    relative_paths = (
+        Path("plugins/fusion-reference-plugin-v1.json"),
+        Path("suites/gated-mlp-epilogue-v1.json"),
+        Path("suites/residual-rmsnorm-v1.json"),
+    )
+    copied: list[Path] = []
+    for relative in relative_paths:
+        source = repository / "benchmarks" / relative
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source.read_bytes())
+        copied.append(destination)
+    return copied[0], copied[1], copied[2]
+
+
+def test_verify_plugin_accepts_committed_template_and_reports_structural_counts(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repository = Path(__file__).resolve().parents[1]
+    plugin = repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+
+    assert cli.main(["verify-plugin", str(plugin)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Plugin structurally verified" in output
+    assert "plugin: fusion-reference-plugin" in output
+    assert "version: 1" in output
+    assert "domains: 2" in output
+    assert "arms: 4" in output
+    assert "suites: 2" in output
+    assert "local.unprobed: 4" in output
+    assert "local.available: 0" in output
+    assert "remote.unprobed: 4" in output
+    assert "remote.available: 0" in output
+    assert "does not validate executability, correctness, or performance" in output
+
+
+def test_verify_plugin_transitively_rejects_tampered_suite_digest(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin, gated_suite, _rmsnorm_suite = _copy_scope_templates(tmp_path)
+    gated_suite.write_bytes(gated_suite.read_bytes() + b"\n")
+
+    assert cli.main(["verify-plugin", str(plugin)]) == 2
+
+    captured = capsys.readouterr()
+    assert "suite digest mismatch" in captured.err
+    assert "structurally verified" not in captured.out
+
+
+def test_verify_plugin_rejects_escaping_suite_path_without_verified_claim(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin, _gated_suite, _rmsnorm_suite = _copy_scope_templates(tmp_path)
+    data: dict[str, object] = json.loads(plugin.read_text(encoding="utf-8"))
+    suite_refs = cast(list[dict[str, object]], data["suite_refs"])
+    suite_refs[0]["path"] = "../../outside.json"
+    write_json_atomic(plugin, data)
+
+    assert cli.main(["verify-plugin", str(plugin)]) == 2
+
+    captured = capsys.readouterr()
+    assert "escapes plugin containment root" in captured.err
+    assert "structurally verified" not in captured.out
+
+
+def test_verify_plugin_rejects_legacy_schema(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin, _gated_suite, _rmsnorm_suite = _copy_scope_templates(tmp_path)
+    data: dict[str, object] = json.loads(plugin.read_text(encoding="utf-8"))
+    data["schema"] = "heliostune.plugin/0"
+    write_json_atomic(plugin, data)
+
+    assert cli.main(["verify-plugin", str(plugin)]) == 2
+    assert "plugin schema must be 'heliostune.plugin/1'" in capsys.readouterr().err
+
+
+def test_verify_plugin_output_escapes_untrusted_identifiers(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    plugin, gated_suite, rmsnorm_suite = _copy_scope_templates(tmp_path)
+    escaped_id = "[bold]literal[/bold]\nsecond line"
+    data: dict[str, object] = json.loads(plugin.read_text(encoding="utf-8"))
+    data["plugin_id"] = escaped_id
+    for suite in (gated_suite, rmsnorm_suite):
+        suite_data: dict[str, object] = json.loads(suite.read_text(encoding="utf-8"))
+        suite_data["plugin_id"] = escaped_id
+        write_json_atomic(suite, suite_data)
+    suite_refs = cast(list[dict[str, object]], data["suite_refs"])
+    for suite_ref in suite_refs:
+        suite_path = (plugin.parent / cast(str, suite_ref["path"])).resolve()
+        suite_ref["sha256"] = hashlib.sha256(suite_path.read_bytes()).hexdigest()
+    write_json_atomic(plugin, data)
+
+    assert cli.main(["verify-plugin", str(plugin)]) == 0
+
+    output = capsys.readouterr().out
+    assert "plugin: [bold]literal[/bold]\\nsecond line" in output
+    assert "\nsecond line" not in output
+    assert f"path: {json.dumps(str(plugin))[1:-1]}" in output
+
+
+def test_verify_suite_accepts_committed_gated_mlp_template_and_reports_counts(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repository = Path(__file__).resolve().parents[1]
+    suite = repository / "benchmarks/suites/gated-mlp-epilogue-v1.json"
+
+    assert cli.main(["verify-suite", str(suite)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Suite structurally verified" in output
+    assert "suite: gated-mlp-epilogue-reference" in output
+    assert "template: gated_mlp_epilogue.v1" in output
+    assert "revision: 1" in output
+    assert "domain: fused_mlp" in output
+    assert "cases: 1" in output
+    assert "arms: 2" in output
+    assert "cells: 4" in output
+    assert "numeric_contracts: 1" in output
+    assert "Correctness passage and execution are not observed" in output
+
+
+def test_verify_suite_accepts_committed_residual_rmsnorm_template(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    repository = Path(__file__).resolve().parents[1]
+    suite = repository / "benchmarks/suites/residual-rmsnorm-v1.json"
+
+    assert cli.main(["verify-suite", str(suite)]) == 0
+
+    output = capsys.readouterr().out
+    assert "suite: residual-rmsnorm-reference" in output
+    assert "template: residual_rmsnorm.v1" in output
+    assert "domain: rmsnorm_residual" in output
+    assert "cases: 1" in output
+    assert "arms: 2" in output
+    assert "cells: 4" in output
+
+
+def test_verify_suite_output_escapes_untrusted_identifiers(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _plugin, suite, _rmsnorm_suite = _copy_scope_templates(tmp_path)
+    data: dict[str, object] = json.loads(suite.read_text(encoding="utf-8"))
+    data["suite_id"] = "[bold]literal[/bold]\nsecond line"
+    write_json_atomic(suite, data)
+
+    assert cli.main(["verify-suite", str(suite)]) == 0
+
+    output = capsys.readouterr().out
+    assert "suite: [bold]literal[/bold]\\nsecond line" in output
+    assert "\nsecond line" not in output
+    assert f"path: {json.dumps(str(suite))[1:-1]}" in output
+
+
+@pytest.mark.parametrize(
+    ("command", "relative_path", "schema"),
+    [
+        ("verify-plugin", "plugins/fusion-reference-plugin-v1.json", "heliostune.plugin/0"),
+        ("verify-suite", "suites/gated-mlp-epilogue-v1.json", "heliostune.suite/0"),
+    ],
+)
+def test_scope_verification_rejects_legacy_and_unknown_fields(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    command: str,
+    relative_path: str,
+    schema: str,
+) -> None:
+    _copy_scope_templates(tmp_path)
+    artifact = tmp_path / relative_path
+    data: dict[str, object] = json.loads(artifact.read_text(encoding="utf-8"))
+    data["schema"] = schema
+    write_json_atomic(artifact, data)
+
+    assert cli.main([command, str(artifact)]) == 2
+    legacy = capsys.readouterr()
+    kind = command.removeprefix("verify-")
+    assert f"{kind} schema must be 'heliostune.{kind}/1'" in legacy.err
+    assert "structurally verified" not in legacy.out
+
+    data["schema"] = f"heliostune.{kind}/1"
+    data["unknown"] = True
+    write_json_atomic(artifact, data)
+    assert cli.main([command, str(artifact)]) == 2
+    unknown = capsys.readouterr()
+    assert "has unknown fields ['unknown']" in unknown.err
+    assert "structurally verified" not in unknown.out
+
+
+def test_list_scope_reports_complete_schema_vocabularies(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["list-scope"]) == 0
+
+    output = capsys.readouterr().out
+    assert (
+        "dtype_schema_vocabulary: fp32,tf32,fp16,bf16,fp8_e4m3fn,fp8_e5m2,int8,int4,uint4"
+    ) in output
+    assert (
+        "domain_schema_vocabulary: "
+        "dense_gemm,fused_mlp,rmsnorm_residual,attention,kv_cache,moe,"
+        "quantized_linear"
+    ) in output
+
+
+def test_list_scope_reports_only_narrow_templates_and_unimplemented_backends(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.main(["list-scope"]) == 0
+
+    output = capsys.readouterr().out
+    assert (
+        "frozen_executable_suite_templates: gated_mlp_epilogue.v1,residual_rmsnorm.v1"
+    ) in output
+    assert "template_input_storage_dtypes: fp16,bf16" in output
+    assert "template_domains: fused_mlp,rmsnorm_residual" in output
+    assert (
+        "suite_template_status: available only for fp16/bf16 input/storage in "
+        "fused_mlp,rmsnorm_residual"
+    ) in output
+    assert "generic_local_runtime_backend: unimplemented" in output
+    assert "generic_remote_runtime_backend: unimplemented" in output
+    assert "do not claim runtime availability, correctness, or performance" in output
+    assert "runtime_backend: available" not in output
+
+
+@pytest.mark.parametrize(
+    ("arguments", "handler"),
+    [
+        (["verify-plugin", "plugin.json"], cli._verify_plugin),
+        (["verify-suite", "suite.json"], cli._verify_suite),
+        (["list-scope"], cli._list_scope),
+    ],
+)
+def test_scope_commands_are_registered_and_describe_structural_limitations(
+    arguments: list[str],
+    handler: Callable[[argparse.Namespace], int],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    assert cli.build_parser().parse_args(arguments).handler is handler
+    with pytest.raises(SystemExit) as raised:
+        cli.build_parser().parse_args([arguments[0], "--help"])
+    assert raised.value.code == 0
+    help_output = " ".join(capsys.readouterr().out.lower().split())
+    if arguments[0] == "verify-plugin":
+        assert "structural" in help_output
+        assert "legacy plugin artifacts are rejected" in help_output
+        assert "does not validate execution, correctness, or performance" in help_output
+    elif arguments[0] == "verify-suite":
+        assert "structural" in help_output
+        assert "legacy suite artifacts are rejected" in help_output
+        assert "correctness passage and execution are not observed" in help_output
+    else:
+        assert "unimplemented generic runtime backend status" in help_output
