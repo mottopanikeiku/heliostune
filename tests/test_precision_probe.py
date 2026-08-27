@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
@@ -159,6 +160,19 @@ def _load_probe() -> ModuleType:
 @pytest.fixture(scope="module")
 def precision_probe() -> ModuleType:
     return _load_probe()
+
+
+def _stub_modal_distribution_version(
+    precision_probe: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real_version = importlib.metadata.version
+
+    def version(distribution_name: str) -> str:
+        if distribution_name == "modal":
+            return "1.5.4"
+        return real_version(distribution_name)
+
+    monkeypatch.setattr(precision_probe.importlib.metadata, "version", version)
 
 
 def _arm(*, reduced: bool) -> dict[str, object]:
@@ -508,6 +522,7 @@ def _configure_gate_run(
     payload: object,
     failure: Exception | None = None,
 ) -> tuple[Path, Path, _GateCall, _GateSpawner]:
+    _stub_modal_distribution_version(precision_probe, monkeypatch)
     destination = tmp_path / "artifacts/hopper-correctness.json"
     journal = Path(f"{destination}.attempts.jsonl")
     wheel = tmp_path / _WHEEL_NAME
@@ -1020,6 +1035,7 @@ def test_failure_prevents_later_bank_spawns(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    _stub_modal_distribution_version(precision_probe, monkeypatch)
     workload = DEFAULT_WORKLOADS[0]
     config = DEFAULT_CONFIGS[0]
     archive = tmp_path / "archive.zst"
@@ -1088,6 +1104,7 @@ def test_precision_probe_sidecar_failure_leaves_no_success_artifact(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    _stub_modal_distribution_version(precision_probe, monkeypatch)
     workload = DEFAULT_WORKLOADS[0]
     config = DEFAULT_CONFIGS[0]
     archive = tmp_path / "archive.zst"

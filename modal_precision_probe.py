@@ -613,7 +613,7 @@ def _gate_config_manifest_sha256(configs: dict[str, list[dict[str, object]]]) ->
 
 def _expected_gate_checks() -> set[tuple[str, str, str]]:
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
-    from heliostune.hopper_kernel import SKINNY_M_LIMIT, validation_workloads
+    from heliostune.hopper_spec import SKINNY_M_LIMIT, validation_workloads
 
     expected: set[tuple[str, str, str]] = set()
     for workload in validation_workloads():
@@ -633,7 +633,7 @@ def _validated_gate_payload(
     """Validate the exact correctness result against local candidate manifests."""
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
     from heliostune.hardware import expectation_for_gpu, validate_hardware
-    from heliostune.hopper_kernel import validation_workloads
+    from heliostune.hopper_spec import validation_workloads
     from heliostune.schema import HardwareProfile
     from heliostune.validation import (
         exact_bool,
