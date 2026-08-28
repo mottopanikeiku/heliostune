@@ -1060,9 +1060,10 @@ def _render_release_provenance(value: Any) -> str:
             "</li>"
         )
     return (
-        '<aside class="custody-panel" aria-labelledby="release-chain-title">'
-        '<p class="micro-label">Immutable evidence handoff</p>'
-        '<h3 id="release-chain-title">Release chain of custody</h3>'
+        '<aside class="custody-panel" aria-labelledby="release-provenance-title">'
+        '<p class="micro-label">caller-supplied release provenance</p>'
+        '<h3 id="release-provenance-title">Release provenance</h3>'
+        '<p class="scope-note">not independently authenticated by summary</p>'
         f'<ol class="custody-chain">{"".join(items)}</ol></aside>'
     )
 
@@ -1556,8 +1557,9 @@ def render_report(summary: Mapping[str, Any], output_path: str | Path) -> None:
         hardware_index, scope_index, provenance_index, limits_index = "03", "04", "05", "06"
     provenance_copy = (
         (
-            "Reported run metadata, release chain of custody, and experiment protocol are "
-            "inventoried separately from facts that are absent from the summary."
+            "Reported run metadata, caller-supplied release provenance, and experiment protocol "
+            "are inventoried separately from facts that are absent from the summary. Release "
+            "provenance is not independently authenticated by summary."
         )
         if summary.get("release_provenance") is not None
         else (

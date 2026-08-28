@@ -4,14 +4,22 @@ import math
 import statistics
 from collections import Counter
 from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
+from heliostune.artifacts import read_measurements
 from heliostune.configs import KernelConfig, Workload
+from heliostune.errors import SchemaError
 from heliostune.multisource import compare_multisource
 from heliostune.multisource_engine import (
     PreparedReplay,
+    _best_observed,
+    _incumbent_value,
     assemble_multisource_summary,
     evaluate_anchored_cold,
     evaluate_cold_thompson,
@@ -19,9 +27,12 @@ from heliostune.multisource_engine import (
     evaluate_parhelion,
     evaluate_parhelion_no_forced_anchor,
     evaluate_pooled_source,
+    parameter_independent_evaluations,
     prepare_multisource,
     serialize_workload_endpoints,
+    validate_release_provenance,
 )
+from heliostune.replay import compare_methods
 from heliostune.schema import HardwareProfile, Measurement
 
 _CONFIGS = (
@@ -60,6 +71,15 @@ _EXPECTED_METHODS = {
     "heldout_reference",
 }
 _CURVE_METHODS = _EXPECTED_METHODS - {"exhaustive", "heldout_reference"}
+_RELEASE_PROVENANCE: dict[str, object] = {
+    "algorithm_commit": "a" * 40,
+    "freeze_commit": "b" * 40,
+    "freeze_sha256": "c" * 64,
+    "sole_h100_run": "https://modal.com/apps/example/main/ap-release",
+    "raw_h100_sha256": "d" * 64,
+    "final_archive_sha256": "e" * 64,
+    "post_run_manifest_path": "benchmarks/post-run-manifest.json",
+}
 
 
 def _corpus() -> tuple[Measurement, ...]:
@@ -474,6 +494,27 @@ def test_final_role_rejects_nonfrozen_arguments_before_data_access(
         compare_multisource(_DataAccessIsFailure(), **(frozen | override))
 
 
+def test_seed_count_above_the_paired_seed_stride_is_rejected() -> None:
+    with pytest.raises(ValueError, match="no greater than 100000"):
+        prepare_multisource(
+            _corpus(),
+            source_gpus=("source-a", "source-b"),
+            target_gpu="target",
+            max_budget=2,
+            seeds=100_001,
+        )
+
+
+def test_legacy_seed_count_above_stride_is_rejected_before_data_access() -> None:
+    with pytest.raises(ValueError, match="no greater than 100000"):
+        compare_methods(
+            _DataAccessIsFailure(),
+            source_gpu="source",
+            target_gpu="target",
+            seeds=100_001,
+        )
+
+
 def test_primary_comparator_rejects_nonprotocol_seed_count_before_data_access() -> None:
     with pytest.raises(ValueError, match="seed count 12 or 30"):
         compare_multisource(
@@ -543,6 +584,144 @@ def test_prepared_replay_is_immutable_and_matches_public_facade() -> None:
     assert assembled == facade
 
 
+def test_fold_precomputation_uses_fold_identity_when_reordered() -> None:
+    prepared = prepare_multisource(
+        _corpus(),
+        source_gpus=("source-a", "source-b"),
+        target_gpu="target",
+        max_budget=2,
+        seeds=3,
+    )
+    reordered = replace(prepared, folds=prepared.folds[::-1])
+    retrieval = evaluate_multisource_retrieval(prepared, k=2, temperature=0.7)
+    reordered_retrieval = evaluate_multisource_retrieval(reordered, k=2, temperature=0.7)
+
+    original_evaluations = (
+        evaluate_parhelion(
+            prepared,
+            k=2,
+            temperature=0.7,
+            transfer_strength=0.2,
+            retrieval=retrieval,
+        ),
+        evaluate_anchored_cold(prepared, retrieval=retrieval),
+        evaluate_parhelion_no_forced_anchor(
+            prepared,
+            k=2,
+            temperature=0.7,
+            transfer_strength=0.2,
+        ),
+    )
+    reordered_evaluations = (
+        evaluate_parhelion(
+            reordered,
+            k=2,
+            temperature=0.7,
+            transfer_strength=0.2,
+            retrieval=reordered_retrieval,
+        ),
+        evaluate_anchored_cold(reordered, retrieval=reordered_retrieval),
+        evaluate_parhelion_no_forced_anchor(
+            reordered,
+            k=2,
+            temperature=0.7,
+            transfer_strength=0.2,
+        ),
+    )
+
+    for original, replayed in zip(original_evaluations, reordered_evaluations, strict=True):
+        original_by_fold = {
+            fold.index: tuple(
+                seed_curves[position] for seed_curves in original.stochastic_seed_fold_curves
+            )
+            for position, fold in enumerate(prepared.folds)
+        }
+        replayed_by_fold = {
+            fold.index: tuple(
+                seed_curves[position] for seed_curves in replayed.stochastic_seed_fold_curves
+            )
+            for position, fold in enumerate(reordered.folds)
+        }
+        assert replayed_by_fold == original_by_fold
+
+
+def test_release_provenance_accepts_mapping_and_serializes_plain_dict() -> None:
+    provenance = MappingProxyType(_RELEASE_PROVENANCE)
+
+    result = _development_replay(release_provenance=provenance)
+
+    assert type(result["release_provenance"]) is dict
+    assert result["release_provenance"] == _RELEASE_PROVENANCE
+    validated = validate_release_provenance(provenance)
+    assert dict(validated) == _RELEASE_PROVENANCE
+    assert tuple(validated) == tuple(_RELEASE_PROVENANCE)
+
+
+@pytest.mark.parametrize(
+    ("provenance", "message"),
+    [
+        (
+            _RELEASE_PROVENANCE | {"unexpected": "value"},
+            "release_provenance has unknown fields",
+        ),
+        (
+            {key: value for key, value in _RELEASE_PROVENANCE.items() if key != "algorithm_commit"},
+            "release_provenance has missing fields",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"algorithm_commit": ""},
+            r"release_provenance\['algorithm_commit'\] must be nonblank",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"algorithm_commit": "A" * 40},
+            "algorithm_commit.*lowercase hexadecimal commit",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"freeze_commit": "b" * 39},
+            "freeze_commit.*40-character",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"freeze_sha256": "c" * 63},
+            "freeze_sha256.*64-character",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"raw_h100_sha256": "D" * 64},
+            "raw_h100_sha256.*lowercase hexadecimal",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"final_archive_sha256": "g" * 64},
+            "final_archive_sha256.*lowercase hexadecimal",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"sole_h100_run": "http://modal.com/apps/example"},
+            "sole_h100_run.*HTTPS Modal URL",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"sole_h100_run": "https://modal.com.evil/apps/example"},
+            "sole_h100_run.*HTTPS Modal URL",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "/benchmarks/manifest.json"},
+            "post_run_manifest_path.*normalized non-escaping",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "benchmarks/../outside.json"},
+            "post_run_manifest_path.*normalized non-escaping",
+        ),
+        (
+            _RELEASE_PROVENANCE | {"post_run_manifest_path": "benchmarks//manifest.json"},
+            "post_run_manifest_path.*normalized non-escaping",
+        ),
+    ],
+)
+def test_release_provenance_mapping_still_rejects_invalid_values(
+    provenance: dict[str, object],
+    message: str,
+) -> None:
+    with pytest.raises(SchemaError, match=message):
+        _development_replay(release_provenance=MappingProxyType(provenance))
+
+
 def test_causal_ablation_evaluators_share_schedule_and_paid_anchor() -> None:
     prepared = prepare_multisource(
         _corpus(),
@@ -604,3 +783,151 @@ def test_causal_ablation_evaluators_share_schedule_and_paid_anchor() -> None:
     assert len(serialize_workload_endpoints(prepared, no_anchor)) == (
         prepared.seeds * len(prepared.all_workloads)
     )
+
+
+def test_published_folds_exclude_target_family_and_shape() -> None:
+    repository = Path(__file__).resolve().parents[1]
+    rows = read_measurements(repository / "benchmarks/data/parhelion-v2-measurements.jsonl.zst")
+
+    prepared = prepare_multisource(
+        rows,
+        source_gpus=("L4", "A10", "T4"),
+        target_gpu="H100",
+        max_budget=1,
+        seeds=1,
+        protocol_role="development",
+    )
+
+    assert len(prepared.folds) == 4
+    assert {fold.heldout_model for fold in prepared.folds} == set(prepared.model_families)
+    assert len({fold.heldout_model for fold in prepared.folds}) == 4
+    for fold in prepared.folds:
+        assert {workload.model for workload in fold.target_workloads} == {fold.heldout_model}
+        target_shapes = {(w.m, w.n, w.k) for w in fold.target_workloads}
+        for gpu in prepared.source_gpus:
+            source_workloads = fold.source_workloads[gpu]
+            assert all(w.model != fold.heldout_model for w in source_workloads)
+            assert not target_shapes & {(w.m, w.n, w.k) for w in source_workloads}
+        assert all(o.source_gpu in prepared.source_gpus for o in fold.archive)
+        assert all(o.workload.model != fold.heldout_model for o in fold.archive)
+
+    # Two of the four published families share exact (M, N, K) shapes with other
+    # families; the exclusion must fire for them and stay inert for the other two.
+    assert {fold.heldout_model: dict(fold.exact_shape_exclusions) for fold in prepared.folds} == {
+        "granite-3.1-8b": {"L4": 12, "A10": 12, "T4": 12},
+        "mistral-7b": {"L4": 12, "A10": 12, "T4": 12},
+        "phi-3-mini": {"L4": 0, "A10": 0, "T4": 0},
+        "qwen2.5-7b": {"L4": 0, "A10": 0, "T4": 0},
+    }
+
+
+_LATENCY_FACTORS = st.lists(
+    st.floats(min_value=0.25, max_value=4.0, allow_nan=False, allow_infinity=False),
+    min_size=len(_HARDWARE) * len(_WORKLOADS) * len(_CONFIGS),
+    max_size=len(_HARDWARE) * len(_WORKLOADS) * len(_CONFIGS),
+)
+
+
+def _factored_corpus(factors: list[float]) -> tuple[Measurement, ...]:
+    rows: list[Measurement] = []
+    values = iter(factors)
+    for gpu_index, hardware in enumerate(_HARDWARE):
+        for workload_index, workload in enumerate(_WORKLOADS):
+            base_latency = 1.0 + 0.2 * workload_index + 0.05 * gpu_index
+            for config_index, config in enumerate(_CONFIGS):
+                factor = next(values)
+                for bank in range(3):
+                    bank_factor = 1.0 + (0.01 * bank if config_index == 0 else -0.01 * bank)
+                    rows.append(
+                        Measurement(
+                            hardware=hardware,
+                            workload=workload,
+                            config=config,
+                            latency_ms=base_latency * factor * bank_factor,
+                            torch_latency_ms=base_latency * 2.5,
+                            correct=True,
+                            bank=bank,
+                            max_abs_error=0.0,
+                        )
+                    )
+    return tuple(rows)
+
+
+@settings(max_examples=20)
+@given(factors=_LATENCY_FACTORS)
+def test_every_live_method_reaches_the_same_incumbent_once_the_budget_is_exhausted(
+    factors: list[float],
+) -> None:
+    # Curves are scored on the evaluation bank while incumbents are selected on the
+    # observation bank, so a curve may dip. What must hold is that a method which has
+    # paid for every action recommends the observation-bank optimum, identically for
+    # every method, seed, and fold.
+    prepared = prepare_multisource(
+        _factored_corpus(factors),
+        source_gpus=("source-a", "source-b"),
+        target_gpu="target",
+        max_budget=len(_CONFIGS),
+        seeds=2,
+    )
+    retrieval = evaluate_multisource_retrieval(prepared, k=2, temperature=0.7)
+    evaluations = {
+        "multisource_retrieval": retrieval,
+        "pooled_source_thompson": evaluate_pooled_source(prepared, transfer_strength=0.2),
+        "parhelion_thompson": evaluate_parhelion(
+            prepared,
+            k=2,
+            temperature=0.7,
+            transfer_strength=0.2,
+            retrieval=retrieval,
+        ),
+        **{
+            method: evaluation
+            for method, evaluation in parameter_independent_evaluations(prepared).items()
+            if method in _CURVE_METHODS
+        },
+    }
+    exhausted = [
+        _incumbent_value(
+            prepared.table,
+            prepared.target_gpu,
+            fold.target_workloads,
+            {workload.key: list(prepared.configs) for workload in fold.target_workloads},
+        )
+        for fold in prepared.folds
+    ]
+
+    for method, evaluation in evaluations.items():
+        if method in {"static_multisource", "torch"}:
+            continue
+        for fold_curves in [
+            evaluation.deterministic_fold_curves,
+            *evaluation.stochastic_seed_fold_curves,
+        ]:
+            for fold_index, curve in enumerate(fold_curves):
+                assert curve[-1] == pytest.approx(exhausted[fold_index]), method
+
+
+@settings(max_examples=20)
+@given(factors=_LATENCY_FACTORS, order=st.permutations(range(len(_CONFIGS))))
+def test_incumbent_selection_never_worsens_in_the_observation_bank(
+    factors: list[float],
+    order: list[int],
+) -> None:
+    prepared = prepare_multisource(
+        _factored_corpus(factors),
+        source_gpus=("source-a", "source-b"),
+        target_gpu="target",
+        max_budget=len(_CONFIGS),
+        seeds=1,
+    )
+    workload = prepared.folds[0].target_workloads[0]
+    queried: list[KernelConfig] = []
+    previous = math.inf
+
+    for index in order:
+        queried.append(prepared.configs[index])
+        incumbent = _best_observed(prepared.table, prepared.target_gpu, workload, queried)
+        latency = prepared.table.get(prepared.target_gpu, workload, incumbent, 0).latency_ms
+        assert latency is not None
+        assert latency <= previous
+        previous = latency

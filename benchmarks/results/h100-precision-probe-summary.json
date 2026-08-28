@@ -1,0 +1,2764 @@
+{
+  "analysis_status": "post_hoc_exploratory",
+  "claim_classification": {
+    "candidate_role": "torch.matmul with FP16 reduced-precision reduction enabled",
+    "claim_kind": "descriptive",
+    "comparator_role": "paired torch.matmul with FP16 reduced-precision reduction disabled",
+    "decision": "supported",
+    "evidence_class": "exploratory",
+    "inferential": false,
+    "limitations": [
+      "This is post-hoc exploratory descriptive evidence, not a confirmatory endpoint.",
+      "The thresholds were written for this diagnostic and do not establish causality.",
+      "Three calls reported one matching observed H100 profile/SKU and measured one fixed 96-workload corpus.",
+      "The archived comparator selected Triton configurations on bank 1 and scored bank 2, while the probe reports three-bank medians.",
+      "The probe cannot revise the frozen Hopper engineering STOP or any Parhelion claim."
+    ],
+    "reference_role": "FP32-output torch.mm numerical reference with TF32 disabled and the contextual archived bank-1-selected, bank-2-scored Triton result",
+    "scope": "one observed H100 profile/SKU across three calls, three banks, and the fixed 96-workload corpus"
+  },
+  "collection_accounting": {
+    "attempts": {
+      "attempted": 3,
+      "completed": 3,
+      "failed": 0,
+      "retried": 0
+    },
+    "cost": {
+      "actual_h100_cost_unknown_reason": "The actual Modal bill and per-call billable GPU duration were unavailable.",
+      "actual_h100_cost_usd": null,
+      "covered_call_ids": [
+        "fc-01M0XT9C4CS22SVVV2M2DV86HS",
+        "fc-01M0XTATZKMR4BY3K6N2J813Z3",
+        "fc-01M0XTBXK9X51JZJXCA6DWF3KY"
+      ],
+      "excluded_calls": [],
+      "published_rate_estimate": {
+        "amount_usd": 0.130054189964,
+        "classification": "estimated",
+        "gpu_rate_usd_per_second": 0.001097,
+        "limitations": "GPU line item only for the covered calls; excludes CPU, memory, queueing/billing adjustments, discounts, taxes, and every excluded call.",
+        "rate_source": {
+          "checked_at_utc": "2026-08-23",
+          "path": "benchmarks/parhelion-v2-h100-freeze.json",
+          "sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+          "url": "https://modal.com/pricing"
+        },
+        "time_basis": "Journal wall time for the covered calls from first transition through last transition; this can differ from billable GPU-active seconds."
+      },
+      "scope": "precision_probe_calls_only"
+    },
+    "elapsed_seconds": 118.554412,
+    "rows": {
+      "expected": 288,
+      "failed": 0,
+      "omitted": 0,
+      "published": 288
+    }
+  },
+  "evidence_scope": "one observed H100 profile/SKU across three calls, three banks, 96 workloads, and 288 paired rows",
+  "limitations": [
+    "This is post-hoc exploratory descriptive evidence, not a confirmatory endpoint.",
+    "The thresholds were written for this diagnostic and do not establish causality.",
+    "Three calls reported one matching observed H100 profile/SKU and measured one fixed 96-workload corpus.",
+    "The archived comparator selected Triton configurations on bank 1 and scored bank 2, while the probe reports three-bank medians.",
+    "The probe cannot revise the frozen Hopper engineering STOP or any Parhelion claim."
+  ],
+  "precision_finding": {
+    "accuracy_regression": false,
+    "baseline_agrees": true,
+    "classification": "does not explain",
+    "conclusion": "Under the frozen descriptive thresholds, reduced FP16 reduction does not explain the archived gap in this fixed H100 probe.",
+    "metrics": {
+      "archive_baseline_torch_over_best_triton": 0.627266,
+      "paired_strict_slowdown": 0.0,
+      "torch_reduced_over_torch_strict_median": 1.0,
+      "torch_reduced_over_triton_median": 0.6304639898943234,
+      "torch_strict_over_triton_median": 0.6303009701424857
+    },
+    "parity_authorized": false,
+    "thresholds": {
+      "baseline_absolute_tolerance": 0.031363300000000004,
+      "baseline_relative_tolerance": 0.05,
+      "meaningful_paired_effect": 0.05
+    }
+  },
+  "protocol": {
+    "arm_order": "per-workload seeded random permutation of the three arms",
+    "arm_order_seed": "sha256('heliostune-precision-probe-v1\\0arm-order\\0<bank>\\0<workload_key>')[:8]",
+    "arms": [
+      "torch_reduced",
+      "torch_strict",
+      "triton"
+    ],
+    "banks": [
+      0,
+      1,
+      2
+    ],
+    "gpu": "H100",
+    "modal_selector": "H100!",
+    "probe": "h100-fp16-reduction-probe",
+    "quantiles": [
+      0.2,
+      0.5,
+      0.8
+    ],
+    "reference": "torch.mm(out_dtype=float32) with TF32 and FP16 reduction disabled",
+    "rep_ms": 100,
+    "retry_policy": "none; a failed remote call is journaled and re-raised",
+    "role": "post-hoc exploratory; not a confirmatory Parhelion endpoint",
+    "schema_version": 2,
+    "statistic": "median of triton.testing.do_bench quantiles [0.2, 0.5, 0.8]",
+    "tensor_seed": "bank * 10000 + legacy-bank shuffled workload index",
+    "tensor_seed_protocol": "legacy-bank, identical to the committed v2 archive",
+    "warmup_ms": 25,
+    "workload_count": 96
+  },
+  "publication": {
+    "hardware": {
+      "compute_capability": [
+        9,
+        0
+      ],
+      "cuda_version": "12.8",
+      "device_name": "NVIDIA H100 80GB HBM3",
+      "gpu": "H100",
+      "multiprocessor_count": 132,
+      "torch_version": "2.8.0+cu128",
+      "total_memory_gb": 79.1788330078125,
+      "triton_version": "3.4.0"
+    },
+    "head_commit": "d411d4537ba63e1f5b9f353853836276400f87db",
+    "journal": {
+      "path": "benchmarks/data/h100-precision-probe.attempts.jsonl",
+      "records": 6,
+      "sha256": "4771219bcedda851f09a5c8de6206ce5957c5a47e3c0e1e6b41971f6d5d4c633"
+    },
+    "manifest_path": "benchmarks/h100-precision-probe-manifest.json",
+    "modal": {
+      "app_id": "ap-oxqdKZOLRVPqepVv8AL6R4",
+      "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4",
+      "app_url_provenance": "operator_recorded",
+      "call_ids": [
+        "fc-01M0XT9C4CS22SVVV2M2DV86HS",
+        "fc-01M0XTATZKMR4BY3K6N2J813Z3",
+        "fc-01M0XTBXK9X51JZJXCA6DWF3KY"
+      ]
+    },
+    "raw": {
+      "bytes": 40379,
+      "path": "benchmarks/data/h100-precision-probe.json.zst",
+      "rows": 288,
+      "schema": "h100-precision-probe-raw-v2",
+      "schema_version": 2,
+      "sha256": "5f15925f06a799b31231d71c9ff497af7c3987edc2cb02592cb90c8991a833d2",
+      "uncompressed_sha256": "015ec9773730169b4ccee4caa111103a6fb9d04d8b6978dbb61f0334df8e1829"
+    },
+    "runtime": {
+      "cuda_version": "12.8",
+      "torch_version": "2.8.0+cu128",
+      "triton_version": "3.4.0"
+    },
+    "source_sha256": "e9c96a912b24dac451f0771034ac73fbb25753f74dd4055871896e560b67427b",
+    "wheel_sha256": "86be6fecadca24d5e24468f06a0fb9cbb8cc297cdd39437f134b7a7cda77e9bc"
+  },
+  "row_count": 288,
+  "schema_version": 1,
+  "study_id": "h100-fp16-reduction-probe",
+  "workload_count": 96,
+  "workloads": [
+    {
+      "archive_torch_over_best_triton": 0.5080091700821674,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.029937744140625,
+        "torch_strict": 0.029937744140625,
+        "triton": 0.029937744140625
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.021376000717282295,
+        "torch_strict": 0.02143999934196472,
+        "triton": 0.04195199906826019
+      },
+      "m": 1,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9970149894287934,
+        "torch_reduced_over_triton": 0.5095347347453302,
+        "torch_strict_over_triton": 0.5110602550090557
+      },
+      "workload_key": "granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5034168382695079,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03118896484375,
+        "torch_strict": 0.03118896484375,
+        "triton": 0.03118896484375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.021088000386953354,
+        "torch_strict": 0.02099199965596199,
+        "triton": 0.04214400053024292
+      },
+      "m": 7,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0045732056290357,
+        "torch_reduced_over_triton": 0.5003796536074075,
+        "torch_strict_over_triton": 0.4981017319629621
+      },
+      "workload_key": "granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5113293038741596,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03113555908203125,
+        "torch_strict": 0.03113555908203125,
+        "triton": 0.03113555908203125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.021695999428629875,
+        "torch_strict": 0.021695999428629875,
+        "triton": 0.04233599826693535
+      },
+      "m": 31,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5124716628112339,
+        "torch_strict_over_triton": 0.5124716628112339
+      },
+      "workload_key": "granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5151739310342213,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.022112000733613968,
+        "torch_strict": 0.022112000733613968,
+        "triton": 0.04323200136423111
+      },
+      "m": 96,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5114729838047422,
+        "torch_strict_over_triton": 0.5114729838047422
+      },
+      "workload_key": "granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8278074861649419,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.04979199916124344,
+        "torch_strict": 0.04995200037956238,
+        "triton": 0.0589120015501976
+      },
+      "m": 1024,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.996796900682592,
+        "torch_reduced_over_triton": 0.845192793506036,
+        "torch_strict_over_triton": 0.8479087293783321
+      },
+      "workload_key": "granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5948575332119399,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02731199935078621,
+        "torch_strict": 0.02735999971628189,
+        "triton": 0.04560000076889992
+      },
+      "m": 257,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9982456006581346,
+        "torch_reduced_over_triton": 0.5989473440845536,
+        "torch_strict_over_triton": 0.5999999836610077
+      },
+      "workload_key": "granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6446911544392611,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0307464599609375,
+        "torch_strict": 0.0307464599609375,
+        "triton": 0.0307464599609375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.029152000322937965,
+        "torch_strict": 0.029152000322937965,
+        "triton": 0.04614400118589401
+      },
+      "m": 1,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.6317614332033604,
+        "torch_strict_over_triton": 0.6317614332033604
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6300138595424137,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03119659423828125,
+        "torch_strict": 0.03119659423828125,
+        "triton": 0.03119659423828125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.029263999313116074,
+        "torch_strict": 0.02924799919128418,
+        "triton": 0.046351999044418335
+      },
+      "m": 7,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0005470501324638,
+        "torch_reduced_over_triton": 0.6313427665778315,
+        "torch_strict_over_triton": 0.6309975792685083
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6341798013428911,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.029600000008940697,
+        "torch_strict": 0.02956799976527691,
+        "triton": 0.04660800099372864
+      },
+      "m": 31,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0010822593316362,
+        "torch_reduced_over_triton": 0.6350840923841282,
+        "torch_strict_over_triton": 0.6343975097592245
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6201601961870175,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02953599952161312,
+        "torch_strict": 0.029632000252604485,
+        "triton": 0.048128001391887665
+      },
+      "m": 96,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9967602345378987,
+        "torch_reduced_over_triton": 0.6136967808223102,
+        "torch_strict_over_triton": 0.6156914768041704
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6431085195003283,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.07425599917769432,
+        "torch_strict": 0.07436800003051758,
+        "triton": 0.11343999952077866
+      },
+      "m": 1024,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.998493964436622,
+        "torch_reduced_over_triton": 0.6545839165319544,
+        "torch_strict_over_triton": 0.6555712301188409
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7056222645523937,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.03574400022625923,
+        "torch_strict": 0.03577600046992302,
+        "triton": 0.0504320003092289
+      },
+      "m": 257,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9991055388181055,
+        "torch_reduced_over_triton": 0.7087563453182759,
+        "torch_strict_over_triton": 0.709390867912414
+      },
+      "workload_key": "granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5052501584801552,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.044769287109375,
+        "torch_strict": 0.044769287109375,
+        "triton": 0.044769287109375
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.052400000393390656,
+        "torch_strict": 0.05241600051522255,
+        "triton": 0.1037760004401207
+      },
+      "m": 1,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9996947473734238,
+        "torch_reduced_over_triton": 0.5049337050103962,
+        "torch_strict_over_triton": 0.5050878844137654
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.505263162068009,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.06097412109375,
+        "torch_strict": 0.06097412109375,
+        "triton": 0.06097412109375
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.052352000027894974,
+        "torch_strict": 0.052319999784231186,
+        "triton": 0.10355199873447418
+      },
+      "m": 7,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0006116254548119,
+        "torch_reduced_over_triton": 0.5055624291920705,
+        "torch_strict_over_triton": 0.5052534033494516
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5044247768747805,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.06207275390625,
+        "torch_strict": 0.06207275390625,
+        "triton": 0.0631256103515625
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.05299200117588043,
+        "torch_strict": 0.052960000932216644,
+        "triton": 0.10476800054311752
+      },
+      "m": 31,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0006042341975172,
+        "torch_reduced_over_triton": 0.5058033073187403,
+        "torch_strict_over_triton": 0.5054978682199899
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5099141827148013,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624542236328125,
+        "torch_strict": 0.0624542236328125,
+        "triton": 0.0629425048828125
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.05518399924039841,
+        "torch_strict": 0.05507199838757515,
+        "triton": 0.10812799632549286
+      },
+      "m": 96,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0020337168815818,
+        "torch_reduced_over_triton": 0.5103581044291294,
+        "torch_strict_over_triton": 0.509322287095697
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6896875303543865,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624847412109375,
+        "torch_strict": 0.0624847412109375,
+        "triton": 0.0624847412109375
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.15116800367832184,
+        "torch_strict": 0.15007999539375305,
+        "triton": 0.2033279985189438
+      },
+      "m": 1024,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0072495223744795,
+        "torch_reduced_over_triton": 0.743468704651798,
+        "torch_strict_over_triton": 0.7381177038427903
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5725784722673838,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624542236328125,
+        "torch_strict": 0.0624542236328125,
+        "triton": 0.0624542236328125
+      },
+      "k": 12800,
+      "latencies_ms": {
+        "torch_reduced": 0.06681600213050842,
+        "torch_strict": 0.06697600334882736,
+        "triton": 0.11830399930477142
+      },
+      "m": 257,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9976110664966732,
+        "torch_reduced_over_triton": 0.5647822772109244,
+        "torch_strict_over_triton": 0.5661347354478328
+      },
+      "workload_key": "granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8642181399046599,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.030792236328125,
+        "torch_strict": 0.030792236328125,
+        "triton": 0.030792236328125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05004800111055374,
+        "torch_strict": 0.050175998359918594,
+        "triton": 0.05827200040221214
+      },
+      "m": 1,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9974490343281919,
+        "torch_reduced_over_triton": 0.8588687665620932,
+        "torch_strict_over_triton": 0.8610653146208757
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8573825707641409,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0311279296875,
+        "torch_strict": 0.0311279296875,
+        "triton": 0.0311279296875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.04975999891757965,
+        "torch_strict": 0.04972799867391586,
+        "triton": 0.05801599845290184
+      },
+      "m": 7,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0006435055605922,
+        "torch_reduced_over_triton": 0.8576944333376505,
+        "torch_strict_over_triton": 0.8571428571428571
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8599007381168239,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05020799860358238,
+        "torch_strict": 0.050175998359918594,
+        "triton": 0.05852799862623215
+      },
+      "m": 31,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.000637759979069,
+        "torch_reduced_over_triton": 0.85784581366292,
+        "torch_strict_over_triton": 0.8572990626306808
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.848161980665629,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05132799968123436,
+        "torch_strict": 0.05132799968123436,
+        "triton": 0.060736000537872314
+      },
+      "m": 96,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.8451000926415704,
+        "torch_strict_over_triton": 0.8451000926415704
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7353224340978531,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.17295999825000763,
+        "torch_strict": 0.17447999864816666,
+        "triton": 0.22729599475860596
+      },
+      "m": 1024,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9912883974671272,
+        "torch_reduced_over_triton": 0.7609460889695636,
+        "torch_strict_over_triton": 0.7676334060944136
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6339704452010857,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.0568000003695488,
+        "torch_strict": 0.05696000158786774,
+        "triton": 0.08851200342178345
+      },
+      "m": 257,
+      "n": 12800,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9971909899252352,
+        "torch_reduced_over_triton": 0.6417208759684441,
+        "torch_strict_over_triton": 0.6435285541604797
+      },
+      "workload_key": "granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5080091700821674,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.02405548095703125,
+        "torch_strict": 0.02405548095703125,
+        "triton": 0.02405548095703125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.021407999098300934,
+        "torch_strict": 0.021407999098300934,
+        "triton": 0.041999999433755875
+      },
+      "m": 1,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5097142711172297,
+        "torch_strict_over_triton": 0.5097142711172297
+      },
+      "workload_key": "mistral-7b-attention-out-decode-1-m1-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.501133795527698,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0308074951171875,
+        "torch_strict": 0.0308074951171875,
+        "triton": 0.0308074951171875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.021088000386953354,
+        "torch_strict": 0.021056000143289566,
+        "triton": 0.04227200150489807
+      },
+      "m": 7,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.001519768400742,
+        "torch_reduced_over_triton": 0.4988644879876312,
+        "torch_strict_over_triton": 0.4981074799793854
+      },
+      "workload_key": "mistral-7b-attention-out-decode-7-m7-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5135542325780041,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03118133544921875,
+        "torch_strict": 0.03118133544921875,
+        "triton": 0.03118133544921875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02179200015962124,
+        "torch_strict": 0.02179200015962124,
+        "triton": 0.042399998754262924
+      },
+      "m": 31,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5139622830161111,
+        "torch_strict_over_triton": 0.5139622830161111
+      },
+      "workload_key": "mistral-7b-attention-out-mixed-31-m31-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5096012121638368,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.022143999114632607,
+        "torch_strict": 0.022175999358296394,
+        "triton": 0.04323200136423111
+      },
+      "m": 96,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9985569875275174,
+        "torch_reduced_over_triton": 0.5122131387827421,
+        "torch_strict_over_triton": 0.512953336845612
+      },
+      "workload_key": "mistral-7b-attention-out-mixed-96-m96-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.832264928430076,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.04982399940490723,
+        "torch_strict": 0.04995200037956238,
+        "triton": 0.058848001062870026
+      },
+      "m": 1024,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9974375205460736,
+        "torch_reduced_over_triton": 0.8466557657868099,
+        "torch_strict_over_triton": 0.8488308774701856
+      },
+      "workload_key": "mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.601540611622276,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02739199995994568,
+        "torch_strict": 0.02739199995994568,
+        "triton": 0.04569600149989128
+      },
+      "m": 257,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5994397553582637,
+        "torch_strict_over_triton": 0.5994397553582637
+      },
+      "workload_key": "mistral-7b-attention-out-prefill-257-m257-n4096-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6248275748560564,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.029388427734375,
+        "torch_strict": 0.029388427734375,
+        "triton": 0.029388427734375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.029152000322937965,
+        "torch_strict": 0.029152000322937965,
+        "triton": 0.0461760014295578
+      },
+      "m": 1,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.6313236187721839,
+        "torch_strict_over_triton": 0.6313236187721839
+      },
+      "workload_key": "mistral-7b-attention-qkv-decode-1-m1-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6311419054490026,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03099822998046875,
+        "torch_strict": 0.03099822998046875,
+        "triton": 0.03099822998046875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.029184000566601753,
+        "torch_strict": 0.02924799919128418,
+        "triton": 0.04620800167322159
+      },
+      "m": 7,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.997811863154677,
+        "torch_reduced_over_triton": 0.6315789367605229,
+        "torch_strict_over_triton": 0.6329639484979925
+      },
+      "workload_key": "mistral-7b-attention-qkv-decode-7-m7-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6297057170363352,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03122711181640625,
+        "torch_strict": 0.03122711181640625,
+        "triton": 0.03122711181640625
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02953599952161312,
+        "torch_strict": 0.02953599952161312,
+        "triton": 0.046911999583244324
+      },
+      "m": 31,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.629604361016463,
+        "torch_strict_over_triton": 0.629604361016463
+      },
+      "workload_key": "mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6157438170184133,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.02953599952161312,
+        "torch_strict": 0.02956799976527691,
+        "triton": 0.0480320006608963
+      },
+      "m": 96,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9989177406683638,
+        "torch_reduced_over_triton": 0.6149233659896016,
+        "torch_strict_over_triton": 0.6155895935717027
+      },
+      "workload_key": "mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6416829250223067,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.07470400258898735,
+        "torch_strict": 0.07478400319814682,
+        "triton": 0.11356800049543381
+      },
+      "m": 1024,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.998930244360582,
+        "torch_reduced_over_triton": 0.6577909469489247,
+        "torch_strict_over_triton": 0.6584953760910287
+      },
+      "workload_key": "mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7068096211613405,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.035711999982595444,
+        "torch_strict": 0.035840000957250595,
+        "triton": 0.05052800104022026
+      },
+      "m": 257,
+      "n": 6144,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9964285443293422,
+        "torch_reduced_over_triton": 0.7067764258904426,
+        "torch_strict_over_triton": 0.7093096940194007
+      },
+      "workload_key": "mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4935646495589345,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0511474609375,
+        "torch_strict": 0.0511474609375,
+        "triton": 0.0511474609375
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.05651199817657471,
+        "torch_strict": 0.056543998420238495,
+        "triton": 0.1143679991364479
+      },
+      "m": 1,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9994340647184877,
+        "torch_reduced_over_triton": 0.49412421834146536,
+        "torch_strict_over_triton": 0.49440401901914977
+      },
+      "workload_key": "mistral-7b-ffn-down-decode-1-m1-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49535864727428675,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0611724853515625,
+        "torch_strict": 0.0611724853515625,
+        "triton": 0.0611724853515625
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.05648000165820122,
+        "torch_strict": 0.05641600117087364,
+        "triton": 0.11382400244474411
+      },
+      "m": 7,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0011344385635155,
+        "torch_reduced_over_triton": 0.4962046707645819,
+        "torch_strict_over_triton": 0.49564239491807366
+      },
+      "workload_key": "mistral-7b-ffn-down-decode-7-m7-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49334443981566733,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0622406005859375,
+        "torch_strict": 0.0622406005859375,
+        "triton": 0.0622406005859375
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.057151999324560165,
+        "torch_strict": 0.05716799944639206,
+        "triton": 0.1151999980211258
+      },
+      "m": 31,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.999720121011985,
+        "torch_reduced_over_triton": 0.49611111376997963,
+        "torch_strict_over_triton": 0.49625000371882283
+      },
+      "workload_key": "mistral-7b-ffn-down-mixed-31-m31-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5008103789384747,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624847412109375,
+        "torch_strict": 0.0624847412109375,
+        "triton": 0.0633544921875
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.05929600074887276,
+        "torch_strict": 0.05923200026154518,
+        "triton": 0.11868800222873688
+      },
+      "m": 96,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0010805052512997,
+        "torch_reduced_over_triton": 0.49959557525112624,
+        "torch_strict_over_triton": 0.49905634225262796
+      },
+      "workload_key": "mistral-7b-ffn-down-mixed-96-m96-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7560993316126376,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624847412109375,
+        "torch_strict": 0.0624847412109375,
+        "triton": 0.0624847412109375
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.16699200123548508,
+        "torch_strict": 0.1666560024023056,
+        "triton": 0.22406400740146637
+      },
+      "m": 1024,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0020161220018249,
+        "torch_reduced_over_triton": 0.7452870417348084,
+        "torch_strict_over_triton": 0.7437874754408902
+      },
+      "workload_key": "mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5828206054490738,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0624542236328125,
+        "torch_strict": 0.0624542236328125,
+        "triton": 0.0624542236328125
+      },
+      "k": 14336,
+      "latencies_ms": {
+        "torch_reduced": 0.07417599856853485,
+        "torch_strict": 0.0740479975938797,
+        "triton": 0.1300159990787506
+      },
+      "m": 257,
+      "n": 4096,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0017286216888293,
+        "torch_reduced_over_triton": 0.5705143912604671,
+        "torch_strict_over_triton": 0.5695298895409701
+      },
+      "workload_key": "mistral-7b-ffn-down-prefill-257-m257-n4096-k14336"
+    },
+    {
+      "archive_torch_over_best_triton": 0.9192000038246314,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0308837890625,
+        "torch_strict": 0.0308837890625,
+        "triton": 0.0308837890625
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05539200082421303,
+        "torch_strict": 0.05588800087571144,
+        "triton": 0.06092799827456474
+      },
+      "m": 1,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9911251065751759,
+        "torch_reduced_over_triton": 0.9091386947359668,
+        "torch_strict_over_triton": 0.9172794521142619
+      },
+      "workload_key": "mistral-7b-ffn-up-decode-1-m1-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.9230357854842106,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03118896484375,
+        "torch_strict": 0.03118896484375,
+        "triton": 0.03118896484375
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.0560000017285347,
+        "torch_strict": 0.05612799897789955,
+        "triton": 0.06092799827456474
+      },
+      "m": 7,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9977195472545662,
+        "torch_reduced_over_triton": 0.9191177014576678,
+        "torch_strict_over_triton": 0.9212184967076291
+      },
+      "workload_key": "mistral-7b-ffn-up-decode-7-m7-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8797669005229255,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03122711181640625,
+        "torch_strict": 0.03122711181640625,
+        "triton": 0.03122711181640625
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.053599998354911804,
+        "torch_strict": 0.05366399884223938,
+        "triton": 0.06124800071120262
+      },
+      "m": 31,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9988073850494124,
+        "torch_reduced_over_triton": 0.8751305794885815,
+        "torch_strict_over_triton": 0.8761755195124911
+      },
+      "workload_key": "mistral-7b-ffn-up-mixed-31-m31-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.864572593615273,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03122711181640625,
+        "torch_strict": 0.03122711181640625,
+        "triton": 0.03122711181640625
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05417599901556969,
+        "torch_strict": 0.05430399999022484,
+        "triton": 0.06297600269317627
+      },
+      "m": 96,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9976428812853898,
+        "torch_reduced_over_triton": 0.8602641752211417,
+        "torch_strict_over_triton": 0.8622967109360359
+      },
+      "workload_key": "mistral-7b-ffn-up-mixed-96-m96-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7138238857643773,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.18756800144910812,
+        "torch_strict": 0.18240000307559967,
+        "triton": 0.25092799961566925
+      },
+      "m": 1024,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0283333239384127,
+        "torch_reduced_over_triton": 0.7474972969791905,
+        "torch_strict_over_triton": 0.7269017541086302
+      },
+      "workload_key": "mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5001369498204379,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 4096,
+      "latencies_ms": {
+        "torch_reduced": 0.05849599838256836,
+        "torch_strict": 0.05859199911355972,
+        "triton": 0.11494400352239609
+      },
+      "m": 257,
+      "n": 14336,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9983615385642449,
+        "torch_reduced_over_triton": 0.5089086563021167,
+        "torch_strict_over_triton": 0.5097438519456429
+      },
+      "workload_key": "mistral-7b-ffn-up-prefill-257-m257-n14336-k4096"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5925155717595789,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.02220916748046875,
+        "torch_strict": 0.02220916748046875,
+        "triton": 0.02220916748046875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.017983999103307724,
+        "torch_strict": 0.017952000722289085,
+        "triton": 0.030432000756263733
+      },
+      "m": 1,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.001782440938681,
+        "torch_reduced_over_triton": 0.5909568433355841,
+        "torch_strict_over_triton": 0.5899053718508493
+      },
+      "workload_key": "phi-3-mini-attention-out-decode-1-m1-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5939771451215513,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03009796142578125,
+        "torch_strict": 0.03009796142578125,
+        "triton": 0.03009796142578125
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.018112000077962875,
+        "torch_strict": 0.018144000321626663,
+        "triton": 0.030688000842928886
+      },
+      "m": 7,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.998236318171487,
+        "torch_reduced_over_triton": 0.590198109373952,
+        "torch_strict_over_triton": 0.5912408701529149
+      },
+      "workload_key": "phi-3-mini-attention-out-decode-7-m7-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49178644506162095,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03089141845703125,
+        "torch_strict": 0.03089141845703125,
+        "triton": 0.03089141845703125
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.015231999568641186,
+        "torch_strict": 0.015296000055968761,
+        "triton": 0.03081599995493889
+      },
+      "m": 31,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.995815867737095,
+        "torch_reduced_over_triton": 0.49428866792946463,
+        "torch_strict_over_triton": 0.49636552694494884
+      },
+      "workload_key": "phi-3-mini-attention-out-mixed-31-m31-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5095862909502064,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03112030029296875,
+        "torch_strict": 0.03112030029296875,
+        "triton": 0.03112030029296875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.015615999698638916,
+        "torch_strict": 0.015744000673294067,
+        "triton": 0.03129599988460541
+      },
+      "m": 96,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9918698571404234,
+        "torch_reduced_over_triton": 0.49897749732292374,
+        "torch_strict_over_triton": 0.5030675080312288
+      },
+      "workload_key": "phi-3-mini-attention-out-mixed-96-m96-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7274725057292968,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03122711181640625,
+        "torch_strict": 0.03122711181640625,
+        "triton": 0.03122711181640625
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.031808000057935715,
+        "torch_strict": 0.031936001032590866,
+        "triton": 0.043136000633239746
+      },
+      "m": 1024,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9959919535785171,
+        "torch_reduced_over_triton": 0.7373887145537804,
+        "torch_strict_over_triton": 0.7403560961555999
+      },
+      "workload_key": "phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6153846111324668,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03118133544921875,
+        "torch_strict": 0.03118133544921875,
+        "triton": 0.03118133544921875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.02038400061428547,
+        "torch_strict": 0.02022399939596653,
+        "triton": 0.03347200155258179
+      },
+      "m": 257,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.007911452882601,
+        "torch_reduced_over_triton": 0.6089866057834595,
+        "torch_strict_over_triton": 0.6042064548842792
+      },
+      "workload_key": "phi-3-mini-attention-out-prefill-257-m257-n3072-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7403481919581956,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0296478271484375,
+        "torch_strict": 0.0296478271484375,
+        "triton": 0.0296478271484375
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.031168000772595406,
+        "torch_strict": 0.031168000772595406,
+        "triton": 0.0424639992415905
+      },
+      "m": 1,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.7339864668721202,
+        "torch_strict_over_triton": 0.7339864668721202
+      },
+      "workload_key": "phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7343396566916451,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.02977752685546875,
+        "torch_strict": 0.02977752685546875,
+        "triton": 0.02977752685546875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.03126399964094162,
+        "torch_strict": 0.031199999153614044,
+        "triton": 0.04262400045990944
+      },
+      "m": 7,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0020512977264027,
+        "torch_reduced_over_triton": 0.7334834671454028,
+        "torch_strict_over_triton": 0.7319819542269292
+      },
+      "workload_key": "phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7352281196018057,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03119659423828125,
+        "torch_strict": 0.03119659423828125,
+        "triton": 0.03119659423828125
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.03145600110292435,
+        "torch_strict": 0.03145600110292435,
+        "triton": 0.04320000112056732
+      },
+      "m": 31,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.7281481547913269,
+        "torch_strict_over_triton": 0.7281481547913269
+      },
+      "workload_key": "phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7161198191028746,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03121185302734375,
+        "torch_strict": 0.03121185302734375,
+        "triton": 0.03121185302734375
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.03209599852561951,
+        "torch_strict": 0.03215999901294708,
+        "triton": 0.04499199986457825
+      },
+      "m": 96,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9980099350344567,
+        "torch_reduced_over_triton": 0.7133712353801895,
+        "torch_strict_over_triton": 0.714793721322584
+      },
+      "workload_key": "phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6559418021792468,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.08828800171613693,
+        "torch_strict": 0.08848000317811966,
+        "triton": 0.13660800457000732
+      },
+      "m": 1024,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9978300016378141,
+        "torch_reduced_over_triton": 0.6462871776367402,
+        "torch_strict_over_triton": 0.647692669669122
+      },
+      "workload_key": "phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8101431053174932,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.031219482421875,
+        "torch_strict": 0.031219482421875,
+        "triton": 0.031219482421875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.040063999593257904,
+        "torch_strict": 0.040031999349594116,
+        "triton": 0.0490880012512207
+      },
+      "m": 257,
+      "n": 9216,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0007993666113035,
+        "torch_reduced_over_triton": 0.8161668548739618,
+        "torch_strict_over_triton": 0.8155149594443635
+      },
+      "workload_key": "phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4394478638204107,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0311431884765625,
+        "torch_strict": 0.0311431884765625,
+        "triton": 0.03121185302734375
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.03139200061559677,
+        "torch_strict": 0.03139200061559677,
+        "triton": 0.07180800288915634
+      },
+      "m": 1,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.4371657663847555,
+        "torch_strict_over_triton": 0.4371657663847555
+      },
+      "workload_key": "phi-3-mini-ffn-down-decode-1-m1-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4430040065188416,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03122711181640625,
+        "torch_strict": 0.03122711181640625,
+        "triton": 0.0318603515625
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.03177599981427193,
+        "torch_strict": 0.03174399957060814,
+        "triton": 0.07155200093984604
+      },
+      "m": 7,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0010080722056656,
+        "torch_reduced_over_triton": 0.4440965926443636,
+        "torch_strict_over_triton": 0.4436493620534163
+      },
+      "workload_key": "phi-3-mini-ffn-down-decode-7-m7-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4447391596851784,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.039947509765625,
+        "torch_strict": 0.039947509765625,
+        "triton": 0.039947509765625
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.032255999743938446,
+        "torch_strict": 0.03222399950027466,
+        "triton": 0.07251200079917908
+      },
+      "m": 31,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.000993056236347,
+        "torch_reduced_over_triton": 0.44483670824738325,
+        "torch_strict_over_triton": 0.44439539862537447
+      },
+      "workload_key": "phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4735711207558561,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.05108642578125,
+        "torch_strict": 0.05108642578125,
+        "triton": 0.05108642578125
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.03513599932193756,
+        "torch_strict": 0.03513599932193756,
+        "triton": 0.07449600100517273
+      },
+      "m": 96,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.4716494690701296,
+        "torch_strict_over_triton": 0.4716494690701296
+      },
+      "workload_key": "phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6505673460078013,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0615081787109375,
+        "torch_strict": 0.0615081787109375,
+        "triton": 0.0615081787109375
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.07228799909353256,
+        "torch_strict": 0.07264000177383423,
+        "triton": 0.10812799632549286
+      },
+      "m": 1024,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9951541482419338,
+        "torch_reduced_over_triton": 0.66854100279383,
+        "torch_strict_over_triton": 0.6717964286989032
+      },
+      "workload_key": "phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5716716309474811,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0583343505859375,
+        "torch_strict": 0.0583343505859375,
+        "triton": 0.0583343505859375
+      },
+      "k": 8192,
+      "latencies_ms": {
+        "torch_reduced": 0.04275200143456459,
+        "torch_strict": 0.042688000947237015,
+        "triton": 0.07513599842786789
+      },
+      "m": 257,
+      "n": 3072,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0014992617575764,
+        "torch_reduced_over_triton": 0.5689949202659148,
+        "torch_strict_over_triton": 0.5681431250057637
+      },
+      "workload_key": "phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7175815286952186,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0276031494140625,
+        "torch_strict": 0.0276031494140625,
+        "triton": 0.0276031494140625
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.02876799926161766,
+        "torch_strict": 0.028672000393271446,
+        "triton": 0.04032000154256821
+      },
+      "m": 1,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0033481747708382,
+        "torch_reduced_over_triton": 0.7134920178821319,
+        "torch_strict_over_triton": 0.7111110936590794
+      },
+      "workload_key": "phi-3-mini-ffn-up-decode-1-m1-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7084987713052052,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03069305419921875,
+        "torch_strict": 0.03069305419921875,
+        "triton": 0.03069305419921875
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.02828799933195114,
+        "torch_strict": 0.02831999957561493,
+        "triton": 0.04052799940109253
+      },
+      "m": 7,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9988700478762951,
+        "torch_reduced_over_triton": 0.6979865710121524,
+        "torch_strict_over_triton": 0.6987761546120507
+      },
+      "workload_key": "phi-3-mini-ffn-up-decode-7-m7-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7008614278371746,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.031158447265625,
+        "torch_strict": 0.031158447265625,
+        "triton": 0.031158447265625
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.028543999418616295,
+        "torch_strict": 0.028543999418616295,
+        "triton": 0.04092799872159958
+      },
+      "m": 31,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.6974198668441689,
+        "torch_strict_over_triton": 0.6974198668441689
+      },
+      "workload_key": "phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6931297806930782,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.028991999104619026,
+        "torch_strict": 0.028991999104619026,
+        "triton": 0.04214400053024292
+      },
+      "m": 96,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.6879270771604633,
+        "torch_strict_over_triton": 0.6879270771604633
+      },
+      "workload_key": "phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.709599072977556,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.07459200173616409,
+        "torch_strict": 0.07448000088334084,
+        "triton": 0.10358399897813797
+      },
+      "m": 1024,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0015037708310273,
+        "torch_reduced_over_triton": 0.7201112379519851,
+        "torch_strict_over_triton": 0.7190299816389624
+      },
+      "workload_key": "phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7187919246522562,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0312347412109375,
+        "torch_strict": 0.0312347412109375,
+        "triton": 0.0312347412109375
+      },
+      "k": 3072,
+      "latencies_ms": {
+        "torch_reduced": 0.034015998244285583,
+        "torch_strict": 0.034015998244285583,
+        "triton": 0.04745600000023842
+      },
+      "m": 257,
+      "n": 8192,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.7167902529525179,
+        "torch_strict_over_triton": 0.7167902529525179
+      },
+      "workload_key": "phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49469965772661445,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.02719879150390625,
+        "torch_strict": 0.02719879150390625,
+        "triton": 0.02719879150390625
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.018015999346971512,
+        "torch_strict": 0.017920000478625298,
+        "triton": 0.03606399893760681
+      },
+      "m": 1,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0053570795637377,
+        "torch_reduced_over_triton": 0.49955634088555806,
+        "torch_strict_over_triton": 0.4968944378472317
+      },
+      "workload_key": "qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49605611198317745,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03066253662109375,
+        "torch_strict": 0.03066253662109375,
+        "triton": 0.03066253662109375
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.01772800087928772,
+        "torch_strict": 0.017791999503970146,
+        "triton": 0.03625600039958954
+      },
+      "m": 7,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.996402954897332,
+        "torch_reduced_over_triton": 0.48896736219940085,
+        "torch_strict_over_triton": 0.4907325493126256
+      },
+      "workload_key": "qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.49912433656261834,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.030792236328125,
+        "torch_strict": 0.030792236328125,
+        "triton": 0.030792236328125
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.017952000722289085,
+        "torch_strict": 0.017920000478625298,
+        "triton": 0.03641600161790848
+      },
+      "m": 31,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0017857278353288,
+        "torch_reduced_over_triton": 0.4929701209553094,
+        "torch_strict_over_triton": 0.4920913796810875
+      },
+      "workload_key": "qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4918873131451991,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03116607666015625,
+        "torch_strict": 0.03116607666015625,
+        "triton": 0.03116607666015625
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.018239999189972878,
+        "torch_strict": 0.018271999433636665,
+        "triton": 0.037248000502586365
+      },
+      "m": 96,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9982486731252367,
+        "torch_reduced_over_triton": 0.4896906932952377,
+        "torch_strict_over_triton": 0.4905498063545162
+      },
+      "workload_key": "qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.8277982598415692,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.04339199885725975,
+        "torch_strict": 0.043296001851558685,
+        "triton": 0.05142400041222572
+      },
+      "m": 1024,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0022172256466126,
+        "torch_reduced_over_triton": 0.843808309532908,
+        "torch_strict_over_triton": 0.8419415351681846
+      },
+      "workload_key": "qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5580285944895392,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.0225600004196167,
+        "torch_strict": 0.0225600004196167,
+        "triton": 0.04022400081157684
+      },
+      "m": 257,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5608591876600132,
+        "torch_strict_over_triton": 0.5608591876600132
+      },
+      "workload_key": "qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5616666482342416,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.02677154541015625,
+        "torch_strict": 0.02677154541015625,
+        "triton": 0.02677154541015625
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.021056000143289566,
+        "torch_strict": 0.021088000386953354,
+        "triton": 0.038495998829603195
+      },
+      "m": 1,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9984825377903737,
+        "torch_reduced_over_triton": 0.5469659388886313,
+        "torch_strict_over_triton": 0.5477972004388364
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5437293685784873,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0302581787109375,
+        "torch_strict": 0.0302581787109375,
+        "triton": 0.0302581787109375
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.02112000063061714,
+        "torch_strict": 0.02112000063061714,
+        "triton": 0.03862399980425835
+      },
+      "m": 7,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5468102925033838,
+        "torch_strict_over_triton": 0.5468102925033838
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5495049419359387,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0311737060546875,
+        "torch_strict": 0.0311737060546875,
+        "triton": 0.0311737060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.021344000473618507,
+        "torch_strict": 0.021344000473618507,
+        "triton": 0.038816001266241074
+      },
+      "m": 31,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.5498763339175213,
+        "torch_strict_over_triton": 0.5498763339175213
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.5525078240490141,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.031219482421875,
+        "torch_strict": 0.031219482421875,
+        "triton": 0.031219482421875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.022463999688625336,
+        "torch_strict": 0.02239999920129776,
+        "triton": 0.040511999279260635
+      },
+      "m": 96,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0028571647147142,
+        "torch_reduced_over_triton": 0.5545023718472804,
+        "torch_strict_over_triton": 0.5529225809589956
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6357033790883541,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.05353600159287453,
+        "torch_strict": 0.05369599908590317,
+        "triton": 0.08294399827718735
+      },
+      "m": 1024,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9970203088544329,
+        "torch_reduced_over_triton": 0.6454475634748716,
+        "torch_strict_over_triton": 0.6473765456357503
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6611940459294947,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.028511999174952507,
+        "torch_strict": 0.02860799990594387,
+        "triton": 0.04243199899792671
+      },
+      "m": 257,
+      "n": 4608,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9966442697389895,
+        "torch_reduced_over_triton": 0.6719456977821301,
+        "torch_strict_over_triton": 0.6742081585018349
+      },
+      "workload_key": "qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.44011449403011377,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.061126708984375,
+        "torch_strict": 0.061126708984375,
+        "triton": 0.064605712890625
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.0647680014371872,
+        "torch_strict": 0.06470400094985962,
+        "triton": 0.14550399780273438
+      },
+      "m": 1,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0009891272006066,
+        "torch_reduced_over_triton": 0.4451286728560942,
+        "torch_strict_over_triton": 0.44468881904936686
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.44402738734188824,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.06195068359375,
+        "torch_strict": 0.06195068359375,
+        "triton": 0.0649871826171875
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.06473600119352341,
+        "torch_strict": 0.06470400094985962,
+        "triton": 0.14496000111103058
+      },
+      "m": 7,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0004945636003033,
+        "torch_reduced_over_triton": 0.44657837125663064,
+        "torch_strict_over_triton": 0.4463576190255426
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.4292257337922712,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.06243896484375,
+        "torch_strict": 0.06243896484375,
+        "triton": 0.0640716552734375
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.06339199841022491,
+        "torch_strict": 0.0634239986538887,
+        "triton": 0.14694400131702423
+      },
+      "m": 31,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9994954552796581,
+        "torch_reduced_over_triton": 0.4314024243389146,
+        "torch_strict_over_triton": 0.43162019603001445
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.441558419670357,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.06243896484375,
+        "torch_strict": 0.06243896484375,
+        "triton": 0.0651397705078125
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.0666240006685257,
+        "torch_strict": 0.0666240006685257,
+        "triton": 0.15094399452209473
+      },
+      "m": 96,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.44138225491822053,
+        "torch_strict_over_triton": 0.44138225491822053
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6880174394716418,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0625,
+        "torch_strict": 0.0625,
+        "triton": 0.0625
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.20668800175189972,
+        "torch_strict": 0.20537599921226501,
+        "triton": 0.2746880054473877
+      },
+      "m": 1024,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0063882953444754,
+        "torch_reduced_over_triton": 0.7524464033850493,
+        "torch_strict_over_triton": 0.7476700661820549
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.45616070440939344,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0625,
+        "torch_strict": 0.0625,
+        "triton": 0.065155029296875
+      },
+      "k": 18944,
+      "latencies_ms": {
+        "torch_reduced": 0.0759039968252182,
+        "torch_strict": 0.07587199658155441,
+        "triton": 0.16752000153064728
+      },
+      "m": 257,
+      "n": 3584,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0004217661997254,
+        "torch_reduced_over_triton": 0.45310408388058543,
+        "torch_strict_over_triton": 0.452913060460269
+      },
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944"
+    },
+    {
+      "archive_torch_over_best_triton": 0.998439925697602,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.0294189453125,
+        "torch_strict": 0.0294189453125,
+        "triton": 0.0294189453125
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.06169600039720535,
+        "torch_strict": 0.06195199862122536,
+        "triton": 0.06297600269317627
+      },
+      "m": 1,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9958677971701094,
+        "torch_reduced_over_triton": 0.9796747611593073,
+        "torch_strict_over_triton": 0.9837397734349712
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.9969024628902866,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03119659423828125,
+        "torch_strict": 0.03119659423828125,
+        "triton": 0.03119659423828125
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.06220800057053566,
+        "torch_strict": 0.06196799874305725,
+        "triton": 0.0631679967045784
+      },
+      "m": 7,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0038729962617245,
+        "torch_reduced_over_triton": 0.9848024920192988,
+        "torch_strict_over_triton": 0.9810030707933758
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.9629999528517968,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.031219482421875,
+        "torch_strict": 0.031219482421875,
+        "triton": 0.031219482421875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.06203199923038483,
+        "torch_strict": 0.06207999959588051,
+        "triton": 0.06460800021886826
+      },
+      "m": 31,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9992267982311832,
+        "torch_reduced_over_triton": 0.960128761457453,
+        "torch_strict_over_triton": 0.9608717091625835
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.921364290507348,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.06313599646091461,
+        "torch_strict": 0.0631679967045784,
+        "triton": 0.06883200258016586
+      },
+      "m": 96,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 0.9994934105032103,
+        "torch_reduced_over_triton": 0.917247705925491,
+        "torch_strict_over_triton": 0.9177126094945324
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.7038145367426368,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03125,
+        "torch_strict": 0.03125,
+        "triton": 0.03125
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.21580800414085388,
+        "torch_strict": 0.20508800446987152,
+        "triton": 0.28998400270938873
+      },
+      "m": 1024,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0522702422245138,
+        "torch_reduced_over_triton": 0.7442065842408855,
+        "torch_strict_over_triton": 0.7072390288901665
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584"
+    },
+    {
+      "archive_torch_over_best_triton": 0.6918535869079905,
+      "banks": [
+        0,
+        1,
+        2
+      ],
+      "errors": {
+        "torch_reduced": 0.03124237060546875,
+        "torch_strict": 0.03124237060546875,
+        "triton": 0.03124237060546875
+      },
+      "k": 3584,
+      "latencies_ms": {
+        "torch_reduced": 0.07465600222349167,
+        "torch_strict": 0.07465600222349167,
+        "triton": 0.10820799693465233
+      },
+      "m": 257,
+      "n": 18944,
+      "ratios": {
+        "torch_reduced_over_torch_strict": 1.0,
+        "torch_reduced_over_triton": 0.6899305443069704,
+        "torch_strict_over_triton": 0.6899305443069704
+      },
+      "workload_key": "qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584"
+    }
+  ]
+}

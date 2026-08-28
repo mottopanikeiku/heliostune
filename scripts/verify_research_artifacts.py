@@ -24,7 +24,9 @@ def main(argv: list[str] | None = None) -> int:
         f"measurement_rows={facts['measurement_rows']} "
         f"json_artifacts={facts['json_artifacts']} "
         f"html_reports={facts['html_reports']} "
-        f"file_artifacts={facts['file_artifacts']} aliases={facts['aliases']}"
+        f"file_artifacts={facts['file_artifacts']} "
+        f"compressed_raw_artifacts={facts['compressed_raw_artifacts']} "
+        f"aliases={facts['aliases']}"
     )
     return 0
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from heliostune.multisource_engine import run_multisource
@@ -23,6 +23,7 @@ def compare_multisource(
     pooled_transfer_strength: float | None = None,
     primary_comparator: str | None = None,
     protocol_role: str = "development",
+    release_provenance: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
     """Compare Parhelion and independently tuned baselines in grouped replay."""
     return run_multisource(
@@ -39,6 +40,7 @@ def compare_multisource(
         pooled_transfer_strength=pooled_transfer_strength,
         primary_comparator=primary_comparator,
         protocol_role=protocol_role,
+        release_provenance=release_provenance,
     )
 
 

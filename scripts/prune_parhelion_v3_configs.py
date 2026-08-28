@@ -15,6 +15,7 @@ from heliostune.configs import (
     DEFAULT_WORKLOADS,
     PARHELION_V3_CANDIDATE_CONFIGS,
     PARHELION_V3_OFFICIAL_CONFIG_KEYS,
+    KernelConfig,
 )
 from heliostune.features import v3_feature_rank
 from heliostune.hardware import expectation_for_gpu, validate_hardware
@@ -44,7 +45,7 @@ def _head() -> str:
 
 
 def _rank_folds(
-    retained: tuple,
+    retained: tuple[KernelConfig, ...],
     profiles: tuple[HardwareProfile, ...],
 ) -> dict[str, int]:
     ranks: dict[str, int] = {}

@@ -29,7 +29,7 @@ from heliostune.v3_engine import (
     evaluation_seed_curves,
     prepare_v3,
 )
-from heliostune.validation import exact_object
+from heliostune.validation import exact_int, exact_object, finite_float
 
 _REPO = Path(__file__).resolve().parents[1]
 _FREEZE = _REPO / "benchmarks/parhelion-v3-h200-freeze.json"
@@ -235,7 +235,7 @@ def build_result() -> dict[str, object]:
 
 
 def _percent(value: object) -> str:
-    return f"{100 * float(value):.2f}%"
+    return f"{100 * finite_float(value, context='percentage'):.2f}%"
 
 
 def render_html(result: Mapping[str, object]) -> str:
@@ -267,6 +267,12 @@ def render_html(result: Mapping[str, object]) -> str:
     interval = exact_object(contrast["uncertainty"], context="primary interval")
     limitations = cast(Sequence[object], result["limitations"])
     run_items = exact_object(result["collection_runs"], context="collection runs")
+    artifacts = exact_object(result["artifacts"], context="artifacts")
+    final_archive = exact_object(artifacts["final_archive"], context="final archive")
+    raw_budgets = result["budgets"]
+    if type(raw_budgets) is not list:
+        raise TypeError("v3 budgets must be a list")
+    budgets = cast(list[object], raw_budgets)
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Parhelion v3 H200 engineering benchmark</title>
@@ -282,12 +288,12 @@ code{{color:#b9f6ef}}a{{color:var(--accent)}}li{{margin:.45em 0}}.muted{{color:v
 </style></head><body><main>
 <p class="muted">HeliosTune · Parhelion v3</p><h1>H200 engineering benchmark</h1>
 <p class="banner">Protocol-deviation engineering result. The original failed campaign remains terminal; this page makes no confirmatory superiority claim.</p>
-<div class="grid"><div class="card">Primary delta<strong>{float(contrast["mean"]):+.4f}</strong>Parhelion − anchored cold AUC1–8</div>
-<div class="card">95% seed interval<strong>[{float(interval["low"]):+.4f}, {float(interval["high"]):+.4f}]</strong>Conditional Monte Carlo interval</div>
-<div class="card">H200 action set<strong>{int(result["retained_config_count"])}</strong>retained configurations</div>
-<div class="card">Final archive<strong>{int(exact_object(result["artifacts"], context="artifacts")["final_archive"]["rows"]):,}</strong>four-GPU measurement rows</div></div>
+<div class="grid"><div class="card">Primary delta<strong>{finite_float(contrast["mean"], context="primary contrast mean"):+.4f}</strong>Parhelion − anchored cold AUC1–8</div>
+<div class="card">95% seed interval<strong>[{finite_float(interval["low"], context="primary interval low"):+.4f}, {finite_float(interval["high"], context="primary interval high"):+.4f}]</strong>Conditional Monte Carlo interval</div>
+<div class="card">H200 action set<strong>{exact_int(result["retained_config_count"], context="retained config count")}</strong>retained configurations</div>
+<div class="card">Final archive<strong>{exact_int(final_archive["rows"], context="final archive rows"):,}</strong>four-GPU measurement rows</div></div>
 <h2>Primary bank-2 results</h2><div class="table-wrap"><table><thead><tr><th>Method</th><th>AUC 1–8</th><th>Budget 8</th><th>Queries to 95%</th></tr></thead><tbody>{"".join(rows)}</tbody></table></div>
-<h2>Mean curves</h2><div class="table-wrap"><table><thead><tr><th>Method</th>{"".join(f"<th>{budget}</th>" for budget in result["budgets"])}</tr></thead><tbody>{"".join(curve_rows)}</tbody></table></div>
+<h2>Mean curves</h2><div class="table-wrap"><table><thead><tr><th>Method</th>{"".join(f"<th>{budget}</th>" for budget in budgets)}</tr></thead><tbody>{"".join(curve_rows)}</tbody></table></div>
 <h2>Validity limits</h2><ul>{"".join(f"<li>{html.escape(str(item))}</li>" for item in limitations)}</ul>
 <h2>Collection chain</h2><ul>{"".join(f'<li><code>{html.escape(name)}</code>: <a href="https://modal.com/apps/mottopanikeiku/main/{html.escape(str(app_id))}">{html.escape(str(app_id))}</a></li>' for name, app_id in run_items.items())}</ul>
 <p class="muted">All fractions use the bank-1-selected retained-config reference and score unchanged recommendations on bank 2. Banks 3 and 4 remain separate sensitivity matrices.</p>

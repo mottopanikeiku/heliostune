@@ -1828,6 +1828,147 @@
       "study_id": "parhelion-v3-h200-transfer"
     },
     {
+      "analysis_status": "post_hoc_exploratory",
+      "attempt_journals": [
+        {
+          "bytes": 3834,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/h100-precision-probe.attempts.jsonl",
+          "schema": "modal-function-call-attempt-journal-v1",
+          "sha256": "4771219bcedda851f09a5c8de6206ce5957c5a47e3c0e1e6b41971f6d5d4c633",
+          "status": "published_complete"
+        }
+      ],
+      "collection_run": "https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4",
+      "manifests": [
+        {
+          "bytes": 6218,
+          "kind": "json_artifact",
+          "path": "benchmarks/h100-precision-probe-manifest.json",
+          "schema": "h100-precision-probe-manifest-v1",
+          "sha256": "907d05372f1d8d28e6b2a89f757c5c5de796f7b7e9864c04a89e1ef598ef65e7",
+          "status": "published_complete"
+        }
+      ],
+      "measurement_schema": "h100-precision-probe-raw-v2",
+      "outcome_status": "does_not_explain",
+      "raw_artifacts": [
+        {
+          "compressed_bytes": 40379,
+          "compressed_sha256": "5f15925f06a799b31231d71c9ff497af7c3987edc2cb02592cb90c8991a833d2",
+          "compression": "zstd",
+          "kind": "compressed_json_artifact",
+          "path": "benchmarks/data/h100-precision-probe.json.zst",
+          "schema": "h100-precision-probe-raw-v2",
+          "status": "published_complete",
+          "uncompressed_bytes": 597409,
+          "uncompressed_sha256": "015ec9773730169b4ccee4caa111103a6fb9d04d8b6978dbb61f0334df8e1829"
+        }
+      ],
+      "reports": [
+        {
+          "bytes": 20112,
+          "kind": "self_contained_html_report",
+          "path": "site/h100-precision-probe.html",
+          "schema": "html5",
+          "sha256": "7d93022f9631479f942b54cce443d9b2bed28f83c65609e8851d06dfa02f6aac",
+          "status": "published"
+        }
+      ],
+      "results": [
+        {
+          "bytes": 80240,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/h100-precision-probe-summary.json",
+          "schema": "h100-precision-probe-summary-v1",
+          "sha256": "b6f259beaba284716ff0df307bc42793cfbf685fbf570e8281bf4f66791a8025",
+          "status": "published_does_not_explain"
+        }
+      ],
+      "split_design": "three fixed legacy banks across the 96-workload corpus",
+      "study_id": "h100-fp16-reduction-probe"
+    },
+    {
+      "analysis_status": "post_hoc_exploratory",
+      "attempt_journals": [
+        {
+          "bytes": 1278,
+          "kind": "append_only_function_call_journal",
+          "path": "benchmarks/data/hopper-h100-engineering.attempts.jsonl",
+          "schema": "modal-function-call-attempt-journal-v1",
+          "sha256": "ecc9a2838ce57325a90799c6f3f08406bf0daddd3aa1b8b44f2b7d4aea569db4",
+          "status": "published_complete"
+        }
+      ],
+      "collection_runs": {
+        "correctness": "https://modal.com/apps/mottopanikeiku/main/ap-yvSdUddrJrfljamxVa4CZI",
+        "engineering": "https://modal.com/apps/mottopanikeiku/main/ap-ryV3BXdW1g2TGp5LIg6MDH"
+      },
+      "manifests": [
+        {
+          "bytes": 6589,
+          "kind": "json_artifact",
+          "path": "benchmarks/hopper-h100-engineering-manifest.json",
+          "schema": "hopper-h100-engineering-manifest-v1",
+          "sha256": "c6a65d8216de0bc736afdabab5d6cc5c0aa26fe9f23b3c837b71f5d86571ae99",
+          "status": "published_negative_stop_immutable"
+        },
+        {
+          "bytes": 10063,
+          "kind": "json_artifact",
+          "path": "benchmarks/hopper-h100-engineering-manifest-v2.json",
+          "schema": "hopper-h100-engineering-manifest-v2",
+          "sha256": "8172a6ac9e1c720a966e100637dd2afc65d59866f982a8fb7ecc114ac31766cf",
+          "status": "published_negative_stop_methodology_compatible_derivation"
+        }
+      ],
+      "measurement_schema": "hopper-h100-engineering-raw-v1",
+      "outcome_status": "STOP",
+      "raw_artifacts": [
+        {
+          "compressed_bytes": 112849,
+          "compressed_sha256": "d5cb96c141894e3dd0a3ca6c8e1930591e4cf283411e3f2e6ebe2dd592513fda",
+          "compression": "zstd",
+          "kind": "compressed_json_artifact",
+          "path": "benchmarks/data/hopper-h100-engineering.json.zst",
+          "schema": "hopper-h100-engineering-raw-v1",
+          "status": "published_negative_stop",
+          "uncompressed_bytes": 3210759,
+          "uncompressed_sha256": "f59b0bb774f5ea54f7691cd2caa887543790e9685f93bfd5c5e4b05cf7b20d31"
+        }
+      ],
+      "reports": [
+        {
+          "bytes": 51616,
+          "kind": "self_contained_html_report",
+          "path": "site/hopper-h100-engineering.html",
+          "schema": "html5",
+          "sha256": "abc1fb32683e721d5d5b0bb73e63b34cfcc0ad259236a50a5afa3b1aadb3e6c8",
+          "status": "published_negative_stop_methodology_compatible_derivation"
+        }
+      ],
+      "results": [
+        {
+          "bytes": 64256,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/hopper-h100-engineering-summary.json",
+          "schema": "hopper-h100-engineering-summary-v1",
+          "sha256": "5d14a49c416d8cd4282c1d382002b2b33f7146a83f606bb7f2c70c3b6382eea5",
+          "status": "published_negative_stop_immutable"
+        },
+        {
+          "bytes": 70589,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/hopper-h100-engineering-summary-v2.json",
+          "schema": "hopper-h100-engineering-summary-v2",
+          "sha256": "a8b089208bad5d2d0a62f9a676b04ec39728abf80fd9310e1fa77226ce5f0f46",
+          "status": "published_negative_stop_methodology_compatible_derivation"
+        }
+      ],
+      "split_design": "single-bank post-hoc engineering screen",
+      "study_id": "hopper-h100-engineering-benchmark"
+    },
+    {
       "analysis_status": "operator_authorized_engineering_protocol_deviation",
       "collection_runs": {
         "candidate_bank0": "https://modal.com/apps/mottopanikeiku/main/ap-a2tRHcReiUYfLwZ4iCN5Pu",

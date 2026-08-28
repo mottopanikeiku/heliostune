@@ -1,0 +1,175 @@
+{
+  "analysis": {
+    "analysis_status": "post_hoc_exploratory",
+    "analyzer": {
+      "path": "scripts/analyze_hopper_benchmark.py",
+      "sha256": "cb7a04b362a0964b64d5880317e001efc77dea7eee128ced3c62a37ee5d67d35"
+    },
+    "cost_screen": {
+      "geometric_mean_speedup_threshold": 1.05,
+      "required_fraction_at_least_five_percent_faster": 0.25,
+      "speedup_threshold_for_win": 1.05
+    },
+    "global_decision": "STOP",
+    "no_superiority_claim": true,
+    "three_bank_collection_performed": false
+  },
+  "commands": {
+    "check": "uv run python scripts/publish_hopper_engineering_result.py --check",
+    "engineering_collection": "modal run modal_precision_probe.py::hopper_benchmark",
+    "generate": "uv run python scripts/publish_hopper_engineering_result.py",
+    "strict_analysis": "uv run python scripts/analyze_hopper_benchmark.py artifacts/hopper-h100-engineering.json"
+  },
+  "hardware": {
+    "compute_capability": [
+      9,
+      0
+    ],
+    "cuda_version": "12.8",
+    "device_name": "NVIDIA H100 80GB HBM3",
+    "gpu": "H100",
+    "multiprocessor_count": 132,
+    "torch_version": "2.8.0+cu128",
+    "total_memory_gb": 79.1788330078125,
+    "triton_version": "3.4.0"
+  },
+  "inputs": {
+    "bundles": {
+      "correctness": {
+        "artifact": {
+          "local_path": "artifacts/hopper-correctness.json",
+          "sha256": "98116c12540102049871b08c09bdfb0b21540c514a1be16df2a9119017885123"
+        },
+        "attempt_journal": {
+          "local_path": "artifacts/hopper-correctness.json.attempts.jsonl",
+          "sha256": "6901b380fd58683a29f6eedf0b8b95e954ae9ae04011e0b0dbdb4e67477ac230"
+        },
+        "manifest": {
+          "local_path": "artifacts/hopper-correctness.json.manifest.json",
+          "sha256": "cda8b732ef3aafbee8ce5f75a1d05d1a59b02d32ff62ecb9dd4733f40fc4dbff"
+        }
+      },
+      "engineering": {
+        "artifact": {
+          "local_path": "artifacts/hopper-h100-engineering.json",
+          "sha256": "f59b0bb774f5ea54f7691cd2caa887543790e9685f93bfd5c5e4b05cf7b20d31"
+        },
+        "attempt_journal": {
+          "local_path": "artifacts/hopper-h100-engineering.json.attempts.jsonl",
+          "sha256": "ecc9a2838ce57325a90799c6f3f08406bf0daddd3aa1b8b44f2b7d4aea569db4"
+        },
+        "manifest": {
+          "local_path": "artifacts/hopper-h100-engineering.json.manifest.json",
+          "sha256": "048b781f53d8fedb21991c517f5439f0eedbd7e0a80c649a210a8f38a381db05"
+        }
+      },
+      "precision": {
+        "artifact": {
+          "local_path": "artifacts/h100-precision-probe.json",
+          "sha256": "015ec9773730169b4ccee4caa111103a6fb9d04d8b6978dbb61f0334df8e1829"
+        },
+        "attempt_journal": {
+          "local_path": "artifacts/h100-precision-probe.json.attempts.jsonl",
+          "sha256": "4771219bcedda851f09a5c8de6206ce5957c5a47e3c0e1e6b41971f6d5d4c633"
+        },
+        "manifest": {
+          "local_path": "artifacts/h100-precision-probe.json.manifest.json",
+          "sha256": "2a7c8dec20a5e055a19802cd64a201129460fc6f0fa9e4c400d0ad578d9bfb92"
+        }
+      }
+    },
+    "context_archive": {
+      "path": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+      "sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f"
+    }
+  },
+  "modal": {
+    "correctness": {
+      "app_id": "ap-yvSdUddrJrfljamxVa4CZI",
+      "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-yvSdUddrJrfljamxVa4CZI",
+      "app_url_binding": "operator-recorded; app ID is not present in the local artifact bundle",
+      "function_call_ids": [
+        "fc-01M0XX5MS2JFMYAH3XW98HJCFR"
+      ]
+    },
+    "engineering": {
+      "app_id": "ap-ryV3BXdW1g2TGp5LIg6MDH",
+      "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-ryV3BXdW1g2TGp5LIg6MDH",
+      "app_url_binding": "operator-recorded; app ID is not present in the local artifact bundle",
+      "function_call_ids": [
+        "fc-01M0XX8KZ2WZQWPA4V2SYVGNWX"
+      ]
+    },
+    "precision": {
+      "app_id": "ap-oxqdKZOLRVPqepVv8AL6R4",
+      "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4",
+      "app_url_binding": "operator-recorded; app ID is not present in the local artifact bundle",
+      "function_call_ids": [
+        "fc-01M0XT9C4CS22SVVV2M2DV86HS",
+        "fc-01M0XTATZKMR4BY3K6N2J813Z3",
+        "fc-01M0XTBXK9X51JZJXCA6DWF3KY"
+      ]
+    }
+  },
+  "protocol": {
+    "candidate_policy": {
+      "hopper_gemm": {
+        "condition": "m > 8",
+        "config_count": 23,
+        "config_set": "HOPPER_GEMM_CONFIGS"
+      },
+      "skinny_gemv": {
+        "condition": "m <= 8",
+        "config_count": 48,
+        "config_set": "SKINNY_GEMV_CONFIGS"
+      }
+    },
+    "expected_candidate_rows": 3008,
+    "expected_hopper_rows": 1472,
+    "expected_hopper_workloads": 64,
+    "expected_skinny_rows": 1536,
+    "expected_skinny_workloads": 32,
+    "expected_workloads": 96,
+    "quantiles": [
+      0.2,
+      0.5,
+      0.8
+    ],
+    "rep_ms": 100,
+    "torch_measurements": 96,
+    "warmup_ms": 25
+  },
+  "provenance": {
+    "head_commit": "3e7734ada28e9ab6c83ea3b21895c311e8d492b7",
+    "head_sha256": "5d709f6360fc95abba6c729c0952e01a8b1ab58809c794e1c68f5ccaeb1fc80b",
+    "source_sha256": "997dd421a8b1e2dea3c61de64e3239c46f64f0f8c95606efb10ce89e9782ee49",
+    "wheel_manifest_sha256": "c6c5b708a579be89ee0d92d9be23b8c2245eb35466f43303d79d80d9b73df02c",
+    "wheel_sha256": "d56791105a58f4b00259cd71624e3177071da96a025e468c3a3def5555728d69"
+  },
+  "publication": {
+    "attempt_journal": {
+      "bytes": 1278,
+      "path": "benchmarks/data/hopper-h100-engineering.attempts.jsonl",
+      "sha256": "ecc9a2838ce57325a90799c6f3f08406bf0daddd3aa1b8b44f2b7d4aea569db4"
+    },
+    "raw": {
+      "compressed_bytes": 112849,
+      "compressed_sha256": "d5cb96c141894e3dd0a3ca6c8e1930591e4cf283411e3f2e6ebe2dd592513fda",
+      "decompressed_bytes": 3210759,
+      "decompressed_sha256": "f59b0bb774f5ea54f7691cd2caa887543790e9685f93bfd5c5e4b05cf7b20d31",
+      "format": "zstd level=19, threads=1, checksum=true, content_size=false",
+      "path": "benchmarks/data/hopper-h100-engineering.json.zst"
+    },
+    "summary": {
+      "bytes": 64256,
+      "path": "benchmarks/results/hopper-h100-engineering-summary.json",
+      "sha256": "5d14a49c416d8cd4282c1d382002b2b33f7146a83f606bb7f2c70c3b6382eea5"
+    }
+  },
+  "publisher": {
+    "path": "scripts/publish_hopper_engineering_result.py",
+    "sha256": "6b2c21d3ae3fdd51f778fb0dec23ad72e455ecdeb7a885bc286b5e760fbf9554"
+  },
+  "schema_version": 1,
+  "study_id": "hopper-h100-engineering-benchmark"
+}

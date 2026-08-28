@@ -1,0 +1,108 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'none'; base-uri 'none'; form-action 'none'"><title>H100 FP16 reduction diagnostic · HeliosTune</title><style>:root {
+  --paper: #f4f0e7;
+  --surface: #fbf8f1;
+  --ink: #142a33;
+  --muted: #53656a;
+  --line: #c9c0ae;
+  --accent: #a23b2a;
+  --accent-soft: #f1d9cf;
+  --teal: #176b67;
+  --teal-soft: #d9e8e3;
+  --warning: #76591b;
+  --warning-soft: #eee2bd;
+  --shadow: 0 0.5rem 1.5rem rgb(20 42 51 / 0.08);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --measure: 76rem;
+  --reading: 48rem;
+  --line-thin: 0.0625rem;
+  --line-heavy: 0.25rem;
+  --type-xs: 0.75rem;
+  --type-sm: 0.875rem;
+  --type-base: 1rem;
+  --type-md: 1.125rem;
+  --type-lg: 1.5rem;
+  --type-xl: clamp(2.25rem, 6vw, 4.75rem);
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+  font-size: var(--type-base);
+  line-height: 1.6;
+}
+a { color: var(--teal); text-decoration-thickness: var(--line-thin); text-underline-offset: var(--space-1); }
+a:hover { text-decoration-thickness: calc(var(--line-thin) * 2); }
+a:focus-visible, [tabindex="0"]:focus-visible { outline: var(--line-heavy) solid var(--accent); outline-offset: var(--space-1); }
+.skip-link { position: absolute; left: var(--space-4); top: -5rem; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--surface); z-index: 2; }
+.skip-link:focus { top: var(--space-4); }
+.page { width: min(100% - var(--space-6), var(--measure)); margin-inline: auto; }
+.report-header { padding: var(--space-6) 0 var(--space-8); border-bottom: var(--line-thin) solid var(--line); }
+.utility { display: flex; gap: var(--space-4); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.lockup, .badge, .eyebrow { font-size: var(--type-xs); font-weight: 750; letter-spacing: 0.11em; text-transform: uppercase; }
+.badge { display: inline-flex; padding: var(--space-1) var(--space-3); border: var(--line-thin) solid var(--accent); border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent); }
+.kicker { margin: var(--space-7) 0 var(--space-2); color: var(--accent); font-weight: 700; }
+h1, h2, h3 { font-family: Charter, Georgia, serif; line-height: 1.08; }
+h1 { max-width: 16ch; margin: 0; font-size: var(--type-xl); letter-spacing: -0.035em; }
+.lede { max-width: var(--reading); margin: var(--space-5) 0 0; font-size: var(--type-md); color: var(--muted); }
+.header-meta { margin-top: var(--space-6); }
+.report-section { padding: var(--space-7) 0; border-bottom: var(--line-thin) solid var(--line); }
+.section-heading { display: grid; grid-template-columns: minmax(9rem, 0.35fr) minmax(0, 1fr); gap: var(--space-5); margin-bottom: var(--space-6); }
+.section-heading .eyebrow { grid-row: 1 / span 2; margin: var(--space-2) 0 0; color: var(--accent); }
+.section-heading h2 { margin: 0; font-size: clamp(1.75rem, 4vw, 2.75rem); }
+.section-heading > p:last-child { max-width: var(--reading); margin: 0; color: var(--muted); }
+h3 { margin: var(--space-6) 0 var(--space-3); font-size: var(--type-lg); }
+.decision { display: grid; grid-template-columns: minmax(10rem, 0.35fr) minmax(0, 1fr); gap: var(--space-4) var(--space-6); padding: var(--space-5); border-left: var(--line-heavy) solid var(--accent); background: var(--accent-soft); box-shadow: var(--shadow); }
+.decision-label { margin: 0; font-size: var(--type-xs); font-weight: 750; letter-spacing: 0.1em; text-transform: uppercase; }
+.decision-value { grid-row: 2; margin: 0; font-family: Charter, Georgia, serif; font-size: clamp(3rem, 10vw, 7rem); line-height: 0.8; color: var(--accent); }
+.decision-value.small { font-size: clamp(2rem, 7vw, 4rem); }
+.decision > p:last-child { grid-column: 2; grid-row: 1 / span 2; align-self: center; margin: 0; font-size: var(--type-md); }
+.decision.diagnostic { border-color: var(--teal); background: var(--teal-soft); }
+.decision.diagnostic .decision-value { color: var(--teal); }
+.notice { margin: var(--space-5) 0; padding: var(--space-4); border: var(--line-thin) solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.notice.direction { border-left: var(--line-heavy) solid var(--teal); }
+.notice.warning { border-left: var(--line-heavy) solid var(--warning); background: var(--warning-soft); }
+.split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-5); }
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--line-thin); margin: var(--space-5) 0; padding: var(--line-thin); background: var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.facts > div { min-width: 0; padding: var(--space-3) var(--space-4); background: var(--surface); }
+.facts dt { margin-bottom: var(--space-1); color: var(--muted); font-size: var(--type-xs); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.facts-wide { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.provenance-facts dd { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: var(--type-sm); }
+.table-wrap { overflow-x: auto; margin: var(--space-5) 0; border: var(--line-thin) solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+caption { padding: var(--space-3) var(--space-4); text-align: left; color: var(--muted); font-size: var(--type-sm); font-weight: 700; }
+th, td { padding: var(--space-3) var(--space-4); border-top: var(--line-thin) solid var(--line); text-align: left; vertical-align: top; }
+thead th { border-top: 0; background: var(--ink); color: var(--surface); font-size: var(--type-xs); letter-spacing: 0.04em; text-transform: uppercase; }
+tbody th { font-weight: 700; }
+tbody tr:nth-child(even) { background: var(--paper); }
+.selection-table { min-width: 88rem; font-size: var(--type-sm); }
+code { font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: var(--type-sm); overflow-wrap: anywhere; }
+.source-note { color: var(--muted); font-size: var(--type-sm); overflow-wrap: anywhere; }
+.limitations { max-width: var(--reading); margin: 0; padding-left: var(--space-5); }
+.limitations li { padding: var(--space-2) 0 var(--space-2) var(--space-2); }
+.footer { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) 0 var(--space-7); color: var(--muted); font-size: var(--type-sm); }
+@media (max-width: 52rem) {
+  .section-heading, .decision, .split { grid-template-columns: 1fr; }
+  .section-heading .eyebrow, .decision-value, .decision > p:last-child { grid-column: 1; grid-row: auto; }
+  .facts, .facts-wide { grid-template-columns: 1fr; }
+  .footer { flex-direction: column; }
+}
+@media print {
+  :root { --paper: #f7f3eb; --surface: #fdfaf3; --ink: #172a31; }
+  .page { width: 100%; }
+  a { color: inherit; }
+  .table-wrap { overflow: visible; }
+}</style></head><body><a class="skip-link" href="#main">Skip to report</a><div class="page"><header class="report-header"><div class="utility"><span class="lockup">HeliosTune // engineering evidence</span><span class="badge">Exploratory engineering diagnostic</span></div><p class="kicker">Legacy-shaped publication · methodology-compatible typed claims</p><h1>H100 FP16 reduction diagnostic</h1><p class="lede">A paired three-bank diagnostic comparing strict and reduced FP16 reduction. Under the frozen descriptive thresholds, reduced FP16 reduction does not explain the archived gap in this fixed H100 probe.</p><dl class="facts facts-wide header-meta"><div><dt>Study ID</dt><dd>h100-fp16-reduction-probe</dd></div><div><dt>Schema</dt><dd>1</dd></div><div><dt>Evidence scope</dt><dd>one observed H100 profile/SKU across three calls, three banks, 96 workloads, and 288 paired rows</dd></div><div><dt>Workloads / published rows</dt><dd>96 / 288</dd></div></dl></header><main id="main"><section id="decision" class="report-section"><div class="section-heading"><p class="eyebrow">Primary result</p><h2>Precision diagnostic conclusion</h2><p>The strict/reduced comparison is a paired exploratory diagnostic. It tests one proposed explanation; it does not create a superiority or parity claim.</p></div><div class="decision diagnostic"><p class="decision-label">Exploratory diagnostic</p><p class="decision-value small">does not explain</p><p>Under the frozen descriptive thresholds, reduced FP16 reduction does not explain the archived gap in this fixed H100 probe.</p></div><div class="notice direction"><strong>Ratio direction:</strong> each numerator latency is divided by its denominator latency. Ratios below 1 favor the numerator; ratios above 1 favor the denominator.</div><div class="table-wrap" tabindex="0" role="region" aria-label="Strict and reduced precision ratios"><table class="data-table"><caption>Strict and reduced precision ratios</caption><thead><tr><th scope="col">Metric</th><th scope="col">Median ratio</th><th scope="col">Interpretation</th></tr></thead><tbody><tr><td>Reduced torch / strict torch</td><td>1</td><td>Below 1 favors reduced; above 1 favors strict</td></tr><tr><td>Strict torch / Triton</td><td>0.630301</td><td>Below 1 means strict torch is faster</td></tr><tr><td>Reduced torch / Triton</td><td>0.630464</td><td>Below 1 means reduced torch is faster</td></tr><tr><td>Archived torch / best Triton</td><td>0.627266</td><td>Contextual frozen bank-1-selected, bank-2-scored result</td></tr><tr><td>Paired strict slowdown</td><td>0</td><td>Compared with the frozen meaningful-effect threshold</td></tr></tbody></table></div><dl class="facts facts-wide"><div><dt>Accuracy regression</dt><dd>No</dd></div><div><dt>Archived baseline agrees</dt><dd>Yes</dd></div><div><dt>Parity authorized</dt><dd>No</dd></div><div><dt>Meaningful paired effect threshold</dt><dd>0.05</dd></div><div><dt>Baseline relative tolerance</dt><dd>5.0%</dd></div><div><dt>Baseline absolute tolerance</dt><dd>0.0313633</dd></div></dl><div class="notice warning"><strong>Comparator limitation:</strong> the archived comparator selected Triton configurations on bank 1 and scored bank 2, while this probe reports three-bank medians. The protocols are not interchangeable.</div></section><section id="claims" class="report-section"><div class="section-heading"><p class="eyebrow">Claim discipline</p><h2>Methodology-compatible typed claims</h2><p>This legacy-shaped publication uses an explicit exploratory claim taxonomy. It is not a Methodology v1 EvidenceBundle and must not be presented as one.</p></div><div class="notice"><strong>No superiority claim is made; the supported decision applies only to the typed does-not-explain diagnostic.</strong></div><dl class="facts facts-wide"><div><dt>Evidence class</dt><dd>exploratory</dd></div><div><dt>Claim kind</dt><dd>descriptive</dd></div><div><dt>Inferential claim</dt><dd>No</dd></div><div><dt>Decision</dt><dd>supported</dd></div><div><dt>Candidate role</dt><dd>torch.matmul with FP16 reduced-precision reduction enabled</dd></div><div><dt>Comparator role</dt><dd>paired torch.matmul with FP16 reduced-precision reduction disabled</dd></div><div><dt>Reference role</dt><dd>FP32-output torch.mm numerical reference with TF32 disabled and the contextual archived bank-1-selected, bank-2-scored Triton result</dd></div><div><dt>Scope</dt><dd>one observed H100 profile/SKU across three calls, three banks, and the fixed 96-workload corpus</dd></div></dl></section><section id="accounting" class="report-section"><div class="section-heading"><p class="eyebrow">Operational record</p><h2>Attempts and cost accounting</h2><p>Observed collection attempts are separated from an explicitly estimated GPU line item. Unknown billing data is not inferred.</p></div><div class="split"><dl class="facts"><div><dt>Attempts</dt><dd>3</dd></div><div><dt>Completed</dt><dd>3</dd></div><div><dt>Failed</dt><dd>0</dd></div><div><dt>Retried</dt><dd>0</dd></div><div><dt>Elapsed journal span</dt><dd>118.554 s</dd></div><div><dt>Rows published / expected</dt><dd>288 / 288</dd></div><div><dt>Rows failed / omitted</dt><dd>0 / 0</dd></div></dl><dl class="facts"><div><dt>Actual H100 cost</dt><dd>Unknown</dd></div><div><dt>Cost scope</dt><dd>precision_probe_calls_only</dd></div><div><dt>Covered call IDs</dt><dd>fc-01M0XT9C4CS22SVVV2M2DV86HS, fc-01M0XTATZKMR4BY3K6N2J813Z3, fc-01M0XTBXK9X51JZJXCA6DWF3KY</dd></div><div><dt>Excluded calls</dt><dd>None</dd></div><div><dt>Why actual cost is unknown</dt><dd>The actual Modal bill and per-call billable GPU duration were unavailable.</dd></div><div><dt>Published-rate estimate</dt><dd>$0.130054</dd></div><div><dt>Estimate classification</dt><dd>estimated</dd></div><div><dt>GPU rate</dt><dd>$0.001097 / second</dd></div><div><dt>Estimate time basis</dt><dd>Journal wall time for the covered calls from first transition through last transition; this can differ from billable GPU-active seconds.</dd></div><div><dt>Estimate limitation</dt><dd>GPU line item only for the covered calls; excludes CPU, memory, queueing/billing adjustments, discounts, taxes, and every excluded call.</dd></div></dl></div><p class="source-note">Rate source: <a href="https://modal.com/pricing">https://modal.com/pricing</a> · checked 2026-08-23 · <a href="../benchmarks/parhelion-v2-h100-freeze.json">benchmarks/parhelion-v2-h100-freeze.json</a> · SHA-256 <code>c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a</code></p></section><section id="hardware" class="report-section"><div class="section-heading"><p class="eyebrow">Execution context</p><h2>Hardware, runtime, and protocol</h2><p>The observed hardware identity is distinct from the recorded runtime and study protocol. These facts bound the report; they do not broaden its claim scope.</p></div><div class="split"><dl class="facts"><div><dt>Requested GPU</dt><dd>H100</dd></div><div><dt>Observed device</dt><dd>NVIDIA H100 80GB HBM3</dd></div><div><dt>Compute capability</dt><dd>9.0</dd></div><div><dt>Multiprocessors</dt><dd>132</dd></div><div><dt>Total memory</dt><dd>79.1788 GiB</dd></div><div><dt>CUDA</dt><dd>12.8</dd></div><div><dt>PyTorch</dt><dd>2.8.0+cu128</dd></div><div><dt>Triton</dt><dd>3.4.0</dd></div></dl><dl class="facts"><div><dt>cuda_version</dt><dd>12.8</dd></div><div><dt>torch_version</dt><dd>2.8.0+cu128</dd></div><div><dt>triton_version</dt><dd>3.4.0</dd></div></dl></div><div class="table-wrap" tabindex="0" role="region" aria-label="Collection protocol"><table class="data-table"><caption>Collection protocol</caption><thead><tr><th scope="col">Protocol field</th><th scope="col">Value</th></tr></thead><tbody><tr><td>GPU selector</td><td>H100 · H100!</td></tr><tr><td>Banks</td><td>0, 1, 2</td></tr><tr><td>Arms</td><td>torch_reduced, torch_strict, triton</td></tr><tr><td>Arm order</td><td>per-workload seeded random permutation of the three arms</td></tr><tr><td>Arm-order seed</td><td>sha256(&#x27;heliostune-precision-probe-v1\0arm-order\0&lt;bank&gt;\0&lt;workload_key&gt;&#x27;)[:8]</td></tr><tr><td>Reference</td><td>torch.mm(out_dtype=float32) with TF32 and FP16 reduction disabled</td></tr><tr><td>Statistic</td><td>median of triton.testing.do_bench quantiles [0.2, 0.5, 0.8]</td></tr><tr><td>Quantiles</td><td>0.2, 0.5, 0.8</td></tr><tr><td>Warmup / repetition</td><td>25 ms / 100 ms</td></tr><tr><td>Tensor seed</td><td>bank * 10000 + legacy-bank shuffled workload index</td></tr><tr><td>Tensor seed protocol</td><td>legacy-bank, identical to the committed v2 archive</td></tr><tr><td>Retry policy</td><td>none; a failed remote call is journaled and re-raised</td></tr><tr><td>Protocol role</td><td>post-hoc exploratory; not a confirmatory Parhelion endpoint</td></tr><tr><td>Workloads / rows</td><td>96 / 288</td></tr></tbody></table></div></section><section id="provenance" class="report-section"><div class="section-heading"><p class="eyebrow">Chain of custody</p><h2>Publication provenance</h2><p>The linked publication manifest binds the raw archive, attempt journal, and summary. The canonical research catalog separately binds this generated report digest.</p></div><div class="table-wrap" tabindex="0" role="region" aria-label="Published artifact provenance"><table class="data-table"><caption>Published artifacts and digests</caption><thead><tr><th scope="col">Artifact</th><th scope="col">Path</th><th scope="col">Digest or digest note</th></tr></thead><tbody><tr><th scope="row">Published raw archive</th><td><a href="../benchmarks/data/h100-precision-probe.json.zst">benchmarks/data/h100-precision-probe.json.zst</a></td><td><code>compressed 5f15925f06a799b31231d71c9ff497af7c3987edc2cb02592cb90c8991a833d2; uncompressed 015ec9773730169b4ccee4caa111103a6fb9d04d8b6978dbb61f0334df8e1829</code></td></tr><tr><th scope="row">Attempt journal</th><td><a href="../benchmarks/data/h100-precision-probe.attempts.jsonl">benchmarks/data/h100-precision-probe.attempts.jsonl</a></td><td><code>4771219bcedda851f09a5c8de6206ce5957c5a47e3c0e1e6b41971f6d5d4c633</code></td></tr><tr><th scope="row">Publication manifest</th><td><a href="../benchmarks/h100-precision-probe-manifest.json">benchmarks/h100-precision-probe-manifest.json</a></td><td><code>Binds the raw archive, attempt journal, and summary; does not bind this report.</code></td></tr><tr><th scope="row">Canonical research catalog</th><td><a href="../benchmarks/research-artifact-manifest.json">benchmarks/research-artifact-manifest.json</a></td><td><code>Binds the generated report digest.</code></td></tr></tbody></table></div><dl class="facts facts-wide provenance-facts"><div><dt>Raw archive bytes</dt><dd>40379</dd></div><div><dt>Raw archive rows</dt><dd>288</dd></div><div><dt>Journal records</dt><dd>6</dd></div><div><dt>Repository HEAD</dt><dd>d411d4537ba63e1f5b9f353853836276400f87db</dd></div><div><dt>Collector source SHA-256</dt><dd>e9c96a912b24dac451f0771034ac73fbb25753f74dd4055871896e560b67427b</dd></div><div><dt>Wheel SHA-256</dt><dd>86be6fecadca24d5e24468f06a0fb9cbb8cc297cdd39437f134b7a7cda77e9bc</dd></div><div><dt>Modal app ID</dt><dd>ap-oxqdKZOLRVPqepVv8AL6R4</dd></div><div><dt>Modal URL provenance</dt><dd>operator_recorded</dd></div><div><dt>Modal call IDs</dt><dd>fc-01M0XT9C4CS22SVVV2M2DV86HS, fc-01M0XTATZKMR4BY3K6N2J813Z3, fc-01M0XTBXK9X51JZJXCA6DWF3KY</dd></div></dl><p class="source-note">Operator-recorded Modal application: <a href="https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4">https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4</a>. This link identifies the application record; artifact digests authenticate committed bytes.</p></section><section id="limitations" class="report-section"><div class="section-heading"><p class="eyebrow">Interpretation boundary</p><h2>Limitations</h2><p>These limitations are part of the typed claim record, not optional caveats.</p></div><ol class="limitations"><li>This is post-hoc exploratory descriptive evidence, not a confirmatory endpoint.</li><li>The thresholds were written for this diagnostic and do not establish causality.</li><li>Three calls reported one matching observed H100 profile/SKU and measured one fixed 96-workload corpus.</li><li>The archived comparator selected Triton configurations on bank 1 and scored bank 2, while the probe reports three-bank medians.</li><li>The probe cannot revise the frozen Hopper engineering STOP or any Parhelion claim.</li></ol></section></main><footer class="footer"><span><strong>HeliosTune</strong> / engineering evidence record</span><span>Standalone HTML · no scripts · no network dependencies</span></footer></div></body></html>

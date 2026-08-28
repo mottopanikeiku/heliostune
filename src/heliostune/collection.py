@@ -432,7 +432,8 @@ class CollectionManifest:
 
 
 class RemoteCall(Protocol):
-    object_id: str
+    @property
+    def object_id(self) -> str: ...
 
     def get(self) -> object: ...
 

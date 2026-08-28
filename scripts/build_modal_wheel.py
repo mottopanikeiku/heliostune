@@ -12,11 +12,23 @@ import zipfile
 from email.parser import BytesParser
 from pathlib import Path
 
-from heliostune.artifacts import write_bytes_atomic
+from heliostune.artifacts import strict_json_dumps, write_bytes_atomic
 
 _REPO = Path(__file__).resolve().parents[1]
 _OUTPUT = _REPO / "artifacts/modal-wheel"
 _PACKAGE = _REPO / "src/heliostune"
+_MANIFEST_SCHEMA_VERSION = 1
+_PYTHON_VERSION = "3.11"
+_UV_VERSION = "0.12.5"
+_HATCHLING_VERSION = "1.32.0"
+_BUILD_DEPENDENCIES = (f"hatchling=={_HATCHLING_VERSION}",)
+_PIP_DEPENDENCIES = (
+    "numpy==2.4.6",
+    "rich==14.3.4",
+    "zstandard==0.25.0",
+    "torch==2.8.0",
+    "triton==3.4.0",
+)
 
 
 def _run(*arguments: str, env: dict[str, str] | None = None) -> str:
@@ -29,6 +41,21 @@ def _run(*arguments: str, env: dict[str, str] | None = None) -> str:
         env=env,
     )
     return completed.stdout.strip()
+
+
+def _sanitized_build_environment() -> dict[str, str]:
+    """Remove ambient package-index controls before resolving build dependencies."""
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if not key.upper().startswith(("PIP_", "UV_"))
+    }
+    environment["UV_NO_CONFIG"] = "1"
+    return environment
+
+
+def _manifest_path(wheel: Path) -> Path:
+    return wheel.with_name(f"{wheel.name}.manifest.json")
 
 
 def _sha256(path: Path) -> str:
@@ -97,16 +124,21 @@ def _verify_wheel(wheel: Path, expected_version: str) -> str:
 
 
 def main() -> int:
-    uv_version = _run("uv", "--version").split()[1]
-    if uv_version != "0.12.5":
-        raise SystemExit(f"Modal wheel build requires uv 0.12.5, got {uv_version}")
-    if _run("git", "status", "--porcelain"):
+    environment = _sanitized_build_environment()
+    uv_version = _run("uv", "--version", env=environment).split()[1]
+    if uv_version != _UV_VERSION:
+        raise SystemExit(f"Modal wheel build requires uv {_UV_VERSION}, got {uv_version}")
+    if _run("git", "status", "--porcelain", env=environment):
         raise SystemExit("Modal wheel build requires a clean Git HEAD")
-    head = _run("git", "rev-parse", "HEAD")
-    source_date_epoch = _run("git", "show", "-s", "--format=%at", "HEAD")
+    head = _run("git", "rev-parse", "HEAD", env=environment)
+    source_date_epoch = _run("git", "show", "-s", "--format=%at", "HEAD", env=environment)
     project = tomllib.loads((_REPO / "pyproject.toml").read_text(encoding="utf-8"))
     expected_version = str(project["project"]["version"])
-    environment = os.environ.copy()
+    build_constraints = tuple(project["tool"]["uv"]["build-constraint-dependencies"])
+    if build_constraints != _BUILD_DEPENDENCIES:
+        raise SystemExit(
+            f"Modal wheel build dependencies must be {_BUILD_DEPENDENCIES}, got {build_constraints}"
+        )
     environment.update(
         {
             "SOURCE_DATE_EPOCH": source_date_epoch,
@@ -118,6 +150,8 @@ def main() -> int:
     _OUTPUT.mkdir(parents=True)
     with tempfile.TemporaryDirectory(prefix="heliostune-wheel-") as temporary:
         root = Path(temporary)
+        build_constraint = root / "build-constraints.txt"
+        build_constraint.write_text("\n".join(_BUILD_DEPENDENCIES) + "\n", encoding="utf-8")
         builds = (root / "first", root / "second")
         for output in builds:
             output.mkdir()
@@ -125,6 +159,8 @@ def main() -> int:
                 "uv",
                 "build",
                 "--wheel",
+                "--build-constraint",
+                str(build_constraint),
                 "--out-dir",
                 str(output),
                 env=environment,
@@ -141,10 +177,27 @@ def main() -> int:
         destination = _OUTPUT / first.name
         write_bytes_atomic(destination, first_payload)
 
+    wheel_sha256 = _sha256(destination)
+    manifest = {
+        "schema_version": _MANIFEST_SCHEMA_VERSION,
+        "head_commit": head,
+        "source_sha256": source_sha256,
+        "wheel_filename": destination.name,
+        "wheel_sha256": wheel_sha256,
+        "python_version": _PYTHON_VERSION,
+        "pip_dependencies": list(_PIP_DEPENDENCIES),
+        "build_dependencies": list(_BUILD_DEPENDENCIES),
+        "build_tools": {"uv": _UV_VERSION, "hatchling": _HATCHLING_VERSION},
+        "wheel_install_args": ["--no-deps"],
+    }
+    manifest_path = _manifest_path(destination)
+    write_bytes_atomic(manifest_path, strict_json_dumps(manifest).encode())
+
     print(f"head={head}")
     print(f"wheel={destination}")
-    print(f"wheel_sha256={_sha256(destination)}")
+    print(f"wheel_sha256={wheel_sha256}")
     print(f"source_sha256={source_sha256}")
+    print(f"manifest={manifest_path}")
     return 0
 
 

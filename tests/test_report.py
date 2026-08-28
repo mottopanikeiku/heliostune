@@ -332,8 +332,10 @@ def test_report_audits_fold_results_release_chain_and_online_budget(
         assert f'<td class="numeric">{mean:.4f}</td>' in fold_document
         assert ('Exhaustive &lt;reference&gt;</td><td class="numeric">36</td>') in fold_document
 
-    assert "Release chain of custody" in document
-    assert "Sole H100 run" in document
+    assert "Release chain of custody" not in document
+    assert "caller-supplied release provenance" in document
+    assert "not independently authenticated by summary" in document
+    assert "Release provenance" in document
     assert "Algorithm commit" in document
     assert "Freeze commit" in document
     assert "Freeze SHA-256" in document
