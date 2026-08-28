@@ -4,47 +4,248 @@ from __future__ import annotations
 
 import hashlib
 import importlib.metadata
+import json
 import os
+import re
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import modal
 
+# PEP 427 wheel filename: distribution-version(-build)?-python-abi-platform.whl. No
+# component may contain "-", so pip refuses names such as "heliostune.whl" or
+# "heliostune-0.4.0.whl"; commit 0486126 fixed exactly that install failure by
+# preserving the built filename inside the container.
+_WHEEL_FILENAME = re.compile(
+    r"[A-Za-z0-9_.]+"
+    r"-[A-Za-z0-9_.!+]+"
+    r"(-[0-9][A-Za-z0-9_.]*)?"
+    r"-[A-Za-z0-9_.]+"
+    r"-[A-Za-z0-9_.]+"
+    r"-[A-Za-z0-9_.]+"
+    r"\.whl"
+)
 
-def _configured_modal_wheel() -> Path:
+_REPO = Path(__file__).resolve().parent
+_WHEEL_DIRECTORY = "artifacts/modal-wheel"
+_WHEEL_MANIFEST_SCHEMA_VERSION = 1
+_PYTHON_VERSION = "3.11"
+_PIP_DEPENDENCIES = (
+    "numpy==2.4.6",
+    "rich==14.3.4",
+    "zstandard==0.25.0",
+    "torch==2.8.0",
+    "triton==3.4.0",
+)
+_BUILD_DEPENDENCIES = ("hatchling==1.32.0",)
+_BUILD_TOOLS = {"uv": "0.12.5", "hatchling": "1.32.0"}
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _source_digest(repository: Path) -> str:
+    package = repository / "src/heliostune"
+    if not package.is_dir():
+        raise RuntimeError(f"HeliosTune source directory does not exist: {package}")
+    digest = hashlib.sha256()
+    paths = sorted(
+        path for path in package.rglob("*") if path.is_file() and "__pycache__" not in path.parts
+    )
+    for path in paths:
+        name = f"heliostune/{path.relative_to(package).as_posix()}"
+        digest.update(name.encode())
+        digest.update(b"\0")
+        digest.update(hashlib.sha256(path.read_bytes()).digest())
+    return digest.hexdigest()
+
+
+def wheel_manifest_path(wheel: Path) -> Path:
+    """Return the required manifest adjacent to ``wheel``."""
+    return wheel.with_name(f"{wheel.name}.manifest.json")
+
+
+def remote_wheel_manifest_path(wheel: Path) -> str:
+    """Return the in-container path of the manifest adjacent to ``wheel``."""
+    return f"{remote_wheel_path(wheel)}.manifest.json"
+
+
+def _git_head(repository: Path) -> str:
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=repository,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    if status:
+        raise RuntimeError("Modal wheel use requires a clean Git HEAD")
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repository,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _manifest_object(path: Path) -> dict[str, object]:
+    def reject_duplicate(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        result: dict[str, object] = {}
+        for key, value in pairs:
+            if key in result:
+                raise RuntimeError(f"wheel manifest contains duplicate key {key!r}")
+            result[key] = value
+        return result
+
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=reject_duplicate)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"cannot read Modal wheel manifest {path}: {exc}") from exc
+    if type(value) is not dict:
+        raise RuntimeError(f"Modal wheel manifest must be a JSON object: {path}")
+    return cast(dict[str, object], value)
+
+
+def validate_wheel_manifest(
+    wheel: Path,
+    *,
+    repository: Path | None = None,
+    remote: bool = False,
+) -> Path:
+    """Validate the wheel's byte binding, and its source/HEAD binding when local."""
+    configured_manifest = os.environ.get("HELIOSTUNE_MODAL_WHEEL_MANIFEST")
+    if remote:
+        if not configured_manifest:
+            raise RuntimeError("HELIOSTUNE_MODAL_WHEEL_MANIFEST is required for a remote wheel")
+        manifest = Path(configured_manifest)
+        if manifest != wheel_manifest_path(wheel):
+            raise RuntimeError("remote Modal wheel manifest must be adjacent to the wheel")
+    else:
+        manifest = wheel_manifest_path(wheel)
+    if not manifest.is_file():
+        raise RuntimeError(f"Modal wheel manifest does not exist: {manifest}")
+    data = _manifest_object(manifest)
+    expected_fields = {
+        "schema_version",
+        "head_commit",
+        "source_sha256",
+        "wheel_filename",
+        "wheel_sha256",
+        "python_version",
+        "pip_dependencies",
+        "build_dependencies",
+        "build_tools",
+        "wheel_install_args",
+    }
+    if set(data) != expected_fields:
+        raise RuntimeError(
+            "Modal wheel manifest fields differ: "
+            f"missing={sorted(expected_fields - set(data))}, "
+            f"unknown={sorted(set(data) - expected_fields)}"
+        )
+    expected_values: dict[str, object] = {
+        "schema_version": _WHEEL_MANIFEST_SCHEMA_VERSION,
+        "wheel_filename": wheel.name,
+        "wheel_sha256": _sha256_file(wheel),
+        "python_version": _PYTHON_VERSION,
+        "pip_dependencies": list(_PIP_DEPENDENCIES),
+        "build_dependencies": list(_BUILD_DEPENDENCIES),
+        "build_tools": _BUILD_TOOLS,
+        "wheel_install_args": ["--no-deps"],
+    }
+    for field, expected in expected_values.items():
+        if data[field] != expected:
+            raise RuntimeError(
+                f"Modal wheel manifest {field} is {data[field]!r}, expected {expected!r}"
+            )
+    digest_lengths = {"head_commit": 40, "source_sha256": 64}
+    for field, length in digest_lengths.items():
+        value = data[field]
+        if (
+            type(value) is not str
+            or len(value) != length
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            raise RuntimeError(f"Modal wheel manifest {field} is not a lowercase hex digest")
+    if not remote:
+        root = _REPO if repository is None else repository.resolve()
+        head = _git_head(root)
+        if data["head_commit"] != head:
+            raise RuntimeError(
+                f"Modal wheel was built at HEAD {data['head_commit']}, current HEAD is {head}"
+            )
+        source_sha256 = _source_digest(root)
+        if data["source_sha256"] != source_sha256:
+            raise RuntimeError("Modal wheel source digest does not match the current source tree")
+    return manifest
+
+
+def configured_modal_wheel(root: Path | None = None) -> Path:
+    """Return the single manifest-validated wheel to bake into the Modal image."""
+    base = _REPO if root is None else root.resolve()
     configured = os.environ.get("HELIOSTUNE_MODAL_WHEEL")
     if configured:
         wheel = Path(configured)
         if not wheel.is_file():
             raise RuntimeError(f"HELIOSTUNE_MODAL_WHEEL does not exist: {wheel}")
+        remote = wheel.is_absolute() and wheel.parent == Path("/root")
+        validate_wheel_manifest(wheel, repository=base, remote=remote)
         return wheel
-    wheels = tuple(sorted(Path("artifacts/modal-wheel").glob("heliostune-*.whl")))
+    directory = base / _WHEEL_DIRECTORY
+    wheels = tuple(sorted(directory.glob("heliostune-*.whl")))
     if len(wheels) != 1:
         raise RuntimeError(
             "run `uv run python scripts/build_modal_wheel.py` before Modal; "
-            f"found {[str(item) for item in wheels]}"
+            f"searched {directory}; found {[str(item) for item in wheels]}"
         )
+    validate_wheel_manifest(wheels[0], repository=base)
     return wheels[0]
 
 
-_MODAL_WHEEL = _configured_modal_wheel()
-_REMOTE_WHEEL = f"/root/{_MODAL_WHEEL.name}"
+def remote_wheel_path(wheel: Path) -> str:
+    """Return the in-container install path, preserving the wheel's own filename."""
+    name = wheel.name
+    if _WHEEL_FILENAME.fullmatch(name) is None:
+        raise ValueError(
+            f"Modal wheel is not a valid PEP 427 filename: {name}; expected "
+            "distribution-version(-build)?-python-abi-platform.whl"
+        )
+    return f"/root/{name}"
+
+
+def build_image(wheel: Path) -> modal.Image:
+    """Return the pinned image after validating and copying wheel plus manifest."""
+    remote = wheel.is_absolute() and wheel.parent == Path("/root")
+    manifest = validate_wheel_manifest(wheel, remote=remote)
+    wheel_remote = remote_wheel_path(wheel)
+    manifest_remote = remote_wheel_manifest_path(wheel)
+    return (
+        modal.Image.debian_slim(python_version=_PYTHON_VERSION)
+        .pip_install(*_PIP_DEPENDENCIES)
+        .add_local_file(wheel, remote_path=wheel_remote, copy=True)
+        .add_local_file(manifest, remote_path=manifest_remote, copy=True)
+        .run_commands(f"python -m pip install --no-deps {wheel_remote}")
+        .env(
+            {
+                "HELIOSTUNE_MODAL_WHEEL": wheel_remote,
+                "HELIOSTUNE_MODAL_WHEEL_MANIFEST": manifest_remote,
+            }
+        )
+    )
+
 
 app = modal.App("heliostune-bench")
-image = (
-    modal.Image.debian_slim(python_version="3.11")
-    .pip_install(
-        "numpy==2.4.6",
-        "rich==14.3.4",
-        "zstandard==0.25.0",
-        "torch==2.8.0",
-        "triton==3.4.0",
-    )
-    .add_local_file(_MODAL_WHEEL, remote_path=_REMOTE_WHEEL, copy=True)
-    .run_commands(f"python -m pip install --no-deps {_REMOTE_WHEEL}")
-    .env({"HELIOSTUNE_MODAL_WHEEL": _REMOTE_WHEEL})
-)
+# Modal binds the image when `@app.function` decorates, so the wheel lookup cannot be
+# deferred into the entrypoint. This single call is the module's only import-time file
+# access, and it is module-relative rather than cwd-relative.
+image = build_image(configured_modal_wheel())
 
 
 def _remote_collect(
@@ -230,6 +431,7 @@ def _sha256_payload(payload: str) -> str:
 def _git_identity() -> tuple[str, str]:
     status = subprocess.run(
         ["git", "status", "--porcelain"],
+        cwd=_REPO,
         check=True,
         capture_output=True,
         text=True,
@@ -238,6 +440,7 @@ def _git_identity() -> tuple[str, str]:
         raise ValueError("Modal collection requires a clean Git HEAD")
     head = subprocess.run(
         ["git", "rev-parse", "HEAD"],
+        cwd=_REPO,
         check=True,
         capture_output=True,
         text=True,
@@ -246,15 +449,30 @@ def _git_identity() -> tuple[str, str]:
 
 
 def _resolve_wheel(path: str) -> Path:
-    wheel = Path(path) if path else _MODAL_WHEEL
+    baked = configured_modal_wheel()
+    wheel = Path(path) if path else baked
     if not wheel.is_file():
         raise ValueError(f"Modal wheel does not exist: {wheel}")
-    if wheel.resolve() != _MODAL_WHEEL.resolve():
+    if wheel.resolve() != baked.resolve():
         raise ValueError(
             "--wheel must match the wheel baked into the image; set "
             "HELIOSTUNE_MODAL_WHEEL before `modal run` to choose another wheel"
         )
     return wheel
+
+
+def _resolved_output(value: str, *, repository: Path = _REPO) -> Path:
+    """Resolve a relative destination while protecting the committed benchmarks tree."""
+    candidate = Path(value)
+    if candidate.is_absolute():
+        raise ValueError("output must be a relative path")
+    if ".." in candidate.parts:
+        raise ValueError("output must not contain '..'")
+    destination = candidate.resolve()
+    benchmarks = (repository / "benchmarks").resolve()
+    if destination == benchmarks or destination.is_relative_to(benchmarks):
+        raise ValueError("collection output must never be written under benchmarks/")
+    return destination
 
 
 def _selected_manifests(
@@ -321,8 +539,10 @@ def main(
 ) -> None:
     from heliostune.artifacts import strict_json_dumps
     from heliostune.collection import (
+        CallPlanItem,
         CollectionBinding,
         CollectionRequest,
+        RemoteCall,
         commit_chunks,
         execute_call_plan,
         preflight_collection,
@@ -400,13 +620,13 @@ def main(
         wheel_sha256=sha256_file(wheel_path),
         head_sha256=head_sha256,
     )
-    destination = Path(output)
+    destination = _resolved_output(output)
     journal = preflight_collection(
         destination,
         resume_attempts=(resume_attempts or None),
     )
 
-    def spawn(item):  # type: ignore[no-untyped-def]
+    def spawn(item: CallPlanItem) -> RemoteCall:
         return functions[item.gpu].spawn(
             bank=item.bank,
             warmup_ms=warmup_ms,

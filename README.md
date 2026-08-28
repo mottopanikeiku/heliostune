@@ -4,6 +4,10 @@ A measured study of retrieval, Bayesian adaptation, and source-to-target launch 
 
 **Live evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
+**Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
+
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
+
 ## Result
 
 Parhelion is a retrieval-anchored Bayesian linear Thompson tuner built in response to the v1 result: nearest-shape reuse beat the original transferred posterior in both L4↔A10 directions. Parhelion converts a family- and shape-disjoint multi-GPU archive into four action-conditioned retrieval statistics, pays for the consensus retrieval action as query one, then adapts on target bank-0 observations.
@@ -24,6 +28,8 @@ The staged result is negative under its frozen primary comparison. On the untouc
 Parhelion improves on its retrieval-only anchor by **4.71 percentage points AUC**, but trails cold Thompson by **0.82 points**. It reaches 95% of the reference after four probes; cold Thompson needs three and nearest-shape reuse needs five. The selected pooled transfer strength and Parhelion source-likelihood strength are both zero, so this corpus does not support a positive transferred-posterior claim. Parhelion still uses the frozen source archive to construct its retrieval anchor and retrieval covariates.
 
 The [post-hoc causal addendum](site/parhelion-v2-addendum.html) does not alter that confirmatory endpoint. With the same paid retrieval action at budget one, Parhelion's AUC was **0.00368 lower** than anchored cold Thompson; the exploratory paired policy-seed interval was **[−0.00566, −0.00169]**. Every new contrast is labeled `post_hoc_exploratory`, carries no superiority claim, and reuses the immutable H100 matrix without selection or recollection.
+
+The separate one-bank H100 engineering expansion screen is also negative. Its ratios are `torch_ms / same-bank best_candidate_ms`, so a ratio of at least **1.05** means the selected candidate is at least 5% faster and a ratio below 1 means it is slower. Skinny GEMV stopped at geomean **0.395875** with **0/32** workloads meeting the 1.05 threshold, and Hopper GEMM stopped at **0.773365** with **0/64**. Candidate selection and scoring reused bank 0, so these same-bank ratios are optimistic; the result is one-instance engineering-gate evidence (preserved as a legacy artifact, not retroactively upgraded to `heliostune.protocol/1`). The global decision was **STOP**, no three-bank collection followed, and no superiority claim is made. The operator-recorded paid app was [Modal `ap-ryV3BXdW1g2TGp5LIg6MDH`](https://modal.com/apps/mottopanikeiku/main/ap-ryV3BXdW1g2TGp5LIg6MDH), with artifact-bound FunctionCall `fc-01M0XX8KZ2WZQWPA4V2SYVGNWX`; its hardened methodology-compatible derivation is published as the [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), [v2 manifest](benchmarks/hopper-h100-engineering-manifest-v2.json), and [report](site/hopper-h100-engineering.html), with the [compressed raw artifact](benchmarks/data/hopper-h100-engineering.json.zst) retained as cataloged evidence. The original [v1 summary](benchmarks/results/hopper-h100-engineering-summary.json) and [v1 manifest](benchmarks/hopper-h100-engineering-manifest.json) are retained immutably.
 
 ## Parhelion v3 campaign outcome
 
@@ -98,7 +104,7 @@ Parhelion and retrieval-only make the same paid query at budget one: both score 
 - Four-GPU replay archive SHA-256: `f417bd7e…`
 - Final summary SHA-256: `765b347a…`
 
-The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact historical runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests. The [research artifact catalog](benchmarks/research-artifact-manifest.json) verifies every historical and published alias digest; the separate [addendum manifest](benchmarks/parhelion-v2-addendum-manifest.json) binds the immutable input, implementation, exploratory result, and new report without touching historical bytes.
+The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) binds the exact historical runs, commits, commands, compressed and uncompressed data, selection, summary, and report. The [pre-H100 freeze](benchmarks/parhelion-v2-h100-freeze.json) records the no-pilot/no-rerun rule, hardware identity gate, selected parameters, source order, seeds, budgets, collector settings, failure rule, and implementation/data digests. The [research artifact catalog](benchmarks/research-artifact-manifest.json) verifies every historical and published alias digest; the separate [addendum manifest](benchmarks/parhelion-v2-addendum-manifest.json) binds the immutable input, implementation, exploratory result, and new report without touching historical bytes. For the engineering publications, each linked publication manifest binds raw data, the attempt journal, and its summary; the canonical research catalog separately binds each generated report digest.
 
 The v3 [development protocol](benchmarks/parhelion-v3-development-protocol.json), [terminal failure manifest](benchmarks/parhelion-v3-validation-failure.json), and [failed attempt journal](benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl) preserve the original stopped campaign. The separate engineering chain binds the [successful pilot](benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst), [mixed-A100 validation archive](benchmarks/data/parhelion-v3-validation.jsonl.zst), [H200 freeze](benchmarks/parhelion-v3-h200-freeze.json), [final archive](benchmarks/data/parhelion-v3-final.jsonl.zst), and [engineering result](benchmarks/results/parhelion-v3-h200-engineering.json) without rewriting the v0.4.0 failure evidence.
 
@@ -115,6 +121,19 @@ uv run heliostune --version
 uv run heliostune demo --output-dir /tmp/heliostune-demo --max-budget 2 --seeds 2
 uv run heliostune inspect /tmp/heliostune-demo/measurements.jsonl
 ```
+
+Inspect the strict CPU-only plugin/suite declaration surface:
+
+```bash
+uv run heliostune verify-plugin path/to/plugin.json
+uv run heliostune verify-suite path/to/suite.json
+uv run heliostune list-scope
+```
+
+These commands validate declarations; they do not execute a backend, establish
+correctness or performance, verify transitive plugin → suite custody through a
+generic EvidenceBundle, or support a claim. Generic local and remote
+plugin/suite backends are currently unimplemented.
 
 Native zstandard inspection needs no external `zstd` executable:
 
@@ -159,10 +178,15 @@ uv run heliostune compare-multisource \
   --k 16 --temperature 2.0 --transfer-strength 0.0 \
   --retrieval-k 8 --retrieval-temperature 0.2 \
   --pooled-transfer-strength 0.0 --primary-comparator torch \
-  --protocol-role final --output artifacts/h100-final-summary.json
-uv run heliostune report artifacts/h100-final-summary.json \
-  --output artifacts/h100-report.html
+  --protocol-role final \
+  --release-provenance benchmarks/parhelion-h100-release-provenance.json \
+  --output artifacts/replay/h100-final-summary.json
+cmp artifacts/replay/h100-final-summary.json benchmarks/results/parhelion-h100-final.json
+uv run heliostune report artifacts/replay/h100-final-summary.json \
+  --output artifacts/replay/h100-report.html
 ```
+
+The replay writes under `artifacts/replay/` because the research artifact catalog binds `artifacts/h100-final-summary.json` and `artifacts/h100-report.html` as historical freeze-only aliases that must stay absent, so writing to those exact paths would make `heliostune verify-catalog` fail.
 
 The local `heliostune demo` is synthetic and supports no hardware claim.
 
@@ -188,6 +212,7 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 ## Repository map
 
 - `src/heliostune/artifacts.py` — strict JSON/JSONL decoding and atomic zstandard persistence
+- `src/heliostune/scope.py` — strict plugin/suite v1 declarations and standalone transitive verification
 - `src/heliostune/collection.py` — paid-call planning, fsynced attempt journals, resume, and commit
 - `src/heliostune/hardware.py` — pure fleet identity and memory gates
 - `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
@@ -205,11 +230,32 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 - `scripts/verify_research_artifacts.py` — full catalog, alias, count, and frozen-point verifier
 - `scripts/assemble_parhelion_final.py` — historical v2 archive verifier
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
+- `benchmarks/plugins/` and `benchmarks/suites/` — frozen reference declarations and suite hashes
+- `EXPERIMENT_SCOPE.md` — declaration state matrix, numeric/fusion scope, baselines, and promotion rules
 - `site/` — offline final report, downloadable JSON, and archived v1 report
 
 ## Scope
 
-This is a steady-state FP16 microkernel configuration-selection study over one fixed 96-workload corpus, one curated 36-arm space, and four Modal GPU fleets. It does not establish generalization to arbitrary GPUs or model families, global Triton optimality, Bayesian calibration, compilation-time savings, end-to-end serving gains, or production interference robustness. T4 is a validation domain, not independent final evidence. H100 is one untouched hardware domain, not proof of universal cross-architecture transfer.
+The published Parhelion/Hopper results are a steady-state FP16 microkernel
+configuration-selection study over one fixed 96-workload corpus, one curated
+36-arm space, and four Modal GPU fleets. They do not establish generalization
+to arbitrary GPUs or model families, global Triton optimality, Bayesian
+calibration, compilation-time savings, end-to-end serving gains, or production
+interference robustness. T4 is a validation domain, not independent final
+evidence. H100 is one untouched hardware domain, not proof of universal
+cross-architecture transfer.
+
+The new `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
+*representable* scope without broadening those historical claims. Only
+`gated_mlp_epilogue.v1` and `residual_rmsnorm.v1` are frozen initial fusion
+templates, constrained to FP16/BF16 input/storage, FP32 accumulation,
+FP16/BF16/FP32 output, null quantization, and disabled TF32. The next actual
+implementation is fused gated MLP first and residual RMSNorm second. Attention
+and KV cache, quantized linear, MoE, and FP8 remain staged catalog/design
+candidates requiring separate suite revisions and promotion review. No paid
+campaign is promised or authorized by that roadmap. See
+[Experiment scope](EXPERIMENT_SCOPE.md) for the state matrix, exact contracts,
+baseline requirements, hashes, and promotion rules.
 
 ## License
 

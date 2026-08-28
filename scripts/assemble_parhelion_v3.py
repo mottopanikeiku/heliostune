@@ -21,7 +21,9 @@ from heliostune.protocol import (
     require_v3_runtime,
     runtime_manifest,
 )
+from heliostune.schema import Measurement
 from heliostune.v3_artifacts import (
+    ValidatedCollection,
     sha256_file,
     validate_collection,
     validate_fold_ranks,
@@ -88,7 +90,7 @@ def _concat_journals(paths: tuple[Path, ...], destination: Path) -> None:
 
 
 def _copy_candidate_publication(
-    candidate,
+    candidate: ValidatedCollection,
     protocol_path: Path,
     config_manifest_path: Path,
 ) -> None:
@@ -243,7 +245,7 @@ def _assemble_validation(
     print(f"validation_rows={len(rows)} retained={len(retained_keys)}")
 
 
-def _validation_publication() -> tuple[tuple, Mapping[str, object]]:
+def _validation_publication() -> tuple[tuple[Measurement, ...], Mapping[str, object]]:
     manifest_path = Path(f"{_VALIDATION_OUTPUT}.manifest.json")
     manifest = cast(Mapping[str, object], read_json(manifest_path))
     data = cast(Mapping[str, object], manifest["data"])

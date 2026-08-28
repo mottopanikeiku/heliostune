@@ -29,6 +29,15 @@ _METHOD_LABELS = {
     "heldout_reference": "Held-out exhaustive reference",
 }
 
+PAIRED_SEED_STRIDE = 100_000
+
+
+def paired_seed(fold_index: int, seed: int) -> int:
+    """Return the frozen per-fold policy seed for one paired replay seed."""
+    if not 0 <= seed < PAIRED_SEED_STRIDE:
+        raise ValueError(f"seed must be in [0, {PAIRED_SEED_STRIDE})")
+    return fold_index * PAIRED_SEED_STRIDE + seed
+
 
 class BenchmarkTable:
     """The sole validated matrix gate for replay observations."""
@@ -495,8 +504,11 @@ def compare_methods(
 
     if source_gpu == target_gpu:
         raise ValueError("source_gpu and target_gpu must differ")
-    if max_budget <= 0 or seeds <= 0:
-        raise ValueError("max_budget and seeds must be positive")
+    if max_budget <= 0 or not 0 < seeds <= PAIRED_SEED_STRIDE:
+        raise ValueError(
+            "max_budget must be positive and seeds must be positive and no greater than "
+            f"{PAIRED_SEED_STRIDE}"
+        )
     if not 0 <= transfer_strength <= 1:
         raise ValueError("transfer_strength must be between zero and one")
 
@@ -592,8 +604,8 @@ def compare_methods(
         )
 
         for seed in range(seeds):
-            paired_seed = fold_index * 100_000 + seed
-            order_rng = np.random.default_rng(paired_seed + 50_000)
+            policy_seed = paired_seed(fold_index, seed)
+            order_rng = np.random.default_rng(policy_seed + 50_000)
             orders = [
                 tuple(
                     target_workloads[index]
@@ -608,14 +620,14 @@ def compare_methods(
                     target_workloads,
                     configs,
                     orders,
-                    paired_seed,
+                    policy_seed,
                 )
             )
             cold = BayesianLinearBandit(
                 dimension=len(V2_FEATURE_NAMES),
                 noise_variance=noise_variance,
                 prior_precision=prior_precision,
-                seed=paired_seed,
+                seed=policy_seed,
             )
             runs["cold_thompson"].append(
                 _bandit_curve(
@@ -629,7 +641,7 @@ def compare_methods(
             )
             transfer = source_model.transferred(
                 transfer_strength=transfer_strength,
-                seed=paired_seed,
+                seed=policy_seed,
             )
             runs["transfer_thompson"].append(
                 _bandit_curve(

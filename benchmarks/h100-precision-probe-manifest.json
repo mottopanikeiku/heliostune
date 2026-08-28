@@ -1,0 +1,164 @@
+{
+  "analysis": {
+    "analysis_status": "post_hoc_exploratory",
+    "analyzer": {
+      "path": "scripts/analyze_precision_probe.py",
+      "sha256": "61df14a4aafeb53de29459a944fc7711a052c667caf400ea407d60e913d4ee5c"
+    },
+    "pure_verdict_function": "analyze_precision_probe.evaluate_explanation",
+    "verdict": {
+      "classification": "does not explain",
+      "inferential": false,
+      "parity_authorized": false
+    }
+  },
+  "collection_accounting": {
+    "attempts": {
+      "attempted": 3,
+      "completed": 3,
+      "failed": 0,
+      "retried": 0
+    },
+    "cost": {
+      "actual_h100_cost_unknown_reason": "The actual Modal bill and per-call billable GPU duration were unavailable.",
+      "actual_h100_cost_usd": null,
+      "covered_call_ids": [
+        "fc-01M0XT9C4CS22SVVV2M2DV86HS",
+        "fc-01M0XTATZKMR4BY3K6N2J813Z3",
+        "fc-01M0XTBXK9X51JZJXCA6DWF3KY"
+      ],
+      "excluded_calls": [],
+      "published_rate_estimate": {
+        "amount_usd": 0.130054189964,
+        "classification": "estimated",
+        "gpu_rate_usd_per_second": 0.001097,
+        "limitations": "GPU line item only for the covered calls; excludes CPU, memory, queueing/billing adjustments, discounts, taxes, and every excluded call.",
+        "rate_source": {
+          "checked_at_utc": "2026-08-23",
+          "path": "benchmarks/parhelion-v2-h100-freeze.json",
+          "sha256": "c9c7138ef812166756746687463f81b88b63f905fb6998b9f468f1b0dadb0b4a",
+          "url": "https://modal.com/pricing"
+        },
+        "time_basis": "Journal wall time for the covered calls from first transition through last transition; this can differ from billable GPU-active seconds."
+      },
+      "scope": "precision_probe_calls_only"
+    },
+    "elapsed_seconds": 118.554412,
+    "rows": {
+      "expected": 288,
+      "failed": 0,
+      "omitted": 0,
+      "published": 288
+    }
+  },
+  "commands": {
+    "check": "uv run python scripts/publish_hopper_engineering_result.py --check",
+    "collection": "modal run modal_precision_probe.py::precision_probe",
+    "generate": "uv run python scripts/publish_hopper_engineering_result.py",
+    "strict_analysis": "uv run python scripts/analyze_precision_probe.py artifacts/h100-precision-probe.json"
+  },
+  "evidence_class": "exploratory",
+  "hardware": {
+    "compute_capability": [
+      9,
+      0
+    ],
+    "cuda_version": "12.8",
+    "device_name": "NVIDIA H100 80GB HBM3",
+    "gpu": "H100",
+    "multiprocessor_count": 132,
+    "torch_version": "2.8.0+cu128",
+    "total_memory_gb": 79.1788330078125,
+    "triton_version": "3.4.0"
+  },
+  "inputs": {
+    "context_archive": {
+      "path": "benchmarks/data/parhelion-v2-measurements.jsonl.zst",
+      "sha256": "ed6ec6ee8c3b61b451ea1276fc6f3925e82f70b5e208e9195c924ef6acc7343f"
+    },
+    "local_sidecar": {
+      "local_path": "artifacts/h100-precision-probe.json.manifest.json",
+      "sha256": "2a7c8dec20a5e055a19802cd64a201129460fc6f0fa9e4c400d0ad578d9bfb92"
+    }
+  },
+  "modal": {
+    "app_id": "ap-oxqdKZOLRVPqepVv8AL6R4",
+    "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-oxqdKZOLRVPqepVv8AL6R4",
+    "app_url_binding": "operator-recorded; app ID is not present in the local artifact bundle",
+    "function_call_ids": [
+      "fc-01M0XT9C4CS22SVVV2M2DV86HS",
+      "fc-01M0XTATZKMR4BY3K6N2J813Z3",
+      "fc-01M0XTBXK9X51JZJXCA6DWF3KY"
+    ]
+  },
+  "protocol": {
+    "arm_order": "per-workload seeded random permutation of the three arms",
+    "arm_order_seed": "sha256('heliostune-precision-probe-v1\\0arm-order\\0<bank>\\0<workload_key>')[:8]",
+    "arms": [
+      "torch_reduced",
+      "torch_strict",
+      "triton"
+    ],
+    "banks": [
+      0,
+      1,
+      2
+    ],
+    "gpu": "H100",
+    "modal_selector": "H100!",
+    "probe": "h100-fp16-reduction-probe",
+    "quantiles": [
+      0.2,
+      0.5,
+      0.8
+    ],
+    "reference": "torch.mm(out_dtype=float32) with TF32 and FP16 reduction disabled",
+    "rep_ms": 100,
+    "retry_policy": "none; a failed remote call is journaled and re-raised",
+    "role": "post-hoc exploratory; not a confirmatory Parhelion endpoint",
+    "schema_version": 2,
+    "statistic": "median of triton.testing.do_bench quantiles [0.2, 0.5, 0.8]",
+    "tensor_seed": "bank * 10000 + legacy-bank shuffled workload index",
+    "tensor_seed_protocol": "legacy-bank, identical to the committed v2 archive",
+    "warmup_ms": 25,
+    "workload_count": 96
+  },
+  "provenance": {
+    "config_manifest_sha256": "c64e7908e334541ebba47d51780c2c4c06f48bf809014bca2bb68cbea0973f08",
+    "head_commit": "d411d4537ba63e1f5b9f353853836276400f87db",
+    "head_sha256": "eae395a8e20aa83afe1483a646b809c48710766897c1a81430e85ba5a4aba337",
+    "protocol_sha256": "6deeba1ca79128903bbc8f59f20e49a0ca25a284a5bc09631cdcc8e32ef5b9f4",
+    "request_sha256": "00c7c9f8c50eb1f336d20e9aa3a6389e4796a04bd42f627503383b21385addf0",
+    "source_sha256": "e9c96a912b24dac451f0771034ac73fbb25753f74dd4055871896e560b67427b",
+    "wheel_sha256": "86be6fecadca24d5e24468f06a0fb9cbb8cc297cdd39437f134b7a7cda77e9bc"
+  },
+  "publication": {
+    "attempt_journal": {
+      "bytes": 3834,
+      "path": "benchmarks/data/h100-precision-probe.attempts.jsonl",
+      "sha256": "4771219bcedda851f09a5c8de6206ce5957c5a47e3c0e1e6b41971f6d5d4c633"
+    },
+    "raw": {
+      "compressed_bytes": 40379,
+      "compressed_sha256": "5f15925f06a799b31231d71c9ff497af7c3987edc2cb02592cb90c8991a833d2",
+      "decompressed_bytes": 597409,
+      "decompressed_sha256": "015ec9773730169b4ccee4caa111103a6fb9d04d8b6978dbb61f0334df8e1829",
+      "format": "zstd level=19, threads=1, checksum=true, content_size=false",
+      "path": "benchmarks/data/h100-precision-probe.json.zst",
+      "rows": 288,
+      "schema": "h100-precision-probe-raw-v2",
+      "schema_version": 2
+    },
+    "summary": {
+      "bytes": 80240,
+      "path": "benchmarks/results/h100-precision-probe-summary.json",
+      "sha256": "b6f259beaba284716ff0df307bc42793cfbf685fbf570e8281bf4f66791a8025"
+    }
+  },
+  "publisher": {
+    "path": "scripts/publish_hopper_engineering_result.py",
+    "sha256": "3a830f406964a6e4bbe954421a45d5c435669342fc647255875fc991582f897b"
+  },
+  "schema_version": 1,
+  "study_id": "h100-fp16-reduction-probe"
+}
