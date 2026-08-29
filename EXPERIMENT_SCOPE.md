@@ -195,6 +195,27 @@ replace that check. The exact verified suite, plugin, and manifest bytes are
 retained before dispatch and are the bytes written into the receipt; mutable
 input paths are not reread after spawning.
 
+If a previously dispatched call has an exact canonical journal whose terminal
+state is already `completed` but receipt publication was interrupted, recover
+only that retained result **before rebuilding or replacing the bound wheel or
+its adjacent manifest**:
+
+```text
+uv run --extra modal python scripts/reconcile_remote_receipt.py --output artifacts/fusion-remote/EXISTING-COMPLETED-OUTPUT
+```
+
+This command performs completed-result retrieval only:
+`modal.FunctionCall.from_id(call_id).get()` for the single call ID already
+bound by the journal. It never spawns, restores, retries, loads, installs, or
+executes the historical wheel. It requires the output directory to remain
+absent, verifies the retained suite, plugin, old wheel-manifest, intent,
+journal, transport, and result bindings, and publishes only the missing
+receipt. Intermediate, failed, aborted, cancellation, and unresolved journal
+states are refused without changing the journal. A retrieval or validation
+failure likewise leaves the journal unchanged and creates no receipt. Current
+`HEAD` need not equal the historical intent: the exact retained intent and old
+wheel manifest/source bindings are the authority for this recovery path.
+
 The client creates descriptor-pinned, exclusive, fsynced intent and journal
 tombstones before its only authorized spawn. It uses `retries=0`, the strict
 `H100!` selector, one single-use container, blocked network and Modal-resource
