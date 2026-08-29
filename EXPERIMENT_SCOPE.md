@@ -158,11 +158,14 @@ different artifact identity and requires an explicit new revision.
 templates on a qualifying NVIDIA CUDA device; use `--plugin PLUGIN` when the
 suite is not the committed template path. It requires the `gpu` extra (including
 exactly PyTorch 2.8.0), native BF16 support, compute capability 8.0 or newer, and
-the Inductor backend. The current candidate and reference arms implement the
-frozen PyTorch reference-template formulas, not arbitrary plugin entrypoints.
-Successful compilation is not evidence that operations fused. The written
-exploratory bundle is structurally verified only: it does not establish a
-performance conclusion, claim eligibility, or publication eligibility.
+the Inductor backend. For gated MLP, candidate and reference arithmetic is
+identical: each projection is `torch.mm(x.float(), weight.float().T)`, followed
+by SiLU, multiplication, and BF16 conversion. The candidate differs only by
+full-graph Inductor compilation. The arms implement the frozen PyTorch
+reference-template formulas, not arbitrary plugin entrypoints, and neither
+compilation nor backend invocation is evidence that operations fused. The
+written exploratory bundle is structurally verified only: it does not establish
+a performance conclusion, claim eligibility, or publication eligibility.
 
 ### Remote Modal H100 execution
 

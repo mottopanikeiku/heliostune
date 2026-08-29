@@ -2,15 +2,18 @@ from __future__ import annotations
 
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
+import heliostune.local_executor as local
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult
 from heliostune.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
+    REMOTE_RESULT_ENVELOPE_MAX_BYTES,
     SERVER_TIMEOUT_SECONDS,
     RemoteIntent,
     RemoteJournal,
@@ -145,6 +148,8 @@ def _aborted_result(
             "all_cells_terminal": False,
             "outcome": "aborted",
             "fusion_claim": False,
+            "candidate_reference_arithmetic": "candidate_reference_identical",
+            "candidate_distinction": "fullgraph_inductor_compilation_only",
             "capability_reasons": list(capability.reasons),
         },
         outcome="aborted",
@@ -175,6 +180,180 @@ def _envelope(
         environment=result.environment,
         result=result.to_dict(),
     )
+
+
+def _failed_compile_result(
+    intent: RemoteIntent, suite_bytes: bytes, compile_error: str
+) -> LocalExecutionResult:
+    suite = verify_suite(SUITE).suite
+    capability = CapabilityProbe(
+        True,
+        (),
+        "2.8.0",
+        "12.8",
+        None,
+        0,
+        _hardware().device_name,
+        (9, 0),
+        True,
+        True,
+        True,
+        None,
+    )
+    environment = dict(_aborted_result(intent, suite_bytes).environment)
+    environment.update(
+        torch_version=capability.torch_version,
+        cuda_version=capability.cuda_version,
+        device_index=capability.device_index,
+        device_name=capability.device_name,
+        compute_capability=list(capability.compute_capability or ()),
+        backend_invoked=False,
+    )
+    attempts: list[dict[str, object]] = []
+    observations: list[local.CellObservation] = []
+    case = suite.cases[0]
+    for cell in suite.expected_cells:
+        failure_kind = (
+            "compile_failed"
+            if cell.stage == "correctness" and cell.arm_id == "mlp-candidate"
+            else "correctness_gate"
+            if cell.stage == "timing"
+            else "runtime"
+        )
+        message = compile_error if failure_kind == "compile_failed" else "not executed"
+        attempts.extend(
+            (
+                {
+                    "attempt_id": len(attempts) + 1,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "running",
+                    "from_state": "pending",
+                    "to_state": "running",
+                    "reason": None,
+                },
+                {
+                    "attempt_id": len(attempts) + 2,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "failure",
+                    "from_state": "running",
+                    "to_state": "failed",
+                    "reason": failure_kind,
+                },
+            )
+        )
+        key = local._correctness_gate_key(intent.suite_sha256, case, cell)
+        correctness = (
+            local.CorrectnessObservation(
+                "failed",
+                key,
+                failure_kind,
+                message,
+                None,
+                False,
+                False,
+                False,
+                False,
+                None,
+            )
+            if cell.stage == "correctness"
+            else None
+        )
+        timing = (
+            local.TimingObservation("failed", key, failure_kind, message, 0, 0, (), None)
+            if cell.stage == "timing"
+            else None
+        )
+        observations.append(
+            local.CellObservation(
+                cell.id,
+                cell.case_id,
+                cell.arm_id,
+                cell.stage,
+                "failed",
+                correctness,
+                timing,
+            )
+        )
+    expected_ids = [cell.id for cell in suite.expected_cells]
+    return LocalExecutionResult(
+        intent.suite_path,
+        intent.suite_sha256,
+        suite_bytes,
+        suite.suite_id,
+        capability,
+        (),
+        tuple(observations),
+        tuple(attempts),
+        environment,
+        {
+            "mlp-candidate": {
+                "case_id": case.id,
+                "arm_id": "mlp-candidate",
+                "entrypoint": "reference_template.gated_mlp_candidate",
+                "status": "compile_failed",
+                "error": compile_error,
+                "wrapper_create_ns": 1,
+                "first_call_ns": None,
+                "eager_fallback": False,
+                "backend_invoked": False,
+                "callable_distinct": False,
+                "autocast_policy": dict(local._AUTOCAST_POLICY),
+            }
+        },
+        {
+            "expected_cell_ids": expected_ids,
+            "terminal_cell_ids": expected_ids,
+            "passed": 0,
+            "failed": len(expected_ids),
+            "blocked": 0,
+            "all_cells_terminal": True,
+            "outcome": "failed",
+            "fusion_claim": False,
+            "candidate_reference_arithmetic": "candidate_reference_identical",
+            "candidate_distinction": "fullgraph_inductor_compilation_only",
+        },
+        "failed",
+    )
+
+
+def test_result_envelope_freezes_inline_utf8_boundary(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    empty = canonical_json_bytes({**base.to_dict(), "result": {"padding": ""}})
+    padding = "x" * (REMOTE_RESULT_ENVELOPE_MAX_BYTES - len(empty))
+    at_limit = replace(base, result={"padding": padding}).to_json()
+
+    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    assert RemoteResultEnvelope.from_json(at_limit).result == {"padding": padding}
+    with pytest.raises(SchemaError, match="inline limit") as caught:
+        replace(base, result={"padding": padding + "x"}).to_json()
+    assert len(str(caught.value).encode("utf-8")) < 128
+    with pytest.raises(SchemaError, match="inline limit"):
+        RemoteResultEnvelope.from_json(at_limit + "x")
+
+
+def test_failed_compile_huge_error_envelope_is_bounded_and_validates(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    compile_error = local._safe_error(
+        TypeError("meta_mm() takes 2 positional arguments but 3 were given\n" + ("x" * 2_000_000))
+    )
+    result = _failed_compile_result(intent, suite_bytes, compile_error)
+    payload = _envelope(intent, result, request_digest).to_json()
+
+    assert len(compile_error.encode("utf-8")) <= 4096
+    assert len(payload.encode("utf-8")) < REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    parsed_envelope, parsed_result = validate_remote_result(
+        payload,
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert parsed_envelope.result["outcome"] == "failed"
+    assert parsed_result.compile_outcomes["mlp-candidate"]["error"] == compile_error
 
 
 def test_request_is_canonical_and_binds_exact_suite_bytes(tmp_path: Path) -> None:
