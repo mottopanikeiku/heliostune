@@ -203,6 +203,17 @@ accepted only after strict request, suite, plugin, wheel, manifest, source,
 commit, selector, H100 hardware, environment, and `LocalExecutionResult`
 bindings are checked.
 
+Modal 1.5.4 defines `MAX_ASYNC_OBJECT_SIZE_BYTES = 8 * 1024` in
+`modal/_utils/blob_utils.py`; `.spawn()` results above that inline threshold
+require blob transport, which is unavailable with restricted Modal-resource
+access. The remote function therefore returns a canonical
+`heliostune.remote-transport/1` wrapper no larger than 6 KiB. It uses the pinned
+`zstandard==0.25.0` codec with fixed deterministic options and standard base64
+to carry the canonical result envelope. This compressed wrapper is only a
+transport implementation detail: the client strictly bounds and verifies it,
+then the receipt retains the decoded canonical result envelope as strict JSON,
+exactly as it did without transport compression.
+
 The output is a `heliostune.remote-receipt/1` receipt, **not** a
 `heliostune.bundle/1` methodology bundle. Its root is published last by
 descriptor-relative staging and atomic no-replace rename. The root and strict

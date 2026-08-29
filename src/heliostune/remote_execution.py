@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import contextlib
 import ctypes
 import hashlib
@@ -14,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, cast
 
+import zstandard
+
 from heliostune.artifacts import strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.hardware import expectation_for_gpu, validate_hardware
@@ -25,6 +29,7 @@ INTENT_SCHEMA = "heliostune.remote-intent/1"
 REQUEST_SCHEMA = "heliostune.remote-request/1"
 JOURNAL_SCHEMA = "heliostune.remote-journal-record/1"
 RESULT_SCHEMA = "heliostune.remote-result-envelope/1"
+TRANSPORT_SCHEMA = "heliostune.remote-transport/1"
 RECEIPT_SCHEMA = "heliostune.remote-receipt/1"
 EXECUTOR_API = "heliostune.modal_fusion_executor/1"
 GPU = "H100"
@@ -33,6 +38,16 @@ SERVER_TIMEOUT_SECONDS = 3600
 CLIENT_TIMEOUT_SECONDS = 3660
 RECEIPT_ROOT = "receipt.json"
 REMOTE_RESULT_ENVELOPE_MAX_BYTES = 512 * 1024
+REMOTE_RESULT_TRANSPORT_MAX_BYTES = 6 * 1024
+_TRANSPORT_ENCODING = "zstd-base64"
+_TRANSPORT_ZSTD_LEVEL = 19
+_TRANSPORT_FIELDS = {
+    "schema",
+    "encoding",
+    "payload",
+    "uncompressed_bytes",
+    "uncompressed_sha256",
+}
 _RENAME_NOREPLACE = 1
 
 ReceiptStatus = Literal["completed", "failed", "aborted", "unresolved"]
@@ -73,6 +88,16 @@ def canonical_json_line_bytes(value: object) -> bytes:
 
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def _compress_result_envelope(payload: bytes) -> bytes:
+    return zstandard.ZstdCompressor(
+        level=_TRANSPORT_ZSTD_LEVEL,
+        threads=0,
+        write_checksum=True,
+        write_content_size=True,
+        write_dict_id=False,
+    ).compress(payload)
 
 
 def _digest(value: object, *, context: str, length: int = 64) -> str:
@@ -672,6 +697,95 @@ class RemoteResultEnvelope:
             )
         return payload.decode("utf-8")
 
+    def to_transport_json(self) -> str:
+        envelope_bytes = self.to_json().encode("utf-8")
+        compressed = _compress_result_envelope(envelope_bytes)
+        wrapper = canonical_json_line_bytes(
+            {
+                "schema": TRANSPORT_SCHEMA,
+                "encoding": _TRANSPORT_ENCODING,
+                "payload": base64.b64encode(compressed).decode("ascii"),
+                "uncompressed_bytes": len(envelope_bytes),
+                "uncompressed_sha256": sha256_bytes(envelope_bytes),
+            }
+        )
+        if len(wrapper) > REMOTE_RESULT_TRANSPORT_MAX_BYTES:
+            raise SchemaError(
+                f"remote result transport exceeds {REMOTE_RESULT_TRANSPORT_MAX_BYTES}-byte inline limit"
+            )
+        return wrapper.decode("utf-8")
+
+    @classmethod
+    def from_transport_json(cls, payload: str) -> RemoteResultEnvelope:
+        if type(payload) is not str:
+            raise SchemaError("remote function must return a transport JSON string")
+        try:
+            transport_bytes = payload.encode("utf-8")
+        except UnicodeError as exc:
+            raise SchemaError("remote result transport must be valid UTF-8") from exc
+        if len(transport_bytes) > REMOTE_RESULT_TRANSPORT_MAX_BYTES:
+            raise SchemaError(
+                f"remote result transport exceeds {REMOTE_RESULT_TRANSPORT_MAX_BYTES}-byte inline limit"
+            )
+        value = strict_json_loads(payload, source="remote result transport")
+        data = exact_fields(value, required=_TRANSPORT_FIELDS, context="remote result transport")
+        if canonical_json_line_bytes(data) != transport_bytes:
+            raise SchemaError("remote result transport is not in canonical JSON form")
+        schema = nonblank_string(data["schema"], context="remote result transport schema")
+        if schema != TRANSPORT_SCHEMA:
+            raise SchemaError(f"remote result transport schema must be {TRANSPORT_SCHEMA!r}")
+        encoding = nonblank_string(data["encoding"], context="remote result transport encoding")
+        if encoding != _TRANSPORT_ENCODING:
+            raise SchemaError(f"remote result transport encoding must be {_TRANSPORT_ENCODING!r}")
+        encoded = nonblank_string(data["payload"], context="remote result transport payload")
+        try:
+            compressed = base64.b64decode(encoded.encode("ascii"), validate=True)
+        except (UnicodeError, binascii.Error) as exc:
+            raise SchemaError("remote result transport payload is not canonical base64") from exc
+        if base64.b64encode(compressed).decode("ascii") != encoded:
+            raise SchemaError("remote result transport payload is not canonical base64")
+        uncompressed_bytes = exact_int(
+            data["uncompressed_bytes"],
+            context="remote result transport uncompressed_bytes",
+            minimum=1,
+        )
+        if uncompressed_bytes > REMOTE_RESULT_ENVELOPE_MAX_BYTES:
+            raise SchemaError("remote result transport uncompressed byte count exceeds limit")
+        uncompressed_sha256 = _digest(
+            data["uncompressed_sha256"],
+            context="remote result transport uncompressed_sha256",
+        )
+        try:
+            frame_bytes = zstandard.frame_content_size(compressed)
+            if frame_bytes != uncompressed_bytes:
+                raise SchemaError(
+                    "remote result transport uncompressed byte count does not match zstd frame"
+                )
+            envelope_bytes = zstandard.ZstdDecompressor(
+                max_window_size=REMOTE_RESULT_ENVELOPE_MAX_BYTES
+            ).decompress(
+                compressed,
+                max_output_size=REMOTE_RESULT_ENVELOPE_MAX_BYTES,
+                allow_extra_data=False,
+            )
+        except SchemaError:
+            raise
+        except zstandard.ZstdError as exc:
+            raise SchemaError(
+                "remote result transport payload is not one bounded zstd frame"
+            ) from exc
+        if len(envelope_bytes) != uncompressed_bytes:
+            raise SchemaError("remote result transport uncompressed byte count does not match")
+        if sha256_bytes(envelope_bytes) != uncompressed_sha256:
+            raise SchemaError("remote result transport uncompressed digest does not match")
+        if _compress_result_envelope(envelope_bytes) != compressed:
+            raise SchemaError("remote result transport payload is not the canonical zstd frame")
+        try:
+            envelope_json = envelope_bytes.decode("utf-8")
+        except UnicodeError as exc:
+            raise SchemaError("remote result envelope is not valid UTF-8") from exc
+        return cls.from_json(envelope_json)
+
     @classmethod
     def from_json(cls, payload: str) -> RemoteResultEnvelope:
         if type(payload) is not str:
@@ -736,7 +850,22 @@ _RESULT_FIELDS = {
 def validate_remote_result(
     payload: str, *, intent: RemoteIntent, request_digest: str, verified_suite_bytes: bytes
 ) -> tuple[RemoteResultEnvelope, LocalExecutionResult]:
-    envelope = RemoteResultEnvelope.from_json(payload)
+    envelope = RemoteResultEnvelope.from_transport_json(payload)
+    return _validate_remote_result_envelope(
+        envelope,
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=verified_suite_bytes,
+    )
+
+
+def _validate_remote_result_envelope(
+    envelope: RemoteResultEnvelope,
+    *,
+    intent: RemoteIntent,
+    request_digest: str,
+    verified_suite_bytes: bytes,
+) -> tuple[RemoteResultEnvelope, LocalExecutionResult]:
     expected = {
         "request_digest": request_digest,
         "suite_path": intent.suite_path,
@@ -1168,8 +1297,8 @@ def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteRece
             result_text = result_payload.decode("utf-8", errors="strict")
         except UnicodeError as exc:
             raise SchemaError("remote result envelope must be UTF-8") from exc
-        envelope, result = validate_remote_result(
-            result_text,
+        envelope, result = _validate_remote_result_envelope(
+            RemoteResultEnvelope.from_json(result_text),
             intent=intent,
             request_digest=request_digest,
             verified_suite_bytes=suite_payload,

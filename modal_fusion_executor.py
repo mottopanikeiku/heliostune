@@ -284,7 +284,7 @@ image = build_image(_MODAL_WHEEL)
     _experimental_restrict_output=True,
 )
 def execute_fusion_suite(request_json: str) -> str:
-    """Validate and execute one suite, returning one strict result envelope."""
+    """Validate and execute one suite, returning one compressed transport wrapper."""
     from heliostune.hardware import expectation_for_gpu, validate_hardware
     from heliostune.kernel import get_hardware_profile
     from heliostune.local_executor import run_local_suite
@@ -348,7 +348,7 @@ def execute_fusion_suite(request_json: str) -> str:
         hardware=hardware,
         environment=result.environment,
         result=result.to_dict(),
-    ).to_json()
+    ).to_transport_json()
 
 
 @dataclass(frozen=True, slots=True)
@@ -504,7 +504,6 @@ def _execute_plan(plan: _LocalPlan, output: str | Path, remote_function: Any) ->
             _cancel_then_unresolve(call, records.journal, call_id, exc)
             _publish_unresolved(plan, records, client_spawn_count=client_spawn_count)
             raise
-        del envelope
         status = cast(Any, result.outcome)
         records.journal.append(status, call_id=call_id)
         write_remote_receipt(
@@ -514,7 +513,7 @@ def _execute_plan(plan: _LocalPlan, output: str | Path, remote_function: Any) ->
             suite_bytes=plan.suite_bytes,
             plugin_bytes=plan.plugin_bytes,
             manifest_bytes=plan.manifest_bytes,
-            result_payload=remote_payload,
+            result_payload=envelope.to_json(),
             client_spawn_count=client_spawn_count,
         )
         return 0 if result.outcome == "completed" else 1
