@@ -201,6 +201,7 @@ def test_modal_decorator_keeps_every_hardening_argument() -> None:
     assert "gpu=_MODAL_SELECTOR" in source
     assert "provider attempts are unobservable" in source
     assert "methodology bundle" in source
+    assert ").to_transport_json()" in source
 
 
 def test_malicious_wheel_with_matching_forged_manifest_is_rejected(
@@ -324,7 +325,7 @@ def test_returned_terminal_results_publish_matching_receipts(
 
         def get(self, *, timeout: int) -> str:
             events.append(("get", timeout))
-            return "remote-json"
+            return "transport-json"
 
     class Remote:
         def spawn(self, request: str) -> Call:
@@ -333,9 +334,10 @@ def test_returned_terminal_results_publish_matching_receipts(
             return Call()
 
     result = SimpleNamespace(outcome=outcome)
+    envelope = SimpleNamespace(to_json=lambda: "canonical-envelope-json")
     monkeypatch.setattr(
         "heliostune.remote_execution.validate_remote_result",
-        lambda *args, **kwargs: (SimpleNamespace(), result),
+        lambda *args, **kwargs: (envelope, result),
     )
     published: dict[str, object] = {}
 
@@ -347,7 +349,7 @@ def test_returned_terminal_results_publish_matching_receipts(
     assert code == expected_code
     assert events == ["spawn", ("get", CLIENT_TIMEOUT_SECONDS)]
     assert published["status"] == outcome
-    assert published["result_payload"] == "remote-json"
+    assert published["result_payload"] == "canonical-envelope-json"
     assert published["plugin_bytes"] == plan.plugin_bytes
     _, journal_path = remote_artifact_paths(plan.intent.output_path)
     states = [json.loads(line)["state"] for line in journal_path.read_text().splitlines()]

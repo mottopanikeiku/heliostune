@@ -1,21 +1,31 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
+import pickle
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
+import zstandard
 
+import heliostune.local_executor as local
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult
 from heliostune.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
+    REMOTE_RESULT_ENVELOPE_MAX_BYTES,
+    REMOTE_RESULT_TRANSPORT_MAX_BYTES,
     SERVER_TIMEOUT_SECONDS,
+    TRANSPORT_SCHEMA,
     RemoteIntent,
     RemoteJournal,
     RemoteResultEnvelope,
     canonical_json_bytes,
+    canonical_json_line_bytes,
     create_remote_records,
     decode_remote_request,
     encode_remote_request,
@@ -145,6 +155,8 @@ def _aborted_result(
             "all_cells_terminal": False,
             "outcome": "aborted",
             "fusion_claim": False,
+            "candidate_reference_arithmetic": "candidate_reference_identical",
+            "candidate_distinction": "fullgraph_inductor_compilation_only",
             "capability_reasons": list(capability.reasons),
         },
         outcome="aborted",
@@ -175,6 +187,463 @@ def _envelope(
         environment=result.environment,
         result=result.to_dict(),
     )
+
+
+def _rewrap(transport_json: str, **updates: object) -> str:
+    wrapper = json.loads(transport_json)
+    assert type(wrapper) is dict
+    wrapper.update(updates)
+    return canonical_json_line_bytes(wrapper).decode("utf-8")
+
+
+def _transport_for_bytes(payload: bytes) -> str:
+    compressed = zstandard.ZstdCompressor(
+        level=19,
+        threads=0,
+        write_checksum=True,
+        write_content_size=True,
+        write_dict_id=False,
+    ).compress(payload)
+    return canonical_json_line_bytes(
+        {
+            "schema": TRANSPORT_SCHEMA,
+            "encoding": "zstd-base64",
+            "payload": base64.b64encode(compressed).decode("ascii"),
+            "uncompressed_bytes": len(payload),
+            "uncompressed_sha256": sha256_bytes(payload),
+        }
+    ).decode("utf-8")
+
+
+def _failed_compile_result(
+    intent: RemoteIntent, suite_bytes: bytes, compile_error: str
+) -> LocalExecutionResult:
+    suite = verify_suite(SUITE).suite
+    capability = CapabilityProbe(
+        True,
+        (),
+        "2.8.0",
+        "12.8",
+        None,
+        0,
+        _hardware().device_name,
+        (9, 0),
+        True,
+        True,
+        True,
+        None,
+    )
+    environment = dict(_aborted_result(intent, suite_bytes).environment)
+    environment.update(
+        torch_version=capability.torch_version,
+        cuda_version=capability.cuda_version,
+        device_index=capability.device_index,
+        device_name=capability.device_name,
+        compute_capability=list(capability.compute_capability or ()),
+        backend_invoked=False,
+    )
+    attempts: list[dict[str, object]] = []
+    observations: list[local.CellObservation] = []
+    case = suite.cases[0]
+    for cell in suite.expected_cells:
+        failure_kind = (
+            "compile_failed"
+            if cell.stage == "correctness" and cell.arm_id == "mlp-candidate"
+            else "correctness_gate"
+            if cell.stage == "timing"
+            else "runtime"
+        )
+        message = compile_error if failure_kind == "compile_failed" else "not executed"
+        attempts.extend(
+            (
+                {
+                    "attempt_id": len(attempts) + 1,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "running",
+                    "from_state": "pending",
+                    "to_state": "running",
+                    "reason": None,
+                },
+                {
+                    "attempt_id": len(attempts) + 2,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "failure",
+                    "from_state": "running",
+                    "to_state": "failed",
+                    "reason": failure_kind,
+                },
+            )
+        )
+        key = local._correctness_gate_key(intent.suite_sha256, case, cell)
+        correctness = (
+            local.CorrectnessObservation(
+                "failed",
+                key,
+                failure_kind,
+                message,
+                None,
+                False,
+                False,
+                False,
+                False,
+                None,
+            )
+            if cell.stage == "correctness"
+            else None
+        )
+        timing = (
+            local.TimingObservation("failed", key, failure_kind, message, 0, 0, (), None)
+            if cell.stage == "timing"
+            else None
+        )
+        observations.append(
+            local.CellObservation(
+                cell.id,
+                cell.case_id,
+                cell.arm_id,
+                cell.stage,
+                "failed",
+                correctness,
+                timing,
+            )
+        )
+    expected_ids = [cell.id for cell in suite.expected_cells]
+    return LocalExecutionResult(
+        intent.suite_path,
+        intent.suite_sha256,
+        suite_bytes,
+        suite.suite_id,
+        capability,
+        (),
+        tuple(observations),
+        tuple(attempts),
+        environment,
+        {
+            "mlp-candidate": {
+                "case_id": case.id,
+                "arm_id": "mlp-candidate",
+                "entrypoint": "reference_template.gated_mlp_candidate",
+                "status": "compile_failed",
+                "error": compile_error,
+                "wrapper_create_ns": 1,
+                "first_call_ns": None,
+                "eager_fallback": False,
+                "backend_invoked": False,
+                "callable_distinct": False,
+                "autocast_policy": dict(local._AUTOCAST_POLICY),
+            }
+        },
+        {
+            "expected_cell_ids": expected_ids,
+            "terminal_cell_ids": expected_ids,
+            "passed": 0,
+            "failed": len(expected_ids),
+            "blocked": 0,
+            "all_cells_terminal": True,
+            "outcome": "failed",
+            "fusion_claim": False,
+            "candidate_reference_arithmetic": "candidate_reference_identical",
+            "candidate_distinction": "fullgraph_inductor_compilation_only",
+        },
+        "failed",
+    )
+
+
+def test_result_envelope_freezes_inline_utf8_boundary(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    empty = canonical_json_bytes({**base.to_dict(), "result": {"padding": ""}})
+    padding = "x" * (REMOTE_RESULT_ENVELOPE_MAX_BYTES - len(empty))
+    at_limit = replace(base, result={"padding": padding}).to_json()
+
+    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    assert RemoteResultEnvelope.from_json(at_limit).result == {"padding": padding}
+    with pytest.raises(SchemaError, match="inline limit") as caught:
+        replace(base, result={"padding": padding + "x"}).to_json()
+    assert len(str(caught.value).encode("utf-8")) < 128
+    with pytest.raises(SchemaError, match="inline limit"):
+        RemoteResultEnvelope.from_json(at_limit + "x")
+
+
+def test_realistic_completed_four_cell_transport_is_deterministic_and_inline(
+    tmp_path: Path,
+) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    result = _failed_compile_result(intent, suite_bytes, "representative compile failure")
+    base = _envelope(intent, result, request_digest)
+    cells = verify_suite(SUITE).suite.expected_cells
+    observations: list[dict[str, object]] = []
+    attempts: list[dict[str, object]] = []
+    for index, cell in enumerate(cells):
+        correctness_key = sha256_bytes(
+            f"{intent.suite_sha256}:{cell.case_id}:{cell.arm_id}".encode()
+        )
+        samples = [float(sample) / 1000 for sample in range(1, 51)]
+        observations.append(
+            {
+                "cell_id": cell.id,
+                "case_id": cell.case_id,
+                "arm_id": cell.arm_id,
+                "stage": cell.stage,
+                "status": "passed",
+                "correctness": (
+                    {
+                        "status": "passed",
+                        "correctness_key": correctness_key,
+                        "failure_kind": None,
+                        "message": None,
+                        "output": {
+                            "shape": [8, 11008],
+                            "device": "cuda:0",
+                            "dtype": "torch.bfloat16",
+                            "layout": "torch.strided",
+                            "contiguous": True,
+                        },
+                        "input_storage_unchanged": True,
+                        "output_disjoint": True,
+                        "finite": True,
+                        "close": True,
+                        "max_abs_error": 0.0,
+                    }
+                    if cell.stage == "correctness"
+                    else None
+                ),
+                "timing": (
+                    {
+                        "status": "passed",
+                        "correctness_key": correctness_key,
+                        "failure_kind": None,
+                        "message": None,
+                        "warmups": 10,
+                        "repetitions": 50,
+                        "samples_ms": samples,
+                        "median_ms": 0.0255,
+                    }
+                    if cell.stage == "timing"
+                    else None
+                ),
+            }
+        )
+        attempts.extend(
+            (
+                {
+                    "attempt_id": 2 * index + 1,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "running",
+                    "from_state": "pending",
+                    "to_state": "running",
+                    "reason": None,
+                },
+                {
+                    "attempt_id": 2 * index + 2,
+                    "cell_id": cell.id,
+                    "stage": cell.stage,
+                    "status": "success",
+                    "from_state": "running",
+                    "to_state": "passed",
+                    "reason": None,
+                },
+            )
+        )
+    completed = result.to_dict()
+    completed["observations"] = observations
+    completed["attempts"] = attempts
+    completed["compile_outcomes"] = {
+        "mlp-candidate": {
+            **dict(result.compile_outcomes["mlp-candidate"]),
+            "status": "compiled_and_first_call_completed",
+            "error": None,
+            "backend_invoked": True,
+            "callable_distinct": True,
+        }
+    }
+    completed["summary"] = {
+        **dict(result.summary),
+        "expected_cell_ids": [cell.id for cell in cells],
+        "terminal_cell_ids": [cell.id for cell in cells],
+        "passed": len(cells),
+        "failed": 0,
+        "blocked": 0,
+        "all_cells_terminal": True,
+        "outcome": "completed",
+        "fusion_claim": False,
+    }
+    completed["outcome"] = "completed"
+    envelope = replace(base, result=completed)
+
+    transport = envelope.to_transport_json()
+    wrapper = json.loads(transport)
+
+    assert len(cells) == 4
+    assert len(transport.encode("utf-8")) < REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert len(pickle.dumps(transport, protocol=4)) < 8 * 1024
+    assert set(wrapper) == {
+        "schema",
+        "encoding",
+        "payload",
+        "uncompressed_bytes",
+        "uncompressed_sha256",
+    }
+    assert wrapper["schema"] == TRANSPORT_SCHEMA
+    assert wrapper["encoding"] == "zstd-base64"
+    assert transport == envelope.to_transport_json()
+    assert RemoteResultEnvelope.from_transport_json(transport) == envelope
+
+
+def test_transport_freezes_exact_utf8_boundary_and_bounded_error(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    intent = replace(intent, output_path="/tmp/heliostune-transport-boundary")
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    entropy = "".join(hashlib.sha256(str(index).encode()).hexdigest() for index in range(1000))
+
+    at_limit = replace(base, result={"padding": entropy[:6609]}).to_transport_json()
+
+    assert len(pickle.dumps(at_limit, protocol=4)) < 8 * 1024
+    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert RemoteResultEnvelope.from_transport_json(at_limit).result == {"padding": entropy[:6609]}
+    with pytest.raises(SchemaError, match="inline limit") as caught:
+        replace(base, result={"padding": entropy[:6614]}).to_transport_json()
+    assert len(str(caught.value).encode("utf-8")) < 128
+    with pytest.raises(SchemaError, match="inline limit"):
+        RemoteResultEnvelope.from_transport_json(at_limit + "x")
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("schema", 1, "schema must be a string"),
+        ("encoding", 1, "encoding must be a string"),
+        ("payload", 1, "payload must be a string"),
+        ("uncompressed_bytes", True, "uncompressed_bytes must be an integer"),
+        ("uncompressed_sha256", 1, "uncompressed_sha256 must be a string"),
+    ],
+)
+def test_transport_requires_exact_field_types(
+    tmp_path: Path, field: str, value: object, match: str
+) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    transport = _envelope(
+        intent, _aborted_result(intent, suite_bytes), request_digest
+    ).to_transport_json()
+
+    with pytest.raises(SchemaError, match=match):
+        RemoteResultEnvelope.from_transport_json(_rewrap(transport, **{field: value}))
+
+
+def test_transport_rejects_base64_digest_count_encoding_and_unknown_fields(
+    tmp_path: Path,
+) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    transport = _envelope(
+        intent, _aborted_result(intent, suite_bytes), request_digest
+    ).to_transport_json()
+    wrapper = json.loads(transport)
+    assert type(wrapper) is dict
+
+    with pytest.raises(SchemaError, match="canonical base64"):
+        RemoteResultEnvelope.from_transport_json(_rewrap(transport, payload="not-base64!"))
+    with pytest.raises(SchemaError, match="digest does not match"):
+        RemoteResultEnvelope.from_transport_json(_rewrap(transport, uncompressed_sha256="0" * 64))
+    with pytest.raises(SchemaError, match="byte count"):
+        RemoteResultEnvelope.from_transport_json(
+            _rewrap(
+                transport,
+                uncompressed_bytes=int(wrapper["uncompressed_bytes"]) + 1,
+            )
+        )
+    with pytest.raises(SchemaError, match="encoding must be 'zstd-base64'"):
+        RemoteResultEnvelope.from_transport_json(_rewrap(transport, encoding="gzip-base64"))
+    wrapper["extra"] = None
+    with pytest.raises(SchemaError, match="unknown fields"):
+        RemoteResultEnvelope.from_transport_json(canonical_json_line_bytes(wrapper).decode("utf-8"))
+
+
+def test_transport_rejects_bomb_trailing_data_and_second_frame(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    transport = _envelope(
+        intent, _aborted_result(intent, suite_bytes), request_digest
+    ).to_transport_json()
+    wrapper = json.loads(transport)
+    assert type(wrapper) is dict
+    frame = base64.b64decode(str(wrapper["payload"]), validate=True)
+    empty_frame = zstandard.ZstdCompressor(write_content_size=True).compress(b"")
+
+    bomb = b"x" * (REMOTE_RESULT_ENVELOPE_MAX_BYTES + 1)
+    bomb_transport = _transport_for_bytes(bomb)
+    assert len(bomb_transport.encode("utf-8")) < REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    with pytest.raises(SchemaError, match="byte count exceeds limit"):
+        RemoteResultEnvelope.from_transport_json(bomb_transport)
+
+    for suffix in (b"trailing", empty_frame):
+        malformed = _rewrap(
+            transport,
+            payload=base64.b64encode(frame + suffix).decode("ascii"),
+        )
+        with pytest.raises(SchemaError, match="one bounded zstd frame"):
+            RemoteResultEnvelope.from_transport_json(malformed)
+
+
+def test_transport_rejects_noncanonical_wrapper_and_envelope(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    envelope = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    transport = envelope.to_transport_json()
+
+    with pytest.raises(SchemaError, match="canonical JSON"):
+        RemoteResultEnvelope.from_transport_json(
+            canonical_json_bytes(json.loads(transport)).decode("utf-8")
+        )
+    envelope_bytes = envelope.to_json().encode("utf-8")
+    noncanonical_frame = zstandard.ZstdCompressor(
+        level=1,
+        write_checksum=False,
+        write_content_size=True,
+        write_dict_id=False,
+    ).compress(envelope_bytes)
+    with pytest.raises(SchemaError, match="canonical zstd frame"):
+        RemoteResultEnvelope.from_transport_json(
+            _rewrap(
+                transport,
+                payload=base64.b64encode(noncanonical_frame).decode("ascii"),
+            )
+        )
+    with pytest.raises(SchemaError, match="canonical JSON"):
+        RemoteResultEnvelope.from_transport_json(
+            _transport_for_bytes(b" " + envelope.to_json().encode("utf-8"))
+        )
+
+
+def test_failed_compile_huge_error_envelope_is_bounded_and_validates(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    compile_error = local._safe_error(
+        TypeError("meta_mm() takes 2 positional arguments but 3 were given\n" + ("x" * 2_000_000))
+    )
+    result = _failed_compile_result(intent, suite_bytes, compile_error)
+    envelope = _envelope(intent, result, request_digest)
+    payload = envelope.to_transport_json()
+
+    assert len(compile_error.encode("utf-8")) <= 4096
+    assert len(payload.encode("utf-8")) < REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert len(pickle.dumps(payload, protocol=4)) < 8 * 1024
+    parsed_envelope, parsed_result = validate_remote_result(
+        payload,
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert parsed_envelope.to_json() == envelope.to_json()
+    assert parsed_envelope.result["outcome"] == "failed"
+    assert parsed_result.compile_outcomes["mlp-candidate"]["error"] == compile_error
 
 
 def test_request_is_canonical_and_binds_exact_suite_bytes(tmp_path: Path) -> None:
@@ -244,7 +713,7 @@ def test_result_envelope_uses_strict_local_parser_and_rejects_contradiction(tmp_
     _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
     envelope = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
     parsed, result = validate_remote_result(
-        envelope.to_json(),
+        envelope.to_transport_json(),
         intent=intent,
         request_digest=request_digest,
         verified_suite_bytes=suite_bytes,
@@ -255,9 +724,10 @@ def test_result_envelope_uses_strict_local_parser_and_rejects_contradiction(tmp_
     assert isinstance(forged["result"], dict)
     assert isinstance(forged["result"]["capability"], dict)
     forged["result"]["capability"]["inductor_available"] = True
+    forged_envelope = RemoteResultEnvelope.from_json(canonical_json_bytes(forged).decode())
     with pytest.raises(SchemaError, match="inconsistent probe evidence"):
         validate_remote_result(
-            canonical_json_bytes(forged).decode(),
+            forged_envelope.to_transport_json(),
             intent=intent,
             request_digest=request_digest,
             verified_suite_bytes=suite_bytes,
@@ -355,7 +825,7 @@ def test_valid_early_capability_aborts_preserve_null_stage_evidence(
     assert verified.receipt.status == "aborted"
     assert verified.result is not None and verified.result.capability == capability
     _, result = validate_remote_result(
-        envelope.to_json(),
+        envelope.to_transport_json(),
         intent=intent,
         request_digest=request_digest,
         verified_suite_bytes=suite_bytes,
@@ -387,7 +857,7 @@ def test_early_capability_abort_rejects_hardware_and_environment_contradictions(
     mismatched = _envelope(intent, result, request_digest)
     with pytest.raises(SchemaError, match="capability field torch_version"):
         validate_remote_result(
-            mismatched.to_json(),
+            mismatched.to_transport_json(),
             intent=intent,
             request_digest=request_digest,
             verified_suite_bytes=suite_bytes,
@@ -420,9 +890,10 @@ def test_early_capability_abort_rejects_hardware_and_environment_contradictions(
     assert isinstance(fabricated["result"]["environment"], dict)
     fabricated["environment"]["device_name"] = _hardware().device_name
     fabricated["result"]["environment"]["device_name"] = _hardware().device_name
+    fabricated_envelope = RemoteResultEnvelope.from_json(canonical_json_bytes(fabricated).decode())
     with pytest.raises(SchemaError, match="environment does not match its capability"):
         validate_remote_result(
-            canonical_json_bytes(fabricated).decode(),
+            fabricated_envelope.to_transport_json(),
             intent=intent,
             request_digest=request_digest,
             verified_suite_bytes=suite_bytes,

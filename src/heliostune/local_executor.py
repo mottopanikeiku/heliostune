@@ -558,6 +558,9 @@ _CAPABILITY_REASONS = (
 _CELL_STATUSES = ("passed", "failed", "blocked")
 _CELL_STAGES = ("correctness", "timing")
 _OUTCOMES = ("completed", "failed", "aborted")
+_ERROR_MAX_UTF8_BYTES = 4096
+_ARITHMETIC_RELATION = "candidate_reference_identical"
+_CANDIDATE_DISTINCTION = "fullgraph_inductor_compilation_only"
 _MATERIALIZATION_DESCRIPTOR_FIELDS = (
     "tensor_id",
     "role",
@@ -974,6 +977,8 @@ def _parse_summary(
         "all_cells_terminal",
         "outcome",
         "fusion_claim",
+        "candidate_reference_arithmetic",
+        "candidate_distinction",
     ]
     if not capability.available:
         required.append("capability_reasons")
@@ -996,6 +1001,14 @@ def _parse_summary(
         ),
         "outcome": _enum(data["outcome"], _OUTCOMES, "local summary outcome"),
         "fusion_claim": exact_bool(data["fusion_claim"], context="local summary fusion_claim"),
+        "candidate_reference_arithmetic": nonblank_string(
+            data["candidate_reference_arithmetic"],
+            context="local summary candidate_reference_arithmetic",
+        ),
+        "candidate_distinction": nonblank_string(
+            data["candidate_distinction"],
+            context="local summary candidate_distinction",
+        ),
     }
     if not capability.available:
         result["capability_reasons"] = [
@@ -1013,6 +1026,8 @@ def _parse_summary(
         "all_cells_terminal": len(observations) == len(expected_ids),
         "outcome": outcome,
         "fusion_claim": False,
+        "candidate_reference_arithmetic": _ARITHMETIC_RELATION,
+        "candidate_distinction": _CANDIDATE_DISTINCTION,
     }
     if not capability.available:
         expected_values["capability_reasons"] = list(capability.reasons)
@@ -1642,8 +1657,18 @@ def _validate_compile_linkage(
 
 
 def _safe_error(exc: BaseException) -> str:
-    text = str(exc).replace("\n", " ").strip()
-    return f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+    """Return one canonical, bounded UTF-8 error record."""
+    raw = str(exc).encode("utf-8", errors="replace").decode("utf-8")
+    text = " ".join(raw.split())
+    full = f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+    encoded = full.encode("utf-8")
+    if len(encoded) <= _ERROR_MAX_UTF8_BYTES:
+        return full
+    digest = hashlib.sha256(encoded).hexdigest()
+    suffix = f" [truncated sha256={digest}]"
+    prefix_bytes = encoded[: _ERROR_MAX_UTF8_BYTES - len(suffix.encode("ascii"))]
+    prefix = prefix_bytes.decode("utf-8", errors="ignore").rstrip()
+    return prefix + suffix
 
 
 def _unavailable_probe(
@@ -1934,8 +1959,8 @@ def _gated_mlp_reference(torch: Any, x: Any, gate_weight: Any, up_weight: Any) -
 
 
 def _gated_mlp_candidate(torch: Any, x: Any, gate_weight: Any, up_weight: Any) -> Any:
-    gate = torch.mm(x, gate_weight.T, out_dtype=torch.float32)
-    up = torch.mm(x, up_weight.T, out_dtype=torch.float32)
+    gate = torch.mm(x.float(), gate_weight.float().T)
+    up = torch.mm(x.float(), up_weight.float().T)
     return (torch.nn.functional.silu(gate, inplace=False) * up).to(dtype=torch.bfloat16)
 
 
@@ -2315,6 +2340,8 @@ def _summary(
         "all_cells_terminal": terminal_ids == [cell.id for cell in suite.expected_cells],
         "outcome": outcome,
         "fusion_claim": False,
+        "candidate_reference_arithmetic": _ARITHMETIC_RELATION,
+        "candidate_distinction": _CANDIDATE_DISTINCTION,
     }
 
 

@@ -570,6 +570,135 @@ def test_recording_backend_wraps_pinned_inductor_and_proves_invocation() -> None
     assert state == {"invoked": True}
 
 
+class EquationTensor:
+    def __init__(self, torch: EquationTorch, expression: str) -> None:
+        self.torch = torch
+        self.expression = expression
+
+    def float(self) -> EquationTensor:
+        expression = f"{self.expression}.float()"
+        self.torch.trace.append(expression)
+        return EquationTensor(self.torch, expression)
+
+    @property
+    def T(self) -> EquationTensor:
+        expression = f"{self.expression}.T"
+        self.torch.trace.append(expression)
+        return EquationTensor(self.torch, expression)
+
+    def __mul__(self, other: EquationTensor) -> EquationTensor:
+        expression = f"({self.expression} * {other.expression})"
+        self.torch.trace.append(expression)
+        return EquationTensor(self.torch, expression)
+
+    def to(self, *, dtype: object) -> EquationTensor:
+        expression = f"{self.expression}.to(dtype={dtype})"
+        self.torch.trace.append(expression)
+        return EquationTensor(self.torch, expression)
+
+
+class EquationTorch:
+    bfloat16 = "bfloat16"
+
+    def __init__(self) -> None:
+        self.trace: list[str] = []
+        self.cuda = CompileCuda()
+        self.nn = SimpleNamespace(
+            functional=SimpleNamespace(silu=self._silu),
+        )
+        self._dynamo = SimpleNamespace(
+            config=SimpleNamespace(disable=False, suppress_errors=False),
+            backends=SimpleNamespace(registry=SimpleNamespace(lookup_backend=self._lookup_backend)),
+        )
+
+    def tensor(self, name: str) -> EquationTensor:
+        return EquationTensor(self, name)
+
+    def mm(self, left: EquationTensor, right: EquationTensor, **kwargs: object) -> EquationTensor:
+        if kwargs:
+            raise TypeError("meta_mm() takes 2 positional arguments but 3 were given")
+        expression = f"torch.mm({left.expression}, {right.expression})"
+        self.trace.append(expression)
+        return EquationTensor(self, expression)
+
+    def _silu(self, value: EquationTensor, *, inplace: bool) -> EquationTensor:
+        expression = f"silu({value.expression}, inplace={inplace})"
+        self.trace.append(expression)
+        return EquationTensor(self, expression)
+
+    def _lookup_backend(self, name: str) -> Any:
+        assert name == "inductor"
+        return lambda graph, _inputs: graph
+
+    def compile(self, kernel: Any, **kwargs: object) -> Any:
+        backend = cast(Any, kwargs.pop("backend"))
+        assert kwargs == {"fullgraph": True, "dynamic": False, "mode": "default"}
+
+        def compiled(*arguments: EquationTensor) -> EquationTensor:
+            lowered = backend(kernel, arguments)
+            return cast(EquationTensor, lowered(*arguments))
+
+        return compiled
+
+
+def _equation_arguments(torch: EquationTorch) -> tuple[EquationTensor, ...]:
+    return (
+        torch.tensor("x"),
+        torch.tensor("gate_weight"),
+        torch.tensor("up_weight"),
+    )
+
+
+def test_gated_candidate_is_exact_reference_arithmetic_compiled_fullgraph() -> None:
+    reference_torch = EquationTorch()
+    reference = local._gated_mlp_reference(reference_torch, *_equation_arguments(reference_torch))
+    candidate_torch = EquationTorch()
+    eager_candidate = local._gated_mlp_candidate
+    candidate = eager_candidate(candidate_torch, *_equation_arguments(candidate_torch))
+
+    expected_trace = [
+        "x.float()",
+        "gate_weight.float()",
+        "gate_weight.float().T",
+        "torch.mm(x.float(), gate_weight.float().T)",
+        "x.float()",
+        "up_weight.float()",
+        "up_weight.float().T",
+        "torch.mm(x.float(), up_weight.float().T)",
+        "silu(torch.mm(x.float(), gate_weight.float().T), inplace=False)",
+        "(silu(torch.mm(x.float(), gate_weight.float().T), inplace=False) * torch.mm(x.float(), up_weight.float().T))",
+        "(silu(torch.mm(x.float(), gate_weight.float().T), inplace=False) * torch.mm(x.float(), up_weight.float().T)).to(dtype=bfloat16)",
+    ]
+    assert candidate_torch.trace == reference_torch.trace == expected_trace
+    assert candidate.expression == reference.expression
+
+    compiled_torch = EquationTorch()
+
+    def kernel(*arguments: EquationTensor) -> EquationTensor:
+        return local._gated_mlp_candidate(compiled_torch, *arguments)
+
+    backend_state: dict[str, bool] = {}
+    compiled = local._compile_candidate(compiled_torch, kernel, backend_state)
+    actual = local._first_candidate_call(
+        compiled_torch, compiled, _equation_arguments(compiled_torch), 0, backend_state
+    )
+    assert actual.expression == reference.expression
+    assert backend_state == {"invoked": True}
+
+
+def test_safe_error_canonicalizes_and_bounds_multimegabyte_utf8() -> None:
+    raw = "  observed\nFakeTensor\tfailure " + ("界" * 1_000_000)
+    canonical = "RuntimeError: observed FakeTensor failure " + ("界" * 1_000_000)
+    safe = local._safe_error(RuntimeError(raw))
+
+    assert len(safe.encode("utf-8")) <= 4096
+    assert safe.startswith("RuntimeError: observed FakeTensor failure 界")
+    assert safe.endswith(
+        f" [truncated sha256={hashlib.sha256(canonical.encode('utf-8')).hexdigest()}]"
+    )
+    assert "\n" not in safe and "\t" not in safe
+
+
 @pytest.mark.parametrize("field", ["disable", "suppress_errors"])
 def test_compile_rejects_force_eager_config(field: str) -> None:
     config = SimpleNamespace(disable=False, suppress_errors=False)
@@ -1119,6 +1248,8 @@ def _available_failed_payload(suite_path: Path = MLP) -> dict[str, Any]:
             "all_cells_terminal": True,
             "outcome": "failed",
             "fusion_claim": False,
+            "candidate_reference_arithmetic": "candidate_reference_identical",
+            "candidate_distinction": "fullgraph_inductor_compilation_only",
         },
         "outcome": "failed",
     }
@@ -1237,6 +1368,8 @@ def _unavailable_payload(capability: dict[str, Any]) -> dict[str, Any]:
         "all_cells_terminal": False,
         "outcome": "aborted",
         "fusion_claim": False,
+        "candidate_reference_arithmetic": "candidate_reference_identical",
+        "candidate_distinction": "fullgraph_inductor_compilation_only",
         "capability_reasons": list(capability["reasons"]),
     }
     value["outcome"] = "aborted"
