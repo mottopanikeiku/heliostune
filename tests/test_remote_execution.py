@@ -12,6 +12,7 @@ import pytest
 import zstandard
 
 import heliostune.local_executor as local
+import heliostune.remote_execution as remote
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult
 from heliostune.remote_execution import (
@@ -29,6 +30,7 @@ from heliostune.remote_execution import (
     create_remote_records,
     decode_remote_request,
     encode_remote_request,
+    open_remote_records,
     protect_remote_output,
     remote_artifact_paths,
     sha256_bytes,
@@ -667,6 +669,8 @@ def test_pinned_records_are_exclusive_and_spawn_acknowledgement_is_terminal(tmp_
     records = create_remote_records(intent.output_path, intent, request_digest)
     try:
         assert records.intent_bytes() == intent.to_bytes()
+        assert records.intent_snapshot == intent.to_bytes()
+        assert records.journal_snapshot is None
         records.journal.append("spawn_acknowledgement_lost", detail="RuntimeError: transport")
         records.journal.append("unresolved", detail="RuntimeError: transport")
         rows = [json.loads(line) for line in records.journal.bytes().splitlines()]
@@ -946,6 +950,61 @@ def test_aborted_receipt_is_root_last_strict_and_tamper_evident(tmp_path: Path) 
         verify_remote_receipt(intent.output_path)
 
 
+def test_live_writer_retains_authorized_journal_if_same_inode_mutates_after_boundary(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    intent, suite_bytes, plugin_bytes, manifest_bytes = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    result_payload = _envelope(
+        intent, _aborted_result(intent, suite_bytes), request_digest
+    ).to_json()
+    records = create_remote_records(intent.output_path, intent, request_digest)
+    records.journal.append("spawned", call_id="fc-one")
+    records.journal.append("retrieval_started", call_id="fc-one")
+    records.journal.append("aborted", call_id="fc-one")
+    authorized = records.journal.bytes()
+    forged = authorized.replace(b"fc-one", b"fc-two")
+    assert len(forged) == len(authorized) and forged != authorized
+    _, journal_path = remote_artifact_paths(intent.output_path)
+    journal_identity = journal_path.stat().st_ino
+    original_mkdir = os.mkdir
+    mutated = False
+
+    def mkdir_after_boundary(path: str, mode: int = 0o777, *, dir_fd: int | None = None) -> None:
+        nonlocal mutated
+        if not mutated and path.startswith(".heliostune-remote-receipt-"):
+            descriptor = os.open(journal_path, os.O_WRONLY)
+            try:
+                assert os.pwrite(descriptor, forged, 0) == len(forged)
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            mutated = True
+        original_mkdir(path, mode, dir_fd=dir_fd)
+
+    monkeypatch.setattr("heliostune.remote_execution.os.mkdir", mkdir_after_boundary)
+    try:
+        write_remote_receipt(
+            records,
+            status="aborted",
+            request_digest=request_digest,
+            suite_bytes=suite_bytes,
+            plugin_bytes=plugin_bytes,
+            manifest_bytes=manifest_bytes,
+            result_payload=result_payload,
+            client_spawn_count=1,
+        )
+        assert records.journal_snapshot == authorized
+    finally:
+        records.close()
+
+    assert mutated
+    assert journal_path.stat().st_ino == journal_identity
+    assert journal_path.read_bytes() == forged
+    assert (Path(intent.output_path) / "journal.jsonl").read_bytes() == authorized
+    assert b"fc-two" not in (Path(intent.output_path) / "journal.jsonl").read_bytes()
+
+
 def test_receipt_rejects_semantic_status_and_path_tampering(tmp_path: Path) -> None:
     intent, suite_bytes, plugin_bytes, manifest_bytes = _intent(tmp_path)
     _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
@@ -987,6 +1046,8 @@ def test_unresolved_receipt_has_no_result_or_false_cancellation_claim(tmp_path: 
     try:
         records.journal.append("spawn_acknowledgement_lost", detail="transport lost")
         records.journal.append("unresolved", detail="transport lost")
+        terminal_journal = records.journal.bytes()
+        assert records.journal_snapshot is None
         write_remote_receipt(
             records,
             status="unresolved",
@@ -997,6 +1058,7 @@ def test_unresolved_receipt_has_no_result_or_false_cancellation_claim(tmp_path: 
             result_payload=None,
             client_spawn_count=1,
         )
+        assert records.journal_snapshot == terminal_journal
     finally:
         records.close()
     verified = verify_remote_receipt(intent.output_path)
@@ -1037,3 +1099,109 @@ def test_parent_substitution_cannot_publish_into_forged_parent(tmp_path: Path) -
             )
     finally:
         records.close()
+
+
+def test_receipt_staging_uses_fresh_nonempty_inventory_repeatedly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    intent, suite_bytes, plugin_bytes, manifest_bytes = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    result_payload = _envelope(
+        intent, _aborted_result(intent, suite_bytes), request_digest
+    ).to_json()
+    original_verify = remote._verify_receipt_fd
+    inventories: list[set[str]] = []
+
+    def verify_twice(directory_fd: int, root_path: Path) -> remote.VerifiedRemoteReceipt:
+        inventories.append(set(os.listdir(f"/proc/self/fd/{directory_fd}")))
+        first = original_verify(directory_fd, root_path)
+        inventories.append(set(os.listdir(f"/proc/self/fd/{directory_fd}")))
+        second = original_verify(directory_fd, root_path)
+        assert first == second
+        return first
+
+    monkeypatch.setattr(remote, "_verify_receipt_fd", verify_twice)
+    records = create_remote_records(intent.output_path, intent, request_digest)
+    try:
+        records.journal.append("spawned", call_id="fc-inventory")
+        records.journal.append("retrieval_started", call_id="fc-inventory")
+        records.journal.append("aborted", call_id="fc-inventory")
+        write_remote_receipt(
+            records,
+            status="aborted",
+            request_digest=request_digest,
+            suite_bytes=suite_bytes,
+            plugin_bytes=plugin_bytes,
+            manifest_bytes=manifest_bytes,
+            result_payload=result_payload,
+            client_spawn_count=1,
+        )
+    finally:
+        records.close()
+
+    assert len(inventories) == 2
+    assert inventories[0] == inventories[1]
+    assert inventories[0] == {
+        "intent.json",
+        "journal.jsonl",
+        "plugin.json",
+        "receipt.json",
+        "result.json",
+        "suite.json",
+        "wheel.manifest.json",
+    }
+
+
+def test_open_existing_records_strictly_restores_completed_journal_read_only(
+    tmp_path: Path,
+) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    created = create_remote_records(intent.output_path, intent, request_digest)
+    created.journal.append("spawned", call_id="fc-completed")
+    created.journal.append("retrieval_started", call_id="fc-completed")
+    created.journal.append("completed", call_id="fc-completed")
+    journal_before = created.journal.bytes()
+    created.close()
+
+    opened = open_remote_records(intent.output_path)
+    try:
+        assert opened.intent == intent
+        assert opened.intent_bytes() == intent.to_bytes()
+        assert opened.journal.bytes() == journal_before
+        assert opened.intent_snapshot == intent.to_bytes()
+        assert opened.journal_snapshot == journal_before
+        assert opened.journal.request_digest == request_digest
+        assert opened.journal.state == "completed"
+        assert opened.journal.call_id == "fc-completed"
+        with pytest.raises(RuntimeError, match="read-only"):
+            opened.journal.append("failed", call_id="fc-completed")
+        opened.assert_parent_identity()
+    finally:
+        opened.close()
+    _, journal_path = remote_artifact_paths(intent.output_path)
+    with RemoteJournal.open_existing(journal_path, request_digest) as journal:
+        assert journal.state == "completed"
+        assert journal.call_id == "fc-completed"
+        assert journal.bytes() == journal_before
+    with pytest.raises(SchemaError, match="request binding"):
+        RemoteJournal.open_existing(journal_path, "f" * 64)
+    assert not Path(intent.output_path).exists()
+
+
+def test_open_existing_records_rejects_noncanonical_or_illegal_journal(
+    tmp_path: Path,
+) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    created = create_remote_records(intent.output_path, intent, request_digest)
+    created.journal.append("spawned", call_id="fc-invalid")
+    created.close()
+    _, journal_path = remote_artifact_paths(intent.output_path)
+    rows = [json.loads(line) for line in journal_path.read_bytes().splitlines()]
+    rows[1]["sequence"] = 7
+    journal_path.write_bytes(b"".join(canonical_json_line_bytes(row) for row in rows))
+
+    with pytest.raises(SchemaError, match="sequence or request binding"):
+        open_remote_records(intent.output_path)

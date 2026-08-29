@@ -397,13 +397,23 @@ class RemoteJournalRecord:
 class RemoteJournal:
     """Append-only state machine backed by one retained descriptor."""
 
-    def __init__(self, path: Path, descriptor: int, request_digest: str) -> None:
+    def __init__(
+        self,
+        path: Path,
+        descriptor: int,
+        request_digest: str,
+        *,
+        writable: bool = True,
+        snapshot: bytes | None = None,
+    ) -> None:
         self.path = path
         self._descriptor = descriptor
         self.request_digest = _digest(request_digest, context="remote journal request_digest")
         self._sequence = 0
         self._state: JournalState | None = None
         self._call_id: str | None = None
+        self._writable = writable
+        self._snapshot = snapshot
 
     @classmethod
     def create(cls, path: str | Path, request_digest: str) -> RemoteJournal:
@@ -421,15 +431,77 @@ class RemoteJournal:
             raise
         return journal
 
+    @classmethod
+    def _open_existing_at(
+        cls,
+        path: Path,
+        parent_fd: int,
+        request_digest: str | None = None,
+    ) -> RemoteJournal:
+        descriptor = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        try:
+            metadata = os.fstat(descriptor)
+            if not stat.S_ISREG(metadata.st_mode):
+                raise ArtifactError(f"remote journal is not a regular file: {path}")
+            payload = _read_descriptor(descriptor)
+            parsed = _parse_journal(payload, request_digest)
+            journal = cls(
+                path,
+                descriptor,
+                parsed[0].request_digest,
+                writable=False,
+                snapshot=payload,
+            )
+            descriptor = -1
+            journal._sequence = len(parsed)
+            journal._state = parsed[-1].state
+            journal._call_id = parsed[-1].call_id
+            return journal
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+
+    @classmethod
+    def open_existing(
+        cls,
+        path: str | Path,
+        request_digest: str | None = None,
+    ) -> RemoteJournal:
+        """Open and strictly restore an existing journal without write access."""
+        destination = Path(path).absolute()
+        parent_fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            parent_stat = os.fstat(parent_fd)
+            parent_identity = (parent_stat.st_dev, parent_stat.st_ino)
+            if not _same_directory(
+                os.stat(destination.parent, follow_symlinks=False), parent_identity
+            ):
+                raise ArtifactError("remote journal parent identity changed while opening")
+            journal = cls._open_existing_at(destination, parent_fd, request_digest)
+            journal_stat = os.fstat(journal._descriptor)
+            path_stat = os.stat(destination.name, dir_fd=parent_fd, follow_symlinks=False)
+            if not _same_regular(path_stat, (journal_stat.st_dev, journal_stat.st_ino)):
+                journal.close()
+                raise ArtifactError("remote journal identity changed while opening")
+            return journal
+        finally:
+            os.close(parent_fd)
+
     @property
     def state(self) -> JournalState | None:
         return self._state
+
+    @property
+    def call_id(self) -> str | None:
+        return self._call_id
 
     def append(
         self, state: JournalState, *, call_id: str | None = None, detail: str | None = None
     ) -> RemoteJournalRecord:
         if self._descriptor < 0:
             raise RuntimeError("remote journal is closed")
+        if not self._writable:
+            raise RuntimeError("existing remote journal is read-only")
         if self._state is None:
             if state != "intent":
                 raise SchemaError("remote journal must begin with intent")
@@ -451,9 +523,11 @@ class RemoteJournal:
     def bytes(self) -> bytes:
         if self._descriptor < 0:
             raise RuntimeError("remote journal is closed")
-        os.fsync(self._descriptor)
-        size = os.fstat(self._descriptor).st_size
-        return os.pread(self._descriptor, size, 0)
+        if self._snapshot is not None:
+            return self._snapshot
+        if self._writable:
+            os.fsync(self._descriptor)
+        return _read_descriptor(self._descriptor)
 
     def close(self) -> None:
         if self._descriptor >= 0:
@@ -474,6 +548,21 @@ def _write_all(descriptor: int, payload: bytes) -> None:
         if written <= 0:
             raise OSError("short write while creating durable remote artifact")
         view = view[written:]
+
+
+def _read_descriptor(descriptor: int) -> bytes:
+    size = os.fstat(descriptor).st_size
+    remaining = size
+    offset = 0
+    blocks: list[bytes] = []
+    while remaining:
+        block = os.pread(descriptor, min(remaining, 1024 * 1024), offset)
+        if not block:
+            raise ArtifactError("short read from retained remote artifact")
+        blocks.append(block)
+        offset += len(block)
+        remaining -= len(block)
+    return b"".join(blocks)
 
 
 def _open_exclusive_at(parent_fd: int, name: str) -> int:
@@ -513,6 +602,19 @@ def protect_remote_output(output_dir: str | Path) -> tuple[Path, Path, Path]:
     return output, intent_path, journal_path
 
 
+def _parse_intent_snapshot(payload: bytes, output: Path) -> RemoteIntent:
+    try:
+        intent_text = payload.decode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise SchemaError("remote intent must be UTF-8") from exc
+    intent = RemoteIntent.from_dict(strict_json_loads(intent_text, source="remote intent"))
+    if canonical_json_bytes(intent.to_dict()) != payload:
+        raise SchemaError("remote intent is not in canonical JSON form")
+    if Path(intent.output_path).absolute() != output:
+        raise SchemaError("remote intent output path does not match the protected output")
+    return intent
+
+
 class RemoteRecords:
     """Pinned intent and journal tombstones for one output parent."""
 
@@ -524,6 +626,8 @@ class RemoteRecords:
         intent_fd: int,
         intent_identity: tuple[int, int],
         journal_identity: tuple[int, int],
+        intent_snapshot: bytes,
+        journal_snapshot: bytes | None,
         intent: RemoteIntent,
         journal: RemoteJournal,
     ) -> None:
@@ -533,6 +637,8 @@ class RemoteRecords:
         self.intent_fd = intent_fd
         self.intent_identity = intent_identity
         self.journal_identity = journal_identity
+        self._intent_snapshot = intent_snapshot
+        self._journal_snapshot = journal_snapshot
         self.intent = intent
         self.journal = journal
 
@@ -544,9 +650,27 @@ class RemoteRecords:
     def journal_path(self) -> Path:
         return remote_artifact_paths(self.output)[1]
 
+    @property
+    def intent_snapshot(self) -> bytes:
+        return self._intent_snapshot
+
+    @property
+    def journal_snapshot(self) -> bytes | None:
+        return self._journal_snapshot
+
     def intent_bytes(self) -> bytes:
-        size = os.fstat(self.intent_fd).st_size
-        return os.pread(self.intent_fd, size, 0)
+        return self._intent_snapshot
+
+    def _current_intent_bytes(self) -> bytes:
+        return _read_descriptor(self.intent_fd)
+
+    def _current_journal_bytes(self) -> bytes:
+        return _read_descriptor(self.journal._descriptor)
+
+    def _retain_terminal_journal_snapshot(self, snapshot: bytes) -> None:
+        if self._journal_snapshot is not None and self._journal_snapshot != snapshot:
+            raise ArtifactError("remote journal snapshot cannot change")
+        self._journal_snapshot = snapshot
 
     def assert_parent_identity(self) -> None:
         if not _same_directory(os.fstat(self.parent_fd), self.parent_identity):
@@ -602,8 +726,9 @@ def create_remote_records(
             pass
         else:
             raise ArtifactError(f"remote receipt output directory already exists: {output}")
+        intent_snapshot = intent.to_bytes()
         intent_fd = _open_exclusive_at(parent_fd, intent_path.name)
-        _write_all(intent_fd, intent.to_bytes())
+        _write_all(intent_fd, intent_snapshot)
         os.fsync(intent_fd)
         os.fsync(parent_fd)
         journal_fd = _open_exclusive_at(parent_fd, journal_path.name)
@@ -620,12 +745,75 @@ def create_remote_records(
             intent_fd,
             (intent_stat.st_dev, intent_stat.st_ino),
             (journal_stat.st_dev, journal_stat.st_ino),
-            intent,
+            intent_snapshot,
+            None,
+            _parse_intent_snapshot(intent_snapshot, output),
             journal,
         )
     except BaseException:
         if journal_fd >= 0:
             os.close(journal_fd)
+        if intent_fd >= 0:
+            os.close(intent_fd)
+        os.close(parent_fd)
+        raise
+
+
+def open_remote_records(output_dir: str | Path) -> RemoteRecords:
+    """Strictly open descriptor-pinned existing records without mutating them."""
+    if not hasattr(os, "O_DIRECTORY") or not hasattr(os, "O_NOFOLLOW"):
+        raise ArtifactError("descriptor-pinned remote publication is unsupported")
+    output = Path(output_dir).absolute()
+    intent_path, journal_path = remote_artifact_paths(output)
+    parent_fd = os.open(output.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    intent_fd = -1
+    journal: RemoteJournal | None = None
+    try:
+        parent_stat = os.fstat(parent_fd)
+        parent_identity = (parent_stat.st_dev, parent_stat.st_ino)
+        if not _same_directory(os.stat(output.parent, follow_symlinks=False), parent_identity):
+            raise ArtifactError("remote output parent identity changed while opening records")
+        try:
+            os.stat(output.name, dir_fd=parent_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise ArtifactError(f"remote receipt output directory already exists: {output}")
+
+        intent_fd = os.open(intent_path.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=parent_fd)
+        intent_stat = os.fstat(intent_fd)
+        intent_identity = (intent_stat.st_dev, intent_stat.st_ino)
+        if not stat.S_ISREG(intent_stat.st_mode):
+            raise ArtifactError(f"remote intent is not a regular file: {intent_path}")
+        intent_payload = _read_descriptor(intent_fd)
+        intent = _parse_intent_snapshot(intent_payload, output)
+
+        journal = RemoteJournal._open_existing_at(journal_path, parent_fd)
+        journal_stat = os.fstat(journal._descriptor)
+        journal_identity = (journal_stat.st_dev, journal_stat.st_ino)
+        for name, expected, label in (
+            (intent_path.name, intent_identity, "intent"),
+            (journal_path.name, journal_identity, "journal"),
+        ):
+            path_stat = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            if not _same_regular(path_stat, expected):
+                raise ArtifactError(f"remote {label} identity changed while opening records")
+        journal_snapshot = journal.bytes()
+        return RemoteRecords(
+            output,
+            parent_fd,
+            parent_identity,
+            intent_fd,
+            intent_identity,
+            journal_identity,
+            intent_payload,
+            journal_snapshot,
+            intent,
+            journal,
+        )
+    except BaseException:
+        if journal is not None:
+            journal.close()
         if intent_fd >= 0:
             os.close(intent_fd)
         os.close(parent_fd)
@@ -1113,32 +1301,39 @@ def _receipt_bindings(
     }
 
 
-def _parse_journal(payload: bytes, request_digest: str) -> tuple[RemoteJournalRecord, ...]:
+def _parse_journal(
+    payload: bytes, request_digest: str | None = None
+) -> tuple[RemoteJournalRecord, ...]:
     try:
         lines = payload.decode("utf-8", errors="strict").splitlines(keepends=True)
     except UnicodeError as exc:
-        raise SchemaError("remote receipt journal must be UTF-8") from exc
+        raise SchemaError("remote journal must be UTF-8") from exc
     if not lines or any(not line.endswith("\n") for line in lines):
-        raise SchemaError("remote receipt journal must be nonempty complete JSONL")
+        raise SchemaError("remote journal must be nonempty complete JSONL")
+    bound_digest = (
+        None
+        if request_digest is None
+        else _digest(request_digest, context="remote journal request_digest")
+    )
     records: list[RemoteJournalRecord] = []
     prior: JournalState | None = None
     call_id: str | None = None
     for sequence, line in enumerate(lines):
-        value = strict_json_loads(line, source="remote receipt journal")
+        value = strict_json_loads(line, source="remote journal")
         record = RemoteJournalRecord.from_dict(value)
         if canonical_json_line_bytes(record.to_dict()).decode("utf-8") != line:
-            raise SchemaError("remote receipt journal record is not canonical JSONL")
-        if record.sequence != sequence or record.request_digest != request_digest:
-            raise SchemaError("remote receipt journal sequence or request binding differs")
+            raise SchemaError("remote journal record is not canonical JSONL")
+        if bound_digest is None:
+            bound_digest = record.request_digest
+        if record.sequence != sequence or record.request_digest != bound_digest:
+            raise SchemaError("remote journal sequence or request binding differs")
         if prior is None:
             if record.state != "intent":
-                raise SchemaError("remote receipt journal must begin with intent")
+                raise SchemaError("remote journal must begin with intent")
         elif record.state not in _LEGAL_TRANSITIONS[prior]:
-            raise SchemaError(
-                f"illegal remote receipt journal transition {prior!r} -> {record.state!r}"
-            )
+            raise SchemaError(f"illegal remote journal transition {prior!r} -> {record.state!r}")
         if call_id is not None and record.call_id != call_id:
-            raise SchemaError("remote receipt journal call ID changed")
+            raise SchemaError("remote journal call ID changed")
         if record.call_id is not None:
             call_id = record.call_id
         records.append(record)
@@ -1165,6 +1360,14 @@ def _read_regular_at(directory_fd: int, name: str) -> bytes:
         return b"".join(blocks)
     finally:
         os.close(descriptor)
+
+
+def _fresh_directory_inventory(directory_fd: int) -> set[str]:
+    """Enumerate through a fresh open file description anchored to directory_fd."""
+    try:
+        return set(os.listdir(f"/proc/self/fd/{directory_fd}"))
+    except OSError as exc:
+        raise ArtifactError("cannot enumerate pinned remote receipt directory") from exc
 
 
 def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteReceipt:
@@ -1226,7 +1429,7 @@ def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteRece
         wheel_data["manifest"], context="remote receipt manifest artifact"
     )
     expected_paths.update({suite_binding.path, plugin_binding.path, manifest_binding.path})
-    actual_paths = set(os.listdir(directory_fd))
+    actual_paths = _fresh_directory_inventory(directory_fd)
     if actual_paths != expected_paths:
         raise ArtifactError(
             f"remote receipt directory inventory differs: missing={sorted(expected_paths - actual_paths)}, extra={sorted(actual_paths - expected_paths)}"
@@ -1358,7 +1561,7 @@ def _rename_directory_noreplace(parent_fd: int, source: str, destination: str) -
 
 
 def _remove_staging(parent_fd: int, staging_fd: int, name: str) -> None:
-    for entry in os.listdir(staging_fd):
+    for entry in _fresh_directory_inventory(staging_fd):
         with contextlib.suppress(FileNotFoundError):
             os.unlink(entry, dir_fd=staging_fd)
     with contextlib.suppress(FileNotFoundError):
@@ -1376,12 +1579,36 @@ def write_remote_receipt(
     manifest_bytes: bytes,
     result_payload: str | None,
     client_spawn_count: int,
+    expected_intent_snapshot: bytes | None = None,
+    expected_journal_snapshot: bytes | None = None,
 ) -> VerifiedRemoteReceipt:
     """Publish a descriptor-pinned, root-last receipt from retained bytes only."""
+    intent_snapshot = (
+        records._current_intent_bytes()
+        if expected_intent_snapshot is None
+        else expected_intent_snapshot
+    )
+    journal_snapshot = (
+        records._current_journal_bytes()
+        if expected_journal_snapshot is None
+        else expected_journal_snapshot
+    )
+    if type(intent_snapshot) is not bytes or type(journal_snapshot) is not bytes:
+        raise TypeError("remote receipt snapshots must be bytes")
+
     records.assert_parent_identity()
-    intent = records.intent
-    if records.intent_bytes() != intent.to_bytes():
-        raise ArtifactError("retained remote intent bytes changed")
+    if intent_snapshot != records.intent_snapshot:
+        raise ArtifactError("expected remote intent differs from retained snapshot")
+    if records.journal_snapshot is not None and journal_snapshot != records.journal_snapshot:
+        raise ArtifactError("expected remote journal differs from retained snapshot")
+    intent = _parse_intent_snapshot(intent_snapshot, records.output)
+    journal_records = _parse_journal(journal_snapshot, request_digest)
+    terminal = journal_records[-1]
+    if terminal.state != status:
+        raise SchemaError("remote receipt status differs from journal terminal state")
+    if records.journal.state != terminal.state or records.journal.call_id != terminal.call_id:
+        raise ArtifactError("remote journal snapshot differs from retained journal state")
+
     result_bytes = None if result_payload is None else result_payload.encode("utf-8")
     if status == "unresolved" and result_bytes is not None:
         raise SchemaError("unresolved receipt cannot publish a validated result")
@@ -1398,9 +1625,8 @@ def write_remote_receipt(
         or manifest_binding.sha256 != intent.manifest_sha256
     ):
         raise SchemaError("retained suite/plugin/manifest bytes differ from intent")
-    journal_bytes = records.journal.bytes()
-    intent_binding = _binding("intent.json", records.intent_bytes())
-    journal_binding = _binding("journal.jsonl", journal_bytes)
+    intent_binding = _binding("intent.json", intent_snapshot)
+    journal_binding = _binding("journal.jsonl", journal_snapshot)
     result_binding = None if result_bytes is None else _binding("result.json", result_bytes)
     receipt = RemoteReceiptV1(
         receipt_id=request_digest,
@@ -1416,14 +1642,22 @@ def write_remote_receipt(
     )
     root_payload = canonical_json_bytes(receipt.to_dict())
     payloads = [
-        (intent_binding.path, records.intent_bytes()),
-        (journal_binding.path, journal_bytes),
+        (intent_binding.path, intent_snapshot),
+        (journal_binding.path, journal_snapshot),
         (suite_binding.path, suite_bytes),
         (plugin_binding.path, plugin_bytes),
         (manifest_binding.path, manifest_bytes),
     ]
     if result_binding is not None and result_bytes is not None:
         payloads.append((result_binding.path, result_bytes))
+    records.assert_parent_identity()
+    current_intent = records._current_intent_bytes()
+    current_journal = records._current_journal_bytes()
+    if current_intent != intent_snapshot:
+        raise ArtifactError("remote intent changed before receipt publication boundary")
+    if current_journal != journal_snapshot:
+        raise ArtifactError("remote journal changed before receipt publication boundary")
+
     staging_name = ""
     staging_fd = -1
     published = False
@@ -1478,6 +1712,7 @@ def write_remote_receipt(
             staging_identity,
         ):
             raise ArtifactError("published remote receipt identity changed during publication")
+        records._retain_terminal_journal_snapshot(journal_snapshot)
         published = True
         return verified
     except OSError as exc:
