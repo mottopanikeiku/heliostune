@@ -132,10 +132,14 @@ uv run heliostune verify-suite path/to/suite.json
 uv run heliostune list-scope
 ```
 
-These commands validate declarations; they do not execute a backend, establish
-correctness or performance, verify transitive plugin → suite custody through a
-generic EvidenceBundle, or support a claim. Generic local and remote
-plugin/suite backends are currently unimplemented.
+These commands validate declarations; they do not execute a backend or establish
+correctness/performance. Separate local and Modal executors support exactly the
+two frozen fusion templates. Their first H100 results are published as
+[exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json):
+both completed correctness and timing, but no fusion, superiority, provider
+attempt-count, cost, attestation, or publication-eligibility claim is made.
+Attention, KV-cache, MoE, quantized-linear, and FP8 remain schema vocabulary and
+staged suite candidates rather than implemented backends.
 
 Native zstandard inspection needs no external `zstd` executable:
 

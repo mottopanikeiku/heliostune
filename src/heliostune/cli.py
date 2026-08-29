@@ -753,19 +753,29 @@ def _list_scope(_args: argparse.Namespace) -> int:
                 "generic_local_runtime_requirements",
                 "torch==2.8.0,cuda,compute_capability>=8.0,native_bf16,inductor",
             ),
-            ("generic_local_runtime_gpu_validation", "not_run"),
+            (
+                "generic_local_runtime_gpu_validation",
+                "validated remotely on H100 for both frozen templates",
+            ),
             (
                 "generic_remote_runtime_backend",
                 "implemented for the two frozen reference templates via Modal receipt",
             ),
-            ("generic_remote_runtime_gpu_validation", "not_run"),
+            (
+                "generic_remote_runtime_gpu_validation",
+                "two completed exploratory H100 receipts",
+            ),
+            (
+                "generic_remote_runtime_evidence",
+                "benchmarks/results/fusion-remote-exploratory-summary.json",
+            ),
             ("generic_remote_receipt_schema", "heliostune.remote-receipt/1"),
             ("generic_remote_provider_physical_attempts", "not_observable"),
             (
                 "limitation",
                 "Schema verification alone does not claim execution, correctness, or performance. "
-                "Both runtimes capability-probe each run; neither CUDA path is validated on this "
-                "project workstation, and Modal receipts cannot observe provider restarts.",
+                "The two frozen templates have exploratory H100 receipts only; plugin capability "
+                "declarations remain unprobed and Modal provider restarts remain unobservable.",
             ),
         ),
     )
