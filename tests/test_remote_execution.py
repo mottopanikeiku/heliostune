@@ -36,6 +36,7 @@ from heliostune.remote_execution import (
     sha256_bytes,
     validate_remote_result,
     verify_remote_receipt,
+    verify_remote_receipt_payloads,
     write_remote_receipt,
 )
 from heliostune.schema import HardwareProfile
@@ -932,6 +933,18 @@ def test_aborted_receipt_is_root_last_strict_and_tamper_evident(tmp_path: Path) 
     assert verified.receipt.schema == RECEIPT_SCHEMA
     assert verified.receipt.status == "aborted"
     assert verified.result is not None and verified.result.outcome == "aborted"
+    receipt_files = {path.name: path.read_bytes() for path in Path(intent.output_path).iterdir()}
+    verified_payloads = verify_remote_receipt_payloads(
+        receipt_files, logical_output_path=intent.output_path
+    )
+    assert verified_payloads.receipt == verified.receipt
+    assert verified_payloads.intent == verified.intent
+    assert verified_payloads.journal == verified.journal
+    assert verified_payloads.envelope == verified.envelope
+    assert verified_payloads.result == verified.result
+    assert verified_payloads.root_path == Path(intent.output_path) / "receipt.json"
+    with pytest.raises(SchemaError, match="location differs"):
+        verify_remote_receipt_payloads(receipt_files, logical_output_path=tmp_path / "other-output")
     root = json.loads((Path(intent.output_path) / "receipt.json").read_text())
     assert root["provider_attempts_observable"] is False
     assert root["provider_physical_attempts"] is None

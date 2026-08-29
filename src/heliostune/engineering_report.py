@@ -1,4 +1,4 @@
-"""Strict standalone reports for the Hopper engineering and precision studies."""
+"""Strict standalone reports for the Hopper, precision, and fusion remote studies."""
 
 from __future__ import annotations
 
@@ -26,11 +26,21 @@ from heliostune.validation import (
 
 HOPPER_STUDY_ID: Literal["hopper-h100-engineering-benchmark"] = "hopper-h100-engineering-benchmark"
 PRECISION_STUDY_ID: Literal["h100-fp16-reduction-probe"] = "h100-fp16-reduction-probe"
-ENGINEERING_STUDY_IDS = frozenset({HOPPER_STUDY_ID, PRECISION_STUDY_ID})
+FUSION_REMOTE_STUDY_ID: Literal["fusion-remote-h100-exploratory"] = "fusion-remote-h100-exploratory"
+FUSION_REMOTE_SCHEMA = "heliostune.fusion-remote-exploratory.summary/1"
+FUSION_REMOTE_RAW_PATH = "benchmarks/data/fusion-remote-exploratory.json.zst"
+FUSION_REMOTE_SUMMARY_PATH = "benchmarks/results/fusion-remote-exploratory-summary.json"
+FUSION_REMOTE_MANIFEST_PATH = "benchmarks/fusion-remote-exploratory-manifest.json"
+ENGINEERING_STUDY_IDS = frozenset({HOPPER_STUDY_ID, PRECISION_STUDY_ID, FUSION_REMOTE_STUDY_ID})
 
 _HEX = frozenset("0123456789abcdef")
 _NUMERIC_REL_TOLERANCE = 1e-12
 _NUMERIC_ABS_TOLERANCE = 1e-12
+
+_FUSION_UNRESOLVED_SEQUENCE = (
+    "retrieval returned 401; client then requested cancellation; "
+    "terminal provider outcome/cancellation success remained unresolved"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -355,7 +365,161 @@ class PrecisionSummary:
     workloads: tuple[PrecisionWorkload, ...]
 
 
-EngineeringSummary = HopperSummary | PrecisionSummary
+@dataclass(frozen=True, slots=True)
+class FusionRemoteApp:
+    app_id: str
+    app_url: str
+    artifact_binding: str
+    identity_provenance: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteCall:
+    function_call_id: str
+    identity_provenance: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteAttempt:
+    app: FusionRemoteApp
+    attempt_id: str
+    call: FusionRemoteCall
+    head_commit: str
+    journal_states: tuple[str, ...]
+    source_sha256: str
+    status: str
+    suite_id: str
+    suite_path: str
+    terminal_detail: str | None
+    wheel_filename: str
+    wheel_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteHardware:
+    compute_capability: tuple[int, int]
+    cuda_version: str
+    device_name: str
+    gpu: str
+    multiprocessor_count: int
+    torch_version: str
+    total_memory_gb: float
+    triton_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionCompileMetrics:
+    arm_id: str
+    backend_invoked: bool
+    callable_distinct: bool
+    eager_fallback: bool
+    first_call_ns: int
+    status: str
+    wrapper_create_ns: int
+
+
+@dataclass(frozen=True, slots=True)
+class FusionCorrectnessMetrics:
+    close: bool
+    finite: bool
+    input_storage_unchanged: bool
+    max_abs_error: float
+    output_disjoint: bool
+    status: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionTimingMetrics:
+    median_ms: float
+    repetitions: int
+    status: str
+    warmups: int
+
+
+@dataclass(frozen=True, slots=True)
+class FusionDescriptiveRatios:
+    candidate_to_reference_median: float
+    interpretation: str
+    reference_to_candidate_median: float
+    superiority_tested: bool
+
+
+@dataclass(frozen=True, slots=True)
+class FusionCompletedMetrics:
+    candidate_distinction: str
+    candidate_reference_arithmetic: str
+    compile: FusionCompileMetrics
+    candidate_correctness: FusionCorrectnessMetrics
+    reference_correctness: FusionCorrectnessMetrics
+    ratios: FusionDescriptiveRatios
+    candidate_timing: FusionTimingMetrics
+    reference_timing: FusionTimingMetrics
+
+
+@dataclass(frozen=True, slots=True)
+class FusionCompletedResult:
+    attempt_id: str
+    claim_scope: str
+    fusion_claim: bool
+    hardware: FusionRemoteHardware
+    metrics: FusionCompletedMetrics
+    publication_eligible: bool
+    suite_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteCounts:
+    attempts: int
+    completed: int
+    failed: int
+    unresolved: int
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteClaims:
+    analysis: str
+    completed_correctness_timing_compile_metrics: str
+    fusion: str
+    performance: str
+    superiority: str
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteMethodology:
+    analysis_status: str
+    design: str
+    fusion_claim: bool
+    performance_inference: str
+    publication_eligible: bool
+    report_status: str
+    superiority_claim: bool
+
+
+@dataclass(frozen=True, slots=True)
+class FusionProviderAccounting:
+    actual_cost_usd: float | None
+    client_authorized_spawns: int
+    cost_status: str
+    provider_attempts_observable: bool
+    provider_physical_attempts: int | None
+    total_gpu_seconds: float | None
+
+
+@dataclass(frozen=True, slots=True)
+class FusionRemoteSummary:
+    attempts: tuple[FusionRemoteAttempt, ...]
+    claim_classification: FusionRemoteClaims
+    completed_results: tuple[FusionCompletedResult, ...]
+    counts: FusionRemoteCounts
+    limitations: tuple[str, ...]
+    methodology: FusionRemoteMethodology
+    provider_accounting: FusionProviderAccounting
+    publication_eligible: bool
+    schema: str
+    study_id: Literal["fusion-remote-h100-exploratory"]
+
+
+EngineeringSummary = HopperSummary | PrecisionSummary | FusionRemoteSummary
 
 
 def _array(value: object, *, context: str) -> list[object]:
@@ -1528,6 +1692,714 @@ def _parse_precision(data: dict[str, object]) -> PrecisionSummary:
     )
 
 
+def _boolean_literal(value: object, expected: bool, *, context: str) -> bool:
+    result = exact_bool(value, context=context)
+    if result is not expected:
+        raise SchemaError(f"{context} must be {str(expected).lower()}")
+    return result
+
+
+def _null_literal(value: object, *, context: str) -> None:
+    if value is not None:
+        raise SchemaError(f"{context} must be null")
+
+
+def _parse_fusion_app(value: object, *, context: str) -> FusionRemoteApp:
+    fields = exact_fields(
+        value,
+        required=("app_id", "app_url", "artifact_binding", "identity_provenance"),
+        context=context,
+    )
+    app_id = nonblank_string(fields["app_id"], context=f"{context}.app_id")
+    app_suffix = app_id.removeprefix("ap-")
+    if (
+        app_suffix == app_id
+        or not app_suffix.isascii()
+        or not app_suffix.isalnum()
+        or len(app_suffix) < 20
+    ):
+        raise SchemaError(f"{context}.app_id must be a Modal app ID")
+    app_url = _https_url(fields["app_url"], context=f"{context}.app_url")
+    parsed_url = urlsplit(app_url)
+    if (
+        parsed_url.netloc != "modal.com"
+        or parsed_url.path != f"/apps/mottopanikeiku/main/{app_id}"
+        or parsed_url.query
+    ):
+        raise SchemaError(f"{context}.app_url must identify {app_id} on modal.com")
+    return FusionRemoteApp(
+        app_id=app_id,
+        app_url=app_url,
+        artifact_binding=_literal(
+            fields["artifact_binding"], "none", context=f"{context}.artifact_binding"
+        ),
+        identity_provenance=_literal(
+            fields["identity_provenance"],
+            "operator_recorded",
+            context=f"{context}.identity_provenance",
+        ),
+    )
+
+
+def _parse_fusion_call(value: object, *, context: str) -> FusionRemoteCall:
+    fields = exact_fields(
+        value,
+        required=("function_call_id", "identity_provenance"),
+        context=context,
+    )
+    call_id = nonblank_string(fields["function_call_id"], context=f"{context}.function_call_id")
+    call_suffix = call_id.removeprefix("fc-")
+    if (
+        call_suffix == call_id
+        or not call_suffix.isascii()
+        or not call_suffix.isalnum()
+        or call_suffix != call_suffix.upper()
+        or len(call_suffix) < 20
+    ):
+        raise SchemaError(f"{context}.function_call_id must be a Modal FunctionCall ID")
+    return FusionRemoteCall(
+        function_call_id=call_id,
+        identity_provenance=_literal(
+            fields["identity_provenance"],
+            "artifact_bound_remote_journal",
+            context=f"{context}.identity_provenance",
+        ),
+    )
+
+
+def _parse_fusion_attempt(value: object, *, index: int) -> FusionRemoteAttempt:
+    context = f"attempts[{index}]"
+    fields = exact_fields(
+        value,
+        required=(
+            "app",
+            "attempt_id",
+            "call",
+            "head_commit",
+            "journal_states",
+            "source_sha256",
+            "status",
+            "suite_id",
+            "suite_path",
+            "terminal_detail",
+            "wheel_filename",
+            "wheel_sha256",
+        ),
+        context=context,
+    )
+    status = nonblank_string(fields["status"], context=f"{context}.status")
+    if status not in {"completed", "unresolved"}:
+        raise SchemaError(f"{context}.status must be completed or unresolved")
+    attempt_id = nonblank_string(fields["attempt_id"], context=f"{context}.attempt_id")
+    if not attempt_id.endswith(f"-{status}"):
+        raise SchemaError(f"{context}.attempt_id must end with its status")
+    suite_id = nonblank_string(fields["suite_id"], context=f"{context}.suite_id")
+    suite_paths = {
+        "gated-mlp-epilogue-reference": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+        "residual-rmsnorm-reference": "benchmarks/suites/residual-rmsnorm-v1.json",
+    }
+    if suite_id not in suite_paths:
+        raise SchemaError(f"{context}.suite_id is not supported by the fusion remote report")
+    suite_path = _repository_path(fields["suite_path"], context=f"{context}.suite_path")
+    if suite_path != suite_paths[suite_id]:
+        raise SchemaError(f"{context}.suite_path must match suite_id")
+    journal_states = _strings(fields["journal_states"], context=f"{context}.journal_states")
+    if fields["terminal_detail"] is None:
+        terminal_detail = None
+    else:
+        terminal_detail = nonblank_string(
+            fields["terminal_detail"], context=f"{context}.terminal_detail"
+        )
+    if status == "unresolved":
+        expected_states = (
+            "intent",
+            "spawned",
+            "retrieval_started",
+            "cancellation_requested",
+            "unresolved",
+        )
+        if journal_states != expected_states:
+            raise SchemaError(f"{context}.journal_states contradict unresolved status")
+        expected_detail = "RemoteError: AuthError(\"Received :status = '401'\")"
+        if terminal_detail != expected_detail:
+            raise SchemaError(f"{context}.terminal_detail must record the retained 401 error")
+        if suite_id != "gated-mlp-epilogue-reference":
+            raise SchemaError(f"{context}.suite_id contradicts the retained unresolved attempts")
+    else:
+        if journal_states != ("intent", "spawned", "retrieval_started", "completed"):
+            raise SchemaError(f"{context}.journal_states contradict completed status")
+        if terminal_detail is not None:
+            raise SchemaError(f"{context}.terminal_detail must be null for completed status")
+    return FusionRemoteAttempt(
+        app=_parse_fusion_app(fields["app"], context=f"{context}.app"),
+        attempt_id=attempt_id,
+        call=_parse_fusion_call(fields["call"], context=f"{context}.call"),
+        head_commit=_digest(fields["head_commit"], context=f"{context}.head_commit", length=40),
+        journal_states=journal_states,
+        source_sha256=_digest(fields["source_sha256"], context=f"{context}.source_sha256"),
+        status=status,
+        suite_id=suite_id,
+        suite_path=suite_path,
+        terminal_detail=terminal_detail,
+        wheel_filename=_literal(
+            fields["wheel_filename"],
+            "heliostune-0.4.1-py3-none-any.whl",
+            context=f"{context}.wheel_filename",
+        ),
+        wheel_sha256=_digest(fields["wheel_sha256"], context=f"{context}.wheel_sha256"),
+    )
+
+
+def _parse_fusion_hardware(value: object, *, context: str) -> FusionRemoteHardware:
+    fields = exact_fields(
+        value,
+        required=(
+            "compute_capability",
+            "cuda_version",
+            "device_name",
+            "gpu",
+            "multiprocessor_count",
+            "torch_version",
+            "total_memory_gb",
+            "triton_version",
+        ),
+        context=context,
+    )
+    compute_capability = _ints(
+        fields["compute_capability"], context=f"{context}.compute_capability"
+    )
+    if compute_capability != (9, 0):
+        raise SchemaError(f"{context}.compute_capability must be [9, 0]")
+    return FusionRemoteHardware(
+        compute_capability=(compute_capability[0], compute_capability[1]),
+        cuda_version=nonblank_string(fields["cuda_version"], context=f"{context}.cuda_version"),
+        device_name=nonblank_string(fields["device_name"], context=f"{context}.device_name"),
+        gpu=_literal(fields["gpu"], "H100", context=f"{context}.gpu"),
+        multiprocessor_count=exact_int(
+            fields["multiprocessor_count"],
+            context=f"{context}.multiprocessor_count",
+            minimum=1,
+        ),
+        torch_version=nonblank_string(fields["torch_version"], context=f"{context}.torch_version"),
+        total_memory_gb=finite_float(
+            fields["total_memory_gb"],
+            context=f"{context}.total_memory_gb",
+            strictly_positive=True,
+        ),
+        triton_version=nonblank_string(
+            fields["triton_version"], context=f"{context}.triton_version"
+        ),
+    )
+
+
+def _parse_fusion_compile(value: object, *, context: str) -> FusionCompileMetrics:
+    fields = exact_fields(
+        value,
+        required=(
+            "arm_id",
+            "backend_invoked",
+            "callable_distinct",
+            "eager_fallback",
+            "first_call_ns",
+            "status",
+            "wrapper_create_ns",
+        ),
+        context=context,
+    )
+    wrapper_create_ns = exact_int(
+        fields["wrapper_create_ns"], context=f"{context}.wrapper_create_ns", minimum=1
+    )
+    first_call_ns = exact_int(
+        fields["first_call_ns"], context=f"{context}.first_call_ns", minimum=1
+    )
+    if first_call_ns <= wrapper_create_ns:
+        raise SchemaError(f"{context}.first_call_ns must exceed wrapper_create_ns")
+    return FusionCompileMetrics(
+        arm_id=nonblank_string(fields["arm_id"], context=f"{context}.arm_id"),
+        backend_invoked=_boolean_literal(
+            fields["backend_invoked"], True, context=f"{context}.backend_invoked"
+        ),
+        callable_distinct=_boolean_literal(
+            fields["callable_distinct"], True, context=f"{context}.callable_distinct"
+        ),
+        eager_fallback=_boolean_literal(
+            fields["eager_fallback"], False, context=f"{context}.eager_fallback"
+        ),
+        first_call_ns=first_call_ns,
+        status=_literal(
+            fields["status"],
+            "compiled_and_first_call_completed",
+            context=f"{context}.status",
+        ),
+        wrapper_create_ns=wrapper_create_ns,
+    )
+
+
+def _parse_fusion_correctness(value: object, *, context: str) -> FusionCorrectnessMetrics:
+    fields = exact_fields(
+        value,
+        required=(
+            "close",
+            "finite",
+            "input_storage_unchanged",
+            "max_abs_error",
+            "output_disjoint",
+            "status",
+        ),
+        context=context,
+    )
+    return FusionCorrectnessMetrics(
+        close=_boolean_literal(fields["close"], True, context=f"{context}.close"),
+        finite=_boolean_literal(fields["finite"], True, context=f"{context}.finite"),
+        input_storage_unchanged=_boolean_literal(
+            fields["input_storage_unchanged"],
+            True,
+            context=f"{context}.input_storage_unchanged",
+        ),
+        max_abs_error=finite_float(
+            fields["max_abs_error"], context=f"{context}.max_abs_error", minimum=0.0
+        ),
+        output_disjoint=_boolean_literal(
+            fields["output_disjoint"], True, context=f"{context}.output_disjoint"
+        ),
+        status=_literal(fields["status"], "passed", context=f"{context}.status"),
+    )
+
+
+def _parse_fusion_timing(value: object, *, context: str) -> FusionTimingMetrics:
+    fields = exact_fields(
+        value,
+        required=("median_ms", "repetitions", "status", "warmups"),
+        context=context,
+    )
+    return FusionTimingMetrics(
+        median_ms=finite_float(
+            fields["median_ms"], context=f"{context}.median_ms", strictly_positive=True
+        ),
+        repetitions=_integer_literal(fields["repetitions"], 50, context=f"{context}.repetitions"),
+        status=_literal(fields["status"], "passed", context=f"{context}.status"),
+        warmups=_integer_literal(fields["warmups"], 10, context=f"{context}.warmups"),
+    )
+
+
+def _parse_fusion_ratios(
+    value: object,
+    *,
+    context: str,
+    candidate_timing: FusionTimingMetrics,
+    reference_timing: FusionTimingMetrics,
+) -> FusionDescriptiveRatios:
+    fields = exact_fields(
+        value,
+        required=(
+            "candidate_to_reference_median",
+            "interpretation",
+            "reference_to_candidate_median",
+            "superiority_tested",
+        ),
+        context=context,
+    )
+    candidate_to_reference = finite_float(
+        fields["candidate_to_reference_median"],
+        context=f"{context}.candidate_to_reference_median",
+        strictly_positive=True,
+    )
+    reference_to_candidate = finite_float(
+        fields["reference_to_candidate_median"],
+        context=f"{context}.reference_to_candidate_median",
+        strictly_positive=True,
+    )
+    expected_candidate_to_reference = candidate_timing.median_ms / reference_timing.median_ms
+    expected_reference_to_candidate = reference_timing.median_ms / candidate_timing.median_ms
+    if not math.isclose(
+        candidate_to_reference,
+        expected_candidate_to_reference,
+        rel_tol=_NUMERIC_REL_TOLERANCE,
+        abs_tol=_NUMERIC_ABS_TOLERANCE,
+    ):
+        raise SchemaError(
+            f"{context}.candidate_to_reference_median must equal candidate median / reference median"
+        )
+    if not math.isclose(
+        reference_to_candidate,
+        expected_reference_to_candidate,
+        rel_tol=_NUMERIC_REL_TOLERANCE,
+        abs_tol=_NUMERIC_ABS_TOLERANCE,
+    ):
+        raise SchemaError(
+            f"{context}.reference_to_candidate_median must equal reference median / candidate median"
+        )
+    if not math.isclose(
+        candidate_to_reference * reference_to_candidate,
+        1.0,
+        rel_tol=_NUMERIC_REL_TOLERANCE,
+        abs_tol=_NUMERIC_ABS_TOLERANCE,
+    ):
+        raise SchemaError(f"{context} ratio directions must be reciprocal")
+    return FusionDescriptiveRatios(
+        candidate_to_reference_median=candidate_to_reference,
+        interpretation=_literal(
+            fields["interpretation"],
+            "ratio_of_returned_medians_only",
+            context=f"{context}.interpretation",
+        ),
+        reference_to_candidate_median=reference_to_candidate,
+        superiority_tested=_boolean_literal(
+            fields["superiority_tested"], False, context=f"{context}.superiority_tested"
+        ),
+    )
+
+
+def _parse_fusion_completed_result(value: object, *, index: int) -> FusionCompletedResult:
+    context = f"completed_results[{index}]"
+    fields = exact_fields(
+        value,
+        required=(
+            "attempt_id",
+            "claim_scope",
+            "fusion_claim",
+            "hardware",
+            "metrics",
+            "publication_eligible",
+            "suite_id",
+        ),
+        context=context,
+    )
+    metrics_context = f"{context}.metrics"
+    metrics_fields = exact_fields(
+        fields["metrics"],
+        required=(
+            "candidate_distinction",
+            "candidate_reference_arithmetic",
+            "compile",
+            "correctness",
+            "descriptive_ratios",
+            "timing",
+        ),
+        context=metrics_context,
+    )
+    correctness_fields = exact_fields(
+        metrics_fields["correctness"],
+        required=("candidate", "reference"),
+        context=f"{metrics_context}.correctness",
+    )
+    timing_fields = exact_fields(
+        metrics_fields["timing"],
+        required=("candidate", "reference"),
+        context=f"{metrics_context}.timing",
+    )
+    candidate_timing = _parse_fusion_timing(
+        timing_fields["candidate"], context=f"{metrics_context}.timing.candidate"
+    )
+    reference_timing = _parse_fusion_timing(
+        timing_fields["reference"], context=f"{metrics_context}.timing.reference"
+    )
+    compile_metrics = _parse_fusion_compile(
+        metrics_fields["compile"], context=f"{metrics_context}.compile"
+    )
+    suite_id = nonblank_string(fields["suite_id"], context=f"{context}.suite_id")
+    expected_arm_ids = {
+        "gated-mlp-epilogue-reference": "mlp-candidate",
+        "residual-rmsnorm-reference": "rmsnorm-candidate",
+    }
+    if suite_id not in expected_arm_ids:
+        raise SchemaError(f"{context}.suite_id is not supported by the fusion remote report")
+    if compile_metrics.arm_id != expected_arm_ids[suite_id]:
+        raise SchemaError(f"{metrics_context}.compile.arm_id must match suite_id")
+    return FusionCompletedResult(
+        attempt_id=nonblank_string(fields["attempt_id"], context=f"{context}.attempt_id"),
+        claim_scope=_literal(
+            fields["claim_scope"], "measured_fact_only", context=f"{context}.claim_scope"
+        ),
+        fusion_claim=_boolean_literal(
+            fields["fusion_claim"], False, context=f"{context}.fusion_claim"
+        ),
+        hardware=_parse_fusion_hardware(fields["hardware"], context=f"{context}.hardware"),
+        metrics=FusionCompletedMetrics(
+            candidate_distinction=_literal(
+                metrics_fields["candidate_distinction"],
+                "fullgraph_inductor_compilation_only",
+                context=f"{metrics_context}.candidate_distinction",
+            ),
+            candidate_reference_arithmetic=_literal(
+                metrics_fields["candidate_reference_arithmetic"],
+                "candidate_reference_identical",
+                context=f"{metrics_context}.candidate_reference_arithmetic",
+            ),
+            compile=compile_metrics,
+            candidate_correctness=_parse_fusion_correctness(
+                correctness_fields["candidate"],
+                context=f"{metrics_context}.correctness.candidate",
+            ),
+            reference_correctness=_parse_fusion_correctness(
+                correctness_fields["reference"],
+                context=f"{metrics_context}.correctness.reference",
+            ),
+            ratios=_parse_fusion_ratios(
+                metrics_fields["descriptive_ratios"],
+                context=f"{metrics_context}.descriptive_ratios",
+                candidate_timing=candidate_timing,
+                reference_timing=reference_timing,
+            ),
+            candidate_timing=candidate_timing,
+            reference_timing=reference_timing,
+        ),
+        publication_eligible=_boolean_literal(
+            fields["publication_eligible"],
+            False,
+            context=f"{context}.publication_eligible",
+        ),
+        suite_id=suite_id,
+    )
+
+
+def _parse_fusion_remote(data: dict[str, object]) -> FusionRemoteSummary:
+    context = "fusion remote exploratory summary"
+    fields = exact_fields(
+        data,
+        required=(
+            "attempts",
+            "claim_classification",
+            "completed_results",
+            "counts",
+            "limitations",
+            "methodology",
+            "provider_accounting",
+            "publication_eligible",
+            "schema",
+            "study_id",
+        ),
+        context=context,
+    )
+    attempts = tuple(
+        _parse_fusion_attempt(item, index=index)
+        for index, item in enumerate(_array(fields["attempts"], context="attempts"))
+    )
+    if len(attempts) != 4:
+        raise SchemaError("attempts must contain exactly four retained remote attempts")
+    attempt_ids = tuple(attempt.attempt_id for attempt in attempts)
+    app_ids = tuple(attempt.app.app_id for attempt in attempts)
+    call_ids = tuple(attempt.call.function_call_id for attempt in attempts)
+    if len(set(attempt_ids)) != 4:
+        raise SchemaError("attempts.attempt_id values must be unique")
+    if len(set(app_ids)) != 4:
+        raise SchemaError("attempts app IDs must be unique")
+    if len(set(call_ids)) != 4:
+        raise SchemaError("attempts FunctionCall IDs must be unique")
+    if len({attempt.head_commit for attempt in attempts}) != 4:
+        raise SchemaError("attempts must preserve four distinct historical HEAD commits")
+    if len({attempt.source_sha256 for attempt in attempts}) != 4:
+        raise SchemaError("attempts must preserve four distinct historical source digests")
+    if len({attempt.wheel_sha256 for attempt in attempts}) != 4:
+        raise SchemaError("attempts must preserve four distinct historical wheel digests")
+    statuses = tuple(attempt.status for attempt in attempts)
+    if statuses.count("completed") != 2 or statuses.count("unresolved") != 2:
+        raise SchemaError("attempts must contain two completed and two unresolved statuses")
+    gated_attempts = tuple(
+        attempt for attempt in attempts if attempt.suite_id == "gated-mlp-epilogue-reference"
+    )
+    rmsnorm_attempts = tuple(
+        attempt for attempt in attempts if attempt.suite_id == "residual-rmsnorm-reference"
+    )
+    if (
+        len(gated_attempts) != 3
+        or sum(attempt.status == "unresolved" for attempt in gated_attempts) != 2
+        or sum(attempt.status == "completed" for attempt in gated_attempts) != 1
+        or len(rmsnorm_attempts) != 1
+        or rmsnorm_attempts[0].status != "completed"
+    ):
+        raise SchemaError("attempt suite and status accounting contradicts the retained evidence")
+
+    completed_results = tuple(
+        _parse_fusion_completed_result(item, index=index)
+        for index, item in enumerate(
+            _array(fields["completed_results"], context="completed_results")
+        )
+    )
+    if len(completed_results) != 2:
+        raise SchemaError("completed_results must contain exactly two returned results")
+    completed_attempts = tuple(attempt for attempt in attempts if attempt.status == "completed")
+    if tuple(result.attempt_id for result in completed_results) != tuple(
+        attempt.attempt_id for attempt in completed_attempts
+    ):
+        raise SchemaError("completed_results must exactly follow the completed attempts")
+    for result, attempt in zip(completed_results, completed_attempts, strict=True):
+        if result.suite_id != attempt.suite_id:
+            raise SchemaError("completed_results suite IDs must match their attempts")
+    if len({result.suite_id for result in completed_results}) != 2:
+        raise SchemaError("completed_results must cover one result for each retained suite")
+    if completed_results[0].hardware != completed_results[1].hardware:
+        raise SchemaError("completed_results hardware profiles must agree")
+
+    claims_data = exact_fields(
+        fields["claim_classification"],
+        required=(
+            "analysis",
+            "completed_correctness_timing_compile_metrics",
+            "fusion",
+            "performance",
+            "superiority",
+        ),
+        context="claim_classification",
+    )
+    claims = FusionRemoteClaims(
+        analysis=_literal(
+            claims_data["analysis"], "exploratory", context="claim_classification.analysis"
+        ),
+        completed_correctness_timing_compile_metrics=_literal(
+            claims_data["completed_correctness_timing_compile_metrics"],
+            "supported_only_as_measured_fact",
+            context="claim_classification.completed_correctness_timing_compile_metrics",
+        ),
+        fusion=_literal(claims_data["fusion"], "not_tested", context="claim_classification.fusion"),
+        performance=_literal(
+            claims_data["performance"],
+            "descriptive",
+            context="claim_classification.performance",
+        ),
+        superiority=_literal(
+            claims_data["superiority"],
+            "not_tested",
+            context="claim_classification.superiority",
+        ),
+    )
+
+    counts_data = exact_fields(
+        fields["counts"],
+        required=("attempts", "completed", "failed", "unresolved"),
+        context="counts",
+    )
+    counts = FusionRemoteCounts(
+        attempts=exact_int(counts_data["attempts"], context="counts.attempts", minimum=0),
+        completed=exact_int(counts_data["completed"], context="counts.completed", minimum=0),
+        failed=exact_int(counts_data["failed"], context="counts.failed", minimum=0),
+        unresolved=exact_int(counts_data["unresolved"], context="counts.unresolved", minimum=0),
+    )
+    observed_counts = FusionRemoteCounts(
+        attempts=len(attempts),
+        completed=statuses.count("completed"),
+        failed=0,
+        unresolved=statuses.count("unresolved"),
+    )
+    if counts != observed_counts:
+        raise SchemaError("counts must exactly match attempt statuses")
+
+    expected_limitations = (
+        "Two gated-MLP calls ended unresolved after cancellation requests; no result receipts exist for them.",
+        "The two completed calls are single returned observations collected without a prespecified comparative analysis plan.",
+        "Reference/candidate ratios are descriptive for the returned medians only; no uncertainty or superiority test was performed.",
+        "The candidate and reference arithmetic are not evidence of kernel fusion; every returned environment explicitly records fusion_claim=false.",
+        "Modal provider physical starts and restarts are unobservable, so provider attempt count, total GPU time, and actual cost are unknown.",
+        "The retained evidence has no attestation and is not publication eligible.",
+    )
+    limitations = _strings(fields["limitations"], context="limitations")
+    if limitations != expected_limitations:
+        raise SchemaError("limitations must exactly preserve the fusion remote disclosures")
+
+    methodology_data = exact_fields(
+        fields["methodology"],
+        required=(
+            "analysis_status",
+            "design",
+            "fusion_claim",
+            "performance_inference",
+            "publication_eligible",
+            "report_status",
+            "superiority_claim",
+        ),
+        context="methodology",
+    )
+    methodology = FusionRemoteMethodology(
+        analysis_status=_literal(
+            methodology_data["analysis_status"],
+            "post_hoc_exploratory",
+            context="methodology.analysis_status",
+        ),
+        design=_literal(
+            methodology_data["design"],
+            "four retained remote attempts analyzed after execution",
+            context="methodology.design",
+        ),
+        fusion_claim=_boolean_literal(
+            methodology_data["fusion_claim"], False, context="methodology.fusion_claim"
+        ),
+        performance_inference=_literal(
+            methodology_data["performance_inference"],
+            "not_tested",
+            context="methodology.performance_inference",
+        ),
+        publication_eligible=_boolean_literal(
+            methodology_data["publication_eligible"],
+            False,
+            context="methodology.publication_eligible",
+        ),
+        report_status=_literal(
+            methodology_data["report_status"],
+            "not_created",
+            context="methodology.report_status",
+        ),
+        superiority_claim=_boolean_literal(
+            methodology_data["superiority_claim"],
+            False,
+            context="methodology.superiority_claim",
+        ),
+    )
+
+    provider_data = exact_fields(
+        fields["provider_accounting"],
+        required=(
+            "actual_cost_usd",
+            "client_authorized_spawns",
+            "cost_status",
+            "provider_attempts_observable",
+            "provider_physical_attempts",
+            "total_gpu_seconds",
+        ),
+        context="provider_accounting",
+    )
+    _null_literal(provider_data["actual_cost_usd"], context="provider_accounting.actual_cost_usd")
+    _null_literal(
+        provider_data["provider_physical_attempts"],
+        context="provider_accounting.provider_physical_attempts",
+    )
+    _null_literal(
+        provider_data["total_gpu_seconds"], context="provider_accounting.total_gpu_seconds"
+    )
+    provider = FusionProviderAccounting(
+        actual_cost_usd=None,
+        client_authorized_spawns=_integer_literal(
+            provider_data["client_authorized_spawns"],
+            4,
+            context="provider_accounting.client_authorized_spawns",
+        ),
+        cost_status=_literal(
+            provider_data["cost_status"], "unknown", context="provider_accounting.cost_status"
+        ),
+        provider_attempts_observable=_boolean_literal(
+            provider_data["provider_attempts_observable"],
+            False,
+            context="provider_accounting.provider_attempts_observable",
+        ),
+        provider_physical_attempts=None,
+        total_gpu_seconds=None,
+    )
+
+    return FusionRemoteSummary(
+        attempts=attempts,
+        claim_classification=claims,
+        completed_results=completed_results,
+        counts=counts,
+        limitations=limitations,
+        methodology=methodology,
+        provider_accounting=provider,
+        publication_eligible=_boolean_literal(
+            fields["publication_eligible"], False, context="publication_eligible"
+        ),
+        schema=_literal(fields["schema"], FUSION_REMOTE_SCHEMA, context="schema"),
+        study_id=FUSION_REMOTE_STUDY_ID,
+    )
+
+
 def parse_engineering_summary(value: object) -> EngineeringSummary:
     """Parse one supported strict study summary and reject every other study."""
     data = exact_object(value, context="engineering report summary")
@@ -1536,6 +2408,8 @@ def parse_engineering_summary(value: object) -> EngineeringSummary:
         return _parse_hopper(data)
     if study_id == PRECISION_STUDY_ID:
         return _parse_precision(data)
+    if study_id == FUSION_REMOTE_STUDY_ID:
+        return _parse_fusion_remote(data)
     raise SchemaError(f"unsupported engineering report study_id {study_id!r}")
 
 
@@ -2096,6 +2970,308 @@ def _precision_body(summary: PrecisionSummary, output_path: Path) -> str:
     )
 
 
+def _fusion_remote_body(summary: FusionRemoteSummary, output_path: Path) -> str:
+    attempt_rows = tuple(
+        (
+            attempt.attempt_id,
+            attempt.suite_id,
+            attempt.status,
+            f"{attempt.app.app_id} · operator-recorded; artifact binding: none",
+            f"{attempt.call.function_call_id} · artifact-bound remote journal",
+            (
+                _FUSION_UNRESOLVED_SEQUENCE
+                if attempt.status == "unresolved"
+                else "completed receipt returned"
+            ),
+        )
+        for attempt in summary.attempts
+    )
+    attempt_table = _table(
+        ("Attempt", "Suite", "Status", "Modal app", "FunctionCall", "Retained lifecycle record"),
+        attempt_rows,
+        caption="Four retained remote attempts and identity provenance",
+        table_class="selection-table",
+    )
+    status_body = (
+        '<div class="decision diagnostic">'
+        '<p class="decision-label">Receipt classification</p>'
+        '<p class="decision-value small">Exploratory</p>'
+        "<p>Four retained client-authorized attempts: two gated-MLP calls retained this sequence: "
+        f"{_FUSION_UNRESOLVED_SEQUENCE}. One gated-MLP and one residual-RMSNorm call returned "
+        "completed receipts. Completed metrics are measured facts only.</p></div>"
+        '<div class="notice warning"><strong>No fusion or superiority claim.</strong> '
+        "Candidate and reference arithmetic are identical. The candidate distinction is "
+        "full-graph Inductor compilation only; every completed environment records "
+        "<code>fusion_claim=false</code>.</div>"
+    )
+
+    correctness_rows: list[tuple[str, ...]] = []
+    compile_rows: list[tuple[str, ...]] = []
+    timing_rows: list[tuple[str, ...]] = []
+    ratio_rows: list[tuple[str, ...]] = []
+    for result in summary.completed_results:
+        metrics = result.metrics
+        for arm, correctness in (
+            ("candidate", metrics.candidate_correctness),
+            ("reference", metrics.reference_correctness),
+        ):
+            correctness_rows.append(
+                (
+                    result.suite_id,
+                    arm,
+                    correctness.status,
+                    _bool(correctness.close),
+                    _bool(correctness.finite),
+                    _bool(correctness.input_storage_unchanged),
+                    _bool(correctness.output_disjoint),
+                    _format_number(correctness.max_abs_error),
+                )
+            )
+        compile_rows.append(
+            (
+                result.suite_id,
+                metrics.compile.arm_id,
+                metrics.compile.status,
+                _bool(metrics.compile.backend_invoked),
+                _bool(metrics.compile.callable_distinct),
+                _bool(metrics.compile.eager_fallback),
+                _format_number(metrics.compile.wrapper_create_ns / 1_000_000),
+                _format_number(metrics.compile.first_call_ns / 1_000_000),
+            )
+        )
+        for arm, timing in (
+            ("candidate", metrics.candidate_timing),
+            ("reference", metrics.reference_timing),
+        ):
+            timing_rows.append(
+                (
+                    result.suite_id,
+                    arm,
+                    timing.status,
+                    str(timing.warmups),
+                    str(timing.repetitions),
+                    _format_number(timing.median_ms),
+                )
+            )
+        ratio_rows.append(
+            (
+                result.suite_id,
+                _format_number(metrics.ratios.candidate_to_reference_median),
+                _format_number(metrics.ratios.reference_to_candidate_median),
+                metrics.ratios.interpretation,
+                _bool(metrics.ratios.superiority_tested),
+            )
+        )
+    observations = (
+        _table(
+            (
+                "Suite",
+                "Arm",
+                "Status",
+                "Close",
+                "Finite",
+                "Input unchanged",
+                "Output disjoint",
+                "Max abs. error",
+            ),
+            correctness_rows,
+            caption="Returned correctness observations",
+            table_class="selection-table",
+        )
+        + _table(
+            (
+                "Suite",
+                "Compile arm",
+                "Status",
+                "Backend invoked",
+                "Callable distinct",
+                "Eager fallback",
+                "Wrapper create (ms)",
+                "First call (ms)",
+            ),
+            compile_rows,
+            caption="Returned compile observations",
+            table_class="selection-table",
+        )
+        + _table(
+            ("Suite", "Arm", "Status", "Warmups", "Raw samples", "Median (ms)"),
+            timing_rows,
+            caption="Returned timing observations",
+        )
+    )
+
+    raw_href = _repo_href(FUSION_REMOTE_RAW_PATH, output_path)
+    summary_href = _repo_href(FUSION_REMOTE_SUMMARY_PATH, output_path)
+    manifest_href = _repo_href(FUSION_REMOTE_MANIFEST_PATH, output_path)
+    interpretation = (
+        '<div class="notice direction"><strong>Ratio direction.</strong> '
+        "<code>candidate / reference</code> is candidate median divided by reference median; "
+        "a value below 1 means the candidate returned the lower median. "
+        "<code>reference / candidate</code> is its reciprocal. Both are descriptive ratios "
+        "of returned medians, not a superiority test.</div>"
+        + _table(
+            (
+                "Suite",
+                "Candidate / reference",
+                "Reference / candidate",
+                "Interpretation",
+                "Superiority tested",
+            ),
+            ratio_rows,
+            caption="Descriptive returned-median ratios in both directions",
+        )
+        + '<div class="notice"><strong>Raw-sample stability boundary.</strong> '
+        "Each timing row summarizes 50 retained raw samples after 10 warmups. The raw archive "
+        "preserves every sample sequence, but no stability threshold, variance estimate, "
+        "uncertainty interval, or comparative analysis plan was prespecified. "
+        f"{_link(raw_href, 'Inspect the compressed raw evidence')}.</div>"
+    )
+
+    hardware = summary.completed_results[0].hardware
+    hardware_facts = _facts(
+        (
+            ("GPU", f"{hardware.device_name} · {hardware.gpu}"),
+            (
+                "Compute capability / SMs",
+                f"{hardware.compute_capability[0]}.{hardware.compute_capability[1]} / "
+                f"{hardware.multiprocessor_count}",
+            ),
+            ("CUDA / torch", f"{hardware.cuda_version} / {hardware.torch_version}"),
+            (
+                "Triton / memory",
+                f"{hardware.triton_version} / {_format_number(hardware.total_memory_gb)} GB",
+            ),
+        ),
+        class_name="facts facts-wide",
+    )
+    provenance_rows = tuple(
+        (
+            attempt.attempt_id,
+            attempt.head_commit,
+            attempt.source_sha256,
+            attempt.wheel_filename,
+            attempt.wheel_sha256,
+        )
+        for attempt in summary.attempts
+    )
+    provenance = (
+        hardware_facts + '<div class="notice warning"><strong>Historical build boundary.</strong> '
+        "The four attempts came from four different historical HEAD commits, source digests, "
+        "and wheel digests. Results must remain attached to their own attempt; they are not "
+        "measurements of one interchangeable build.</div>"
+        + _table(
+            ("Attempt", "HEAD", "Source SHA-256", "Wheel", "Wheel SHA-256"),
+            provenance_rows,
+            caption="Historical source and wheel bindings by attempt",
+            table_class="selection-table",
+        )
+    )
+
+    provider = summary.provider_accounting
+    accounting = (
+        _facts(
+            (
+                ("Client-authorized spawns", str(provider.client_authorized_spawns)),
+                ("Provider physical attempts", "Unknown / unobservable"),
+                ("Provider starts or restarts", "Unknown / unobservable"),
+                ("Total GPU time", "Unknown"),
+                ("Actual cost", "Unknown"),
+                ("Attestation", "None present"),
+                ("Cost status", provider.cost_status),
+                ("Publication eligible", _bool(summary.publication_eligible)),
+            ),
+            class_name="facts facts-wide",
+        )
+        + '<div class="notice warning"><strong>Receipt and publication boundary.</strong> '
+        "Both completed receipts record <code>publication_eligible=false</code>. Provider "
+        "physical starts and restarts, provider attempt count, total GPU time, and actual cost "
+        "are unknown; no attestation is present.</div>"
+    )
+    artifact_links = (
+        '<p class="source-note">Evidence files: '
+        f"{_link(raw_href, 'compressed raw evidence')} · "
+        f"{_link(summary_href, 'strict source summary')} · "
+        f"{_link(manifest_href, 'publication manifest')}</p>"
+    )
+    publication = (
+        _facts(
+            (
+                ("Summary schema", summary.schema),
+                ("Analysis status", summary.methodology.analysis_status),
+                ("Performance inference", summary.methodology.performance_inference),
+                ("Source report status", summary.methodology.report_status),
+                ("Fusion claim", _bool(summary.methodology.fusion_claim)),
+                ("Superiority claim", _bool(summary.methodology.superiority_claim)),
+                ("Publication eligible", _bool(summary.methodology.publication_eligible)),
+                ("Completed result scope", "Measured fact only"),
+            ),
+            class_name="facts facts-wide provenance-facts",
+        )
+        + artifact_links
+        + '<div class="notice"><strong>Binding status.</strong> The immutable source summary '
+        "and manifest record <code>report_status=not_created</code>. This deterministic page "
+        "renders that source without changing it and does not create a fusion, superiority, "
+        "attestation, or publication-eligibility claim.</div>"
+    )
+    corrected_limitations = (
+        "Two gated-MLP calls retained this sequence: "
+        f"{_FUSION_UNRESOLVED_SEQUENCE}. No result receipts exist for them.",
+        *summary.limitations[1:],
+    )
+    return (
+        _section(
+            "status",
+            "Receipt status",
+            "Exploratory remote evidence",
+            "A deterministic synthesis of four retained H100 remote attempts. It separates unresolved lifecycle evidence from two completed measured observations.",
+            status_body,
+        )
+        + _section(
+            "attempts",
+            "Lifecycle",
+            "Four attempts: two completed, two unresolved",
+            "Modal app identities are operator-recorded and have no artifact binding. FunctionCall identities are bound by each retained remote journal.",
+            attempt_table,
+        )
+        + _section(
+            "observations",
+            "Measured facts",
+            "Correctness, compile, and timing",
+            "Only the two completed receipts contribute observation rows. No result is imputed for either unresolved 401 attempt.",
+            observations,
+        )
+        + _section(
+            "interpretation",
+            "Reading the numbers",
+            "Raw-sample stability and ratio direction",
+            "Returned medians are displayed in both ratio directions with the limits required to interpret them.",
+            interpretation,
+        )
+        + _section(
+            "provenance",
+            "Environment and bytes",
+            "H100 environment and historical builds",
+            "The two completed environments agree, while each attempt remains bound to distinct historical source and wheel bytes.",
+            provenance,
+        )
+        + _section(
+            "accounting",
+            "Unknowns",
+            "Provider accounting and attestation",
+            "Client-authorized calls are countable; provider execution lifecycle and spend are not observable from the retained evidence.",
+            accounting,
+        )
+        + _section(
+            "publication",
+            "Evidence access",
+            "Raw, summary, and manifest",
+            "Repository-relative links expose the immutable evidence without promoting these receipts to publication eligibility.",
+            publication,
+        )
+        + _limitations_section(corrected_limitations)
+    )
+
+
 def _styles() -> str:
     return """
 :root {
@@ -2221,7 +3397,17 @@ def _render_document(summary: EngineeringSummary, output_path: Path) -> str:
         rows = summary.protocol.row_count
         workloads = summary.protocol.workload_count
         body = _hopper_body(summary, output_path)
-    else:
+        kicker = "Legacy-shaped publication · methodology-compatible typed claims"
+        header_facts = _facts(
+            (
+                ("Study ID", summary.study_id),
+                ("Schema", str(summary.schema_version)),
+                ("Evidence scope", scope),
+                ("Workloads / published rows", f"{workloads} / {rows}"),
+            ),
+            class_name="facts facts-wide header-meta",
+        )
+    elif isinstance(summary, PrecisionSummary):
         title = "H100 FP16 reduction diagnostic"
         badge = "Exploratory engineering diagnostic"
         lede = (
@@ -2232,15 +3418,34 @@ def _render_document(summary: EngineeringSummary, output_path: Path) -> str:
         rows = summary.row_count
         workloads = summary.workload_count
         body = _precision_body(summary, output_path)
-    header_facts = _facts(
-        (
-            ("Study ID", summary.study_id),
-            ("Schema", str(summary.schema_version)),
-            ("Evidence scope", scope),
-            ("Workloads / published rows", f"{workloads} / {rows}"),
-        ),
-        class_name="facts facts-wide header-meta",
-    )
+        kicker = "Legacy-shaped publication · methodology-compatible typed claims"
+        header_facts = _facts(
+            (
+                ("Study ID", summary.study_id),
+                ("Schema", str(summary.schema_version)),
+                ("Evidence scope", scope),
+                ("Workloads / published rows", f"{workloads} / {rows}"),
+            ),
+            class_name="facts facts-wide header-meta",
+        )
+    else:
+        title = "H100 fusion remote receipts"
+        badge = "Exploratory receipt status"
+        lede = (
+            "Four retained remote attempts: two unresolved gated-MLP 401 outcomes and two "
+            "completed measured observations. No fusion or superiority claim is made."
+        )
+        body = _fusion_remote_body(summary, output_path)
+        kicker = "Remote receipt synthesis · measured facts only"
+        header_facts = _facts(
+            (
+                ("Study ID", summary.study_id),
+                ("Schema", summary.schema),
+                ("Attempt status", "2 unresolved / 2 completed"),
+                ("Publication eligible", _bool(summary.publication_eligible)),
+            ),
+            class_name="facts facts-wide header-meta",
+        )
     return (
         "<!doctype html>"
         '<html lang="en"><head><meta charset="utf-8">'
@@ -2252,7 +3457,7 @@ def _render_document(summary: EngineeringSummary, output_path: Path) -> str:
         '<header class="report-header"><div class="utility">'
         '<span class="lockup">HeliosTune // engineering evidence</span>'
         f'<span class="badge">{_escape(badge)}</span></div>'
-        '<p class="kicker">Legacy-shaped publication · methodology-compatible typed claims</p>'
+        f'<p class="kicker">{_escape(kicker)}</p>'
         f'<h1>{_escape(title)}</h1><p class="lede">{_escape(lede)}</p>{header_facts}</header>'
         f'<main id="main">{body}</main><footer class="footer">'
         "<span><strong>HeliosTune</strong> / engineering evidence record</span>"
