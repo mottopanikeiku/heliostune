@@ -32,6 +32,7 @@ GPU_SELECTOR = "H100!"
 SERVER_TIMEOUT_SECONDS = 3600
 CLIENT_TIMEOUT_SECONDS = 3660
 RECEIPT_ROOT = "receipt.json"
+REMOTE_RESULT_ENVELOPE_MAX_BYTES = 512 * 1024
 _RENAME_NOREPLACE = 1
 
 ReceiptStatus = Literal["completed", "failed", "aborted", "unresolved"]
@@ -664,12 +665,21 @@ class RemoteResultEnvelope:
         }
 
     def to_json(self) -> str:
-        return canonical_json_bytes(self.to_dict()).decode("utf-8")
+        payload = canonical_json_bytes(self.to_dict())
+        if len(payload) > REMOTE_RESULT_ENVELOPE_MAX_BYTES:
+            raise SchemaError(
+                f"remote result envelope exceeds {REMOTE_RESULT_ENVELOPE_MAX_BYTES}-byte inline limit"
+            )
+        return payload.decode("utf-8")
 
     @classmethod
     def from_json(cls, payload: str) -> RemoteResultEnvelope:
         if type(payload) is not str:
             raise SchemaError("remote function must return a JSON string")
+        if len(payload.encode("utf-8")) > REMOTE_RESULT_ENVELOPE_MAX_BYTES:
+            raise SchemaError(
+                f"remote result envelope exceeds {REMOTE_RESULT_ENVELOPE_MAX_BYTES}-byte inline limit"
+            )
         value = strict_json_loads(payload, source="remote result envelope")
         data = exact_fields(value, required=_RESULT_FIELDS, context="remote result envelope")
         envelope = cls(
