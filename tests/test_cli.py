@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import builtins
 import hashlib
 import json
 from collections.abc import Callable
 from importlib.metadata import version
 from io import BytesIO, StringIO
 from pathlib import Path
+from types import SimpleNamespace
 from typing import cast
 
 import pytest
@@ -15,6 +17,7 @@ import zstandard
 import heliostune.cli as cli
 from heliostune.artifacts import write_json_atomic
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.methodology import VerificationLimitations
 from heliostune.multisource_engine import ReleaseProvenance, validate_release_provenance
 
 
@@ -1100,7 +1103,7 @@ def test_list_scope_reports_complete_schema_vocabularies(
     ) in output
 
 
-def test_list_scope_reports_only_narrow_templates_and_unimplemented_backends(
+def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert cli.main(["list-scope"]) == 0
@@ -1115,9 +1118,15 @@ def test_list_scope_reports_only_narrow_templates_and_unimplemented_backends(
         "suite_template_status: available only for fp16/bf16 input/storage in "
         "fused_mlp,rmsnorm_residual"
     ) in output
-    assert "generic_local_runtime_backend: unimplemented" in output
+    assert (
+        "generic_local_runtime_backend: implemented for the two frozen reference templates"
+        in output
+    )
+    assert "generic_local_runtime_gpu_validation: not_run" in output
     assert "generic_remote_runtime_backend: unimplemented" in output
-    assert "do not claim runtime availability, correctness, or performance" in output
+    assert (
+        "Schema verification alone does not claim execution, correctness, or performance" in output
+    )
     assert "runtime_backend: available" not in output
 
 
@@ -1148,4 +1157,402 @@ def test_scope_commands_are_registered_and_describe_structural_limitations(
         assert "legacy suite artifacts are rejected" in help_output
         assert "correctness passage and execution are not observed" in help_output
     else:
-        assert "unimplemented generic runtime backend status" in help_output
+        assert "local/remote runtime implementation and validation status" in help_output
+
+
+def _fake_local_result(
+    *,
+    outcome: str,
+    capability: str,
+    suite_id: str = "gated_mlp_epilogue.v1",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        outcome=outcome,
+        suite_id=suite_id,
+        capability=SimpleNamespace(available=capability == "available"),
+    )
+
+
+def _fake_verified_local_bundle(
+    root_path: Path,
+    *,
+    expected: int = 4,
+    terminal: int = 4,
+    successes: int = 4,
+    failures: int = 0,
+) -> SimpleNamespace:
+    coverage = SimpleNamespace(
+        expected_cells=expected,
+        terminal_cells=terminal,
+        successes=successes,
+        failures=failures,
+    )
+    return SimpleNamespace(
+        root_path=root_path,
+        root_sha256="a" * 64,
+        bundle=SimpleNamespace(coverage=coverage),
+        limitations=VerificationLimitations(),
+    )
+
+
+def test_run_local_suite_completed_writes_and_reports_bundle(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heliostune import local_bundle, local_executor
+
+    suite = tmp_path / "suite.json"
+    plugin = tmp_path / "plugin.json"
+    output = tmp_path / "local-output"
+    result = _fake_local_result(outcome="completed", capability="available")
+    calls: list[tuple[object, Path, Path]] = []
+
+    monkeypatch.setattr(local_executor, "run_local_suite", lambda path: result)
+
+    def write_bundle(
+        observed: object,
+        *,
+        plugin_path: Path,
+        output_dir: Path,
+    ) -> SimpleNamespace:
+        calls.append((observed, plugin_path, output_dir))
+        return _fake_verified_local_bundle(output_dir / "bundle.json")
+
+    monkeypatch.setattr(local_bundle, "write_local_bundle", write_bundle)
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--plugin",
+                str(plugin),
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    assert calls == [(result, plugin, output)]
+    printed = capsys.readouterr().out
+    assert "local_cuda_capability: available" in printed
+    assert "Local CUDA suite result recorded" in printed
+    assert "suite: gated_mlp_epilogue.v1" in printed
+    assert "outcome: completed" in printed
+    assert "cells.expected: 4" in printed
+    assert "cells.terminal: 4" in printed
+    assert "cells.successes: 4" in printed
+    assert "cells.failures: 0" in printed
+    assert f"bundle_root: {output / 'bundle.json'}" in printed
+    assert "structural_limitation.protocol_ancestry: not_checked" in printed
+    assert "Bundle verification is structural only" in printed
+    assert "speedup" not in printed.lower()
+    assert "publication eligible" not in printed.lower()
+
+
+@pytest.mark.parametrize(
+    ("outcome", "capability", "successes", "failures"),
+    [
+        ("aborted", "unavailable", 0, 0),
+        ("failed", "available", 3, 1),
+    ],
+)
+def test_run_local_suite_noncompleted_still_writes_bundle_and_exits_nonzero(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    outcome: str,
+    capability: str,
+    successes: int,
+    failures: int,
+) -> None:
+    from heliostune import local_bundle, local_executor
+
+    output = tmp_path / outcome
+    result = _fake_local_result(outcome=outcome, capability=capability)
+    written: list[object] = []
+    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+
+    def write_bundle(
+        observed: object,
+        *,
+        plugin_path: Path,
+        output_dir: Path,
+    ) -> SimpleNamespace:
+        written.append(observed)
+        return _fake_verified_local_bundle(
+            output_dir / "bundle.json",
+            expected=4,
+            terminal=successes + failures,
+            successes=successes,
+            failures=failures,
+        )
+
+    monkeypatch.setattr(local_bundle, "write_local_bundle", write_bundle)
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(tmp_path / "suite.json"),
+                "--plugin",
+                str(tmp_path / "plugin.json"),
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    assert written == [result]
+    printed = capsys.readouterr().out
+    assert f"local_cuda_capability: {capability}" in printed
+    assert f"outcome: {outcome}" in printed
+    assert f"cells.failures: {failures}" in printed
+
+
+@pytest.mark.parametrize("protected_name", ["benchmarks", "site"])
+def test_run_local_suite_rejects_protected_repository_output_before_execution(
+    protected_name: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heliostune import local_executor
+
+    def unexpected_run(_path: Path) -> object:
+        raise AssertionError("executor ran before output protection")
+
+    monkeypatch.setattr(local_executor, "run_local_suite", unexpected_run)
+    repository = Path(cli.__file__).resolve().parents[2]
+    suite = tmp_path / "external-suite-copy.json"
+    output = repository / protected_name / "local-suite-test-output"
+    monkeypatch.setattr(cli, "__file__", "/wheel/site-packages/heliostune/cli.py")
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--plugin",
+                "plugin.json",
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    captured = capsys.readouterr()
+    assert f"inside protected repository directory {protected_name}" in captured.err
+    assert not output.exists()
+
+
+def test_run_local_suite_rejects_existing_nonempty_destination(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heliostune import local_executor
+
+    output = tmp_path / "existing"
+    output.mkdir()
+    (output / "keep").write_text("user data", encoding="utf-8")
+
+    def unexpected_run(_path: Path) -> object:
+        raise AssertionError("executor ran before destination protection")
+
+    monkeypatch.setattr(local_executor, "run_local_suite", unexpected_run)
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                "suite.json",
+                "--plugin",
+                "plugin.json",
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    assert "existing nonempty local suite output directory" in capsys.readouterr().err
+    assert (output / "keep").read_text(encoding="utf-8") == "user data"
+
+
+def test_run_local_suite_accepts_existing_empty_destination(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heliostune import local_bundle, local_executor
+
+    output = tmp_path / "empty"
+    output.mkdir()
+    result = _fake_local_result(outcome="completed", capability="available")
+    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+
+    def write_bundle(
+        observed: object,
+        *,
+        plugin_path: Path,
+        output_dir: Path,
+    ) -> SimpleNamespace:
+        assert observed is result
+        assert not output_dir.exists()
+        return _fake_verified_local_bundle(output_dir / "bundle.json")
+
+    monkeypatch.setattr(local_bundle, "write_local_bundle", write_bundle)
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                "suite.json",
+                "--plugin",
+                "plugin.json",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+
+
+def test_run_local_suite_uses_default_plugin_only_for_committed_templates(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heliostune import local_bundle, local_executor
+
+    repository = Path(cli.__file__).resolve().parents[2]
+    suite = repository / "benchmarks/suites/gated-mlp-epilogue-v1.json"
+    expected_plugin = repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+    result = _fake_local_result(outcome="completed", capability="available")
+    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    monkeypatch.setattr(cli, "__file__", "/wheel/site-packages/heliostune/cli.py")
+
+    def write_bundle(
+        _observed: object,
+        *,
+        plugin_path: Path,
+        output_dir: Path,
+    ) -> SimpleNamespace:
+        assert plugin_path == expected_plugin
+        return _fake_verified_local_bundle(output_dir / "bundle.json")
+
+    monkeypatch.setattr(local_bundle, "write_local_bundle", write_bundle)
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--output",
+                str(tmp_path / "output"),
+            ]
+        )
+        == 0
+    )
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(tmp_path / "other-suite.json"),
+                "--output",
+                str(tmp_path / "other-output"),
+            ]
+        )
+        == 2
+    )
+
+
+def test_run_local_suite_escapes_unusual_identifiers_and_bundle_root(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from heliostune import local_bundle, local_executor
+
+    output = tmp_path / "output"
+    unusual_id = "[bold]suite[/bold]\nsecond"
+    result = _fake_local_result(
+        outcome="completed",
+        capability="available",
+        suite_id=unusual_id,
+    )
+    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    unusual_root = output / "[bold]literal[/bold]\nsecond"
+    monkeypatch.setattr(
+        local_bundle,
+        "write_local_bundle",
+        lambda *_args, **_kwargs: _fake_verified_local_bundle(unusual_root),
+    )
+
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                "suite.json",
+                "--plugin",
+                "plugin.json",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+    printed = capsys.readouterr().out
+    assert "[bold]suite[/bold]\\nsecond" in printed
+    assert unusual_id not in printed
+    assert "[bold]literal[/bold]\\nsecond" in printed
+    assert "[bold]literal[/bold]\nsecond" not in printed
+
+
+def test_run_local_suite_parser_and_help(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    parsed = cli.build_parser().parse_args(
+        [
+            "run-local-suite",
+            "suite.json",
+            "--plugin",
+            "plugin.json",
+            "--output",
+            "bundle-dir",
+        ]
+    )
+    assert parsed.handler is cli._run_local_suite
+    assert parsed.suite == Path("suite.json")
+    assert parsed.plugin == Path("plugin.json")
+    assert parsed.output == Path("bundle-dir")
+
+    with pytest.raises(SystemExit) as raised:
+        cli.build_parser().parse_args(["run-local-suite", "--help"])
+    assert raised.value.code == 0
+    help_output = " ".join(capsys.readouterr().out.lower().split())
+    assert "local cuda" in help_output
+    assert "structurally verified exploratory evidence bundle" in help_output
+    assert "--plugin plugin" in help_output
+    assert "--output dir" in help_output
+
+
+def test_other_commands_do_not_import_torch(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    real_import = builtins.__import__
+
+    def guarded_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "torch" or name.startswith("torch."):
+            raise AssertionError("a non-execution command imported torch")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    assert cli.main(["list-scope"]) == 0
+    assert "Scope vocabulary and execution status" in capsys.readouterr().out

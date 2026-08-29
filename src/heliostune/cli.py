@@ -745,12 +745,21 @@ def _list_scope(_args: argparse.Namespace) -> int:
                 "suite_template_status",
                 "available only for fp16/bf16 input/storage in fused_mlp,rmsnorm_residual",
             ),
-            ("generic_local_runtime_backend", "unimplemented"),
+            (
+                "generic_local_runtime_backend",
+                "implemented for the two frozen reference templates",
+            ),
+            (
+                "generic_local_runtime_requirements",
+                "torch==2.8.0,cuda,compute_capability>=8.0,native_bf16,inductor",
+            ),
+            ("generic_local_runtime_gpu_validation", "not_run"),
             ("generic_remote_runtime_backend", "unimplemented"),
             (
                 "limitation",
-                "Schema vocabulary and frozen templates do not claim runtime "
-                "availability, correctness, or performance.",
+                "Schema verification alone does not claim execution, correctness, or performance. "
+                "The local runtime capability-probes each run; its CUDA path is not yet validated "
+                "on this project workstation.",
             ),
         ),
     )
@@ -881,6 +890,129 @@ def _verify_bundle(args: argparse.Namespace) -> int:
         )
     _print_structural_verification("Bundle", facts)
     return 0
+
+
+def _is_local_repository(repository: Path) -> bool:
+    return (repository / "pyproject.toml").is_file() and (repository / "src/heliostune").is_dir()
+
+
+def _local_suite_repository(suite: Path) -> Path | None:
+    resolved = suite.resolve()
+    suites_directory = resolved.parent
+    benchmarks_directory = suites_directory.parent
+    if suites_directory.name != "suites" or benchmarks_directory.name != "benchmarks":
+        return None
+
+    repository = benchmarks_directory.parent
+    return repository if _is_local_repository(repository) else None
+
+
+def _local_output_directory(output: Path) -> Path:
+    resolved = output.resolve()
+    for ancestor in (resolved, *resolved.parents):
+        if ancestor.name not in {"benchmarks", "site"}:
+            continue
+        if _is_local_repository(ancestor.parent):
+            raise ArtifactError(
+                f"refusing local suite output inside protected repository directory "
+                f"{ancestor.name}: {output}"
+            )
+
+    if output.is_symlink():
+        raise ArtifactError(f"refusing existing local suite output symlink: {output}")
+    if output.exists():
+        if not output.is_dir():
+            raise ArtifactError(
+                f"local suite output destination exists and is not a directory: {output}"
+            )
+        try:
+            next(output.iterdir())
+        except StopIteration:
+            pass
+        else:
+            raise ArtifactError(
+                f"refusing existing nonempty local suite output directory: {output}"
+            )
+    return output
+
+
+def _local_plugin_path(suite: Path, explicit_plugin: Path | None) -> Path:
+    if explicit_plugin is not None:
+        return explicit_plugin
+
+    repository = _local_suite_repository(suite)
+    if repository is None:
+        raise ArtifactError(
+            "--plugin is required unless SUITE resolves to a committed reference template"
+        )
+    templates = {
+        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").resolve(),
+        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").resolve(),
+    }
+    if suite.resolve() not in templates:
+        raise ArtifactError(
+            "--plugin is required unless SUITE resolves to a committed reference template"
+        )
+    return repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+
+
+def _run_local_suite(args: argparse.Namespace) -> int:
+    output_dir = _local_output_directory(args.output)
+    plugin_path = _local_plugin_path(args.suite, args.plugin)
+
+    from heliostune.local_bundle import write_local_bundle
+    from heliostune.local_executor import run_local_suite
+
+    result = run_local_suite(args.suite)
+    if output_dir.exists():
+        try:
+            output_dir.rmdir()
+        except OSError as exc:
+            raise ArtifactError(
+                f"local suite output directory is no longer empty: {output_dir}"
+            ) from exc
+    verified = write_local_bundle(
+        result,
+        plugin_path=plugin_path,
+        output_dir=output_dir,
+    )
+    coverage = verified.bundle.coverage
+    facts: list[tuple[str, str | int | Path]] = [
+        ("suite", result.suite_id),
+        (
+            "local_cuda_capability",
+            "available" if result.capability.available else "unavailable",
+        ),
+        ("outcome", result.outcome),
+        ("cells.expected", coverage.expected_cells),
+        ("cells.terminal", coverage.terminal_cells),
+        ("cells.successes", coverage.successes),
+        ("cells.failures", coverage.failures),
+        ("bundle_root", verified.root_path),
+        ("bundle_root_sha256", verified.root_sha256),
+    ]
+    for limitation in dataclass_fields(verified.limitations):
+        facts.append(
+            (
+                f"structural_limitation.{limitation.name}",
+                getattr(verified.limitations, limitation.name),
+            )
+        )
+    facts.append(
+        (
+            "limitation",
+            "Bundle verification is structural only; it does not establish "
+            "execution semantics, comparative performance, or claim eligibility.",
+        )
+    )
+    _print_facts("Local CUDA suite result recorded", facts)
+    return (
+        0
+        if result.outcome == "completed"
+        and coverage.failures == 0
+        and coverage.terminal_cells == coverage.expected_cells
+        else 2
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -1051,12 +1183,40 @@ def build_parser() -> argparse.ArgumentParser:
     verify_suite.add_argument("path", type=Path, metavar="PATH")
     verify_suite.set_defaults(handler=_verify_suite)
 
+    run_local_suite = subparsers.add_parser(
+        "run-local-suite",
+        help="execute one frozen suite on local CUDA and write an evidence bundle",
+        description=(
+            "Execute one frozen reference suite on a qualifying local CUDA device, "
+            "retain correctness and timing observations, and write a structurally "
+            "verified exploratory evidence bundle."
+        ),
+    )
+    run_local_suite.add_argument("suite", type=Path, metavar="SUITE")
+    run_local_suite.add_argument(
+        "--plugin",
+        type=Path,
+        metavar="PLUGIN",
+        help=(
+            "plugin artifact bound into the bundle; defaults to the committed "
+            "reference plugin only for a committed suite template"
+        ),
+    )
+    run_local_suite.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        metavar="DIR",
+        help="new or empty destination directory outside benchmarks/ and site/",
+    )
+    run_local_suite.set_defaults(handler=_run_local_suite)
+
     list_scope = subparsers.add_parser(
         "list-scope",
         help="list schema vocabulary, frozen templates, and runtime implementation status",
         description=(
-            "List schema vocabulary, the narrow frozen suite templates, and "
-            "unimplemented generic runtime backend status."
+            "List schema vocabulary, the narrow frozen suite templates, and explicitly scoped "
+            "local/remote runtime implementation and validation status."
         ),
     )
     list_scope.set_defaults(handler=_list_scope)

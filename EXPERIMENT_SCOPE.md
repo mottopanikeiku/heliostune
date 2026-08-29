@@ -25,8 +25,8 @@ one "supported" label.
 | Schema | A `heliostune.plugin/1` or `heliostune.suite/1` document has exact JSON types, no unknown or duplicate fields, and satisfies its cross-field rules. | `verify-plugin` and `verify-suite`. | That referenced code imports, a GPU is present, or a case is correct or fast. |
 | Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two initial suite template JSON files and their SHA-256 values. | That a local or remote backend is implemented. |
 | Backend capability | A particular arm was not probed, or a retained probe found it available or unavailable. Local and remote are separate. | Suite arm `local_capability` and `remote_capability`: `unprobed`, `available`, or `unavailable`. | Correctness, performance, portability to another target, or claim eligibility. |
-| Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A future executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
-| Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A future executor/bundle observation and analysis, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
+| Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A narrow local executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
+| Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A narrow local executor/bundle observation, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
 
 A capability state is exactly `unprobed | available | unavailable`. `unprobed`
 requires `evidence_sha256: null`; `available` and `unavailable` require the
@@ -136,8 +136,8 @@ Only two suite template IDs are currently executable-suite declarations:
 2. `residual_rmsnorm.v1`
 
 “Executable-suite declaration” means the case semantics and execution plan are
-closed enough to feed a future executor. It does not mean a generic executor is
-implemented today.
+closed enough for the narrow local executor described below. It does not mean a
+generic executor is implemented.
 
 The committed reference declarations are:
 
@@ -151,6 +151,18 @@ Their `template_status` is `reference_template_not_execution_freeze`: the
 bytes and hashes are frozen reference declarations, not a capability probe,
 execution freeze, or permission to dispatch work. Changing any byte produces a
 different artifact identity and requires an explicit new revision.
+
+### Local CUDA execution
+
+`heliostune run-local-suite SUITE --output DIR` executes only these two frozen
+templates on a qualifying NVIDIA CUDA device; use `--plugin PLUGIN` when the
+suite is not the committed template path. It requires the `gpu` extra (including
+exactly PyTorch 2.8.0), native BF16 support, compute capability 8.0 or newer, and
+the Inductor backend. The current candidate and reference arms implement the
+frozen PyTorch reference-template formulas, not arbitrary plugin entrypoints.
+Successful compilation is not evidence that operations fused. The written
+exploratory bundle is structurally verified only: it does not establish a
+performance conclusion, claim eligibility, or publication eligibility.
 
 ### `gated_mlp_epilogue.v1`
 
@@ -246,16 +258,17 @@ reviewed revision that:
 6. adds focused structural and behavioral acceptance coverage; and
 7. continues to report backend, correctness and performance states separately.
 
-Execution needs a later backend implementation and retained probe evidence.
+Execution of any promoted candidate still needs a matching backend
+implementation and retained probe evidence.
 Performance work needs retained passing correctness observations, a frozen
 timing protocol and complete evidence lifecycle. A paid campaign additionally
 needs an independently approved, frozen paid plan; nothing in this roadmap
 promises or authorizes one.
 
-The next actual backend/template implementation should be fused gated MLP
-first, followed by residual RMSNorm. Attention/KV-cache, quantized-linear, MoE
-and FP8 work require their own suite revisions and promotion reviews rather
-than being folded into either initial template.
+The implemented local executor stops at the frozen gated MLP and residual
+RMSNorm reference templates. Attention/KV-cache, quantized-linear, MoE and FP8
+work require their own suite revisions, backend implementations, and promotion
+reviews rather than being folded into either initial template.
 
 ## Focused acceptance boundary
 
@@ -279,9 +292,9 @@ Together they cover legacy-byte non-regression, strict closed roots and exact
 types, dtype/quantization cross-rules, capability evidence, both case-semantic
 unions, inline shape applicability, static and runtime correctness gates,
 standalone plugin → suite custody, and the separation between vocabulary and
-execution. They do not stand in for the unimplemented executor, observation,
-bundle-custody, analysis, or publication acceptance tests in
-[METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
+execution. Those declaration tests do not stand in for the separate executor,
+observation, bundle-custody, analysis, or publication acceptance tests described
+in [METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
 
 ## Inspect and verify
 
