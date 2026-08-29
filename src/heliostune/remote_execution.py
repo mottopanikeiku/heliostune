@@ -89,6 +89,7 @@ def canonical_json_line_bytes(value: object) -> bytes:
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
+
 def _compress_result_envelope(payload: bytes) -> bytes:
     return zstandard.ZstdCompressor(
         level=_TRANSPORT_ZSTD_LEVEL,
