@@ -70,3 +70,4 @@ jobs:
       - run: uv run heliostune verify-catalog benchmarks/research-artifact-manifest.json
       - run: uv run python scripts/build_parhelion_v2_addendum.py --check
       - run: uv run python scripts/publish_hopper_engineering_result.py --check
+      - run: uv run python scripts/publish_fusion_remote_results.py --check

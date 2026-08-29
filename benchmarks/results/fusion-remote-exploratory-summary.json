@@ -1,0 +1,299 @@
+{
+  "attempts": [
+    {
+      "app": {
+        "app_id": "ap-6A3Flv17wjZa7pSgL4qtJe",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-6A3Flv17wjZa7pSgL4qtJe",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-01-unresolved",
+      "call": {
+        "function_call_id": "fc-01M15RPHFH9ENEXWD1WYBX1KNW",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "91e595e83ff9a57e6ab32b74a01f8254bd923521",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "cancellation_requested",
+        "unresolved"
+      ],
+      "source_sha256": "a3173cddca5bd45d40608492eea6ad8056cc67808628ce6d7e0bb63fc8f53ed8",
+      "status": "unresolved",
+      "suite_id": "gated-mlp-epilogue-reference",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "terminal_detail": "RemoteError: AuthError(\"Received :status = '401'\")",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "42a7fb382ac9d495592dc5750b26cf324d076b13cc945c1573f7e1e687ebbe60"
+    },
+    {
+      "app": {
+        "app_id": "ap-F06mCUOAA53kliXeB4K11V",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-F06mCUOAA53kliXeB4K11V",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-02-unresolved",
+      "call": {
+        "function_call_id": "fc-01M15XBYSXW0JBYBRXVN9YEHSP",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "f691cc1c85e28ccf574fa5257cfdcc7281ac19e8",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "cancellation_requested",
+        "unresolved"
+      ],
+      "source_sha256": "c83e55fcd9bf9acaaefe6a0f05f08055f13cd70dcdd46896bddd76ab222e4973",
+      "status": "unresolved",
+      "suite_id": "gated-mlp-epilogue-reference",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "terminal_detail": "RemoteError: AuthError(\"Received :status = '401'\")",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "0ad321a8126d04c4b17897e30ffabb0af4196535d5a19c0e7e02e3dbcf15b17e"
+    },
+    {
+      "app": {
+        "app_id": "ap-0ybLik0aGa1sV9QlGbZGke",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-0ybLik0aGa1sV9QlGbZGke",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-03-completed",
+      "call": {
+        "function_call_id": "fc-01M163X38NG8E1Q7X0VX53JKYP",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "4a74c1c54f1885e93a77b329460a685642ccba13",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "completed"
+      ],
+      "source_sha256": "63ab414eb942fcb09ff20e250d75242b8643f83316e01164a45596290e2e11c1",
+      "status": "completed",
+      "suite_id": "gated-mlp-epilogue-reference",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "terminal_detail": null,
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "031202773ce6ad418fa94b3733fa7770a67a65b4bfac0bc55a60e4fd231e9c6b"
+    },
+    {
+      "app": {
+        "app_id": "ap-jKSyIjohIzchDqd6kIu1kY",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-jKSyIjohIzchDqd6kIu1kY",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "residual-rmsnorm-01-completed",
+      "call": {
+        "function_call_id": "fc-01M168458F6DDQ5887S83W6S46",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "2514bb087deebcd92ad60a596c0ddc25e901da3f",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "completed"
+      ],
+      "source_sha256": "a384a020a513e677b024ee855aaaa4d3eaee8d841f06dbb3bc64d7175e20e80f",
+      "status": "completed",
+      "suite_id": "residual-rmsnorm-reference",
+      "suite_path": "benchmarks/suites/residual-rmsnorm-v1.json",
+      "terminal_detail": null,
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "cf6409a72b68fed4d65d5653792858cd5b664340addf2b02f878e38574cec2f5"
+    }
+  ],
+  "claim_classification": {
+    "analysis": "exploratory",
+    "completed_correctness_timing_compile_metrics": "supported_only_as_measured_fact",
+    "fusion": "not_tested",
+    "performance": "descriptive",
+    "superiority": "not_tested"
+  },
+  "completed_results": [
+    {
+      "attempt_id": "gated-mlp-03-completed",
+      "claim_scope": "measured_fact_only",
+      "fusion_claim": false,
+      "hardware": {
+        "compute_capability": [
+          9,
+          0
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA H100 80GB HBM3",
+        "gpu": "H100",
+        "multiprocessor_count": 132,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 79.1788330078125,
+        "triton_version": "3.4.0"
+      },
+      "metrics": {
+        "candidate_distinction": "fullgraph_inductor_compilation_only",
+        "candidate_reference_arithmetic": "candidate_reference_identical",
+        "compile": {
+          "arm_id": "mlp-candidate",
+          "backend_invoked": true,
+          "callable_distinct": true,
+          "eager_fallback": false,
+          "first_call_ns": 4042163082,
+          "status": "compiled_and_first_call_completed",
+          "wrapper_create_ns": 5615188
+        },
+        "correctness": {
+          "candidate": {
+            "close": true,
+            "finite": true,
+            "input_storage_unchanged": true,
+            "max_abs_error": 0.00048828125,
+            "output_disjoint": true,
+            "status": "passed"
+          },
+          "reference": {
+            "close": true,
+            "finite": true,
+            "input_storage_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "status": "passed"
+          }
+        },
+        "descriptive_ratios": {
+          "candidate_to_reference_median": 0.8691970134155299,
+          "interpretation": "ratio_of_returned_medians_only",
+          "reference_to_candidate_median": 1.1504871560366696,
+          "superiority_tested": false
+        },
+        "timing": {
+          "candidate": {
+            "median_ms": 0.4909919947385788,
+            "repetitions": 50,
+            "status": "passed",
+            "warmups": 10
+          },
+          "reference": {
+            "median_ms": 0.564879983663559,
+            "repetitions": 50,
+            "status": "passed",
+            "warmups": 10
+          }
+        }
+      },
+      "publication_eligible": false,
+      "suite_id": "gated-mlp-epilogue-reference"
+    },
+    {
+      "attempt_id": "residual-rmsnorm-01-completed",
+      "claim_scope": "measured_fact_only",
+      "fusion_claim": false,
+      "hardware": {
+        "compute_capability": [
+          9,
+          0
+        ],
+        "cuda_version": "12.8",
+        "device_name": "NVIDIA H100 80GB HBM3",
+        "gpu": "H100",
+        "multiprocessor_count": 132,
+        "torch_version": "2.8.0+cu128",
+        "total_memory_gb": 79.1788330078125,
+        "triton_version": "3.4.0"
+      },
+      "metrics": {
+        "candidate_distinction": "fullgraph_inductor_compilation_only",
+        "candidate_reference_arithmetic": "candidate_reference_identical",
+        "compile": {
+          "arm_id": "rmsnorm-candidate",
+          "backend_invoked": true,
+          "callable_distinct": true,
+          "eager_fallback": false,
+          "first_call_ns": 4227531128,
+          "status": "compiled_and_first_call_completed",
+          "wrapper_create_ns": 7014219
+        },
+        "correctness": {
+          "candidate": {
+            "close": true,
+            "finite": true,
+            "input_storage_unchanged": true,
+            "max_abs_error": 0.00390625,
+            "output_disjoint": true,
+            "status": "passed"
+          },
+          "reference": {
+            "close": true,
+            "finite": true,
+            "input_storage_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "status": "passed"
+          }
+        },
+        "descriptive_ratios": {
+          "candidate_to_reference_median": 0.5226506682701267,
+          "interpretation": "ratio_of_returned_medians_only",
+          "reference_to_candidate_median": 1.9133238713915888,
+          "superiority_tested": false
+        },
+        "timing": {
+          "candidate": {
+            "median_ms": 0.04467199929058552,
+            "repetitions": 50,
+            "status": "passed",
+            "warmups": 10
+          },
+          "reference": {
+            "median_ms": 0.0854720026254654,
+            "repetitions": 50,
+            "status": "passed",
+            "warmups": 10
+          }
+        }
+      },
+      "publication_eligible": false,
+      "suite_id": "residual-rmsnorm-reference"
+    }
+  ],
+  "counts": {
+    "attempts": 4,
+    "completed": 2,
+    "failed": 0,
+    "unresolved": 2
+  },
+  "limitations": [
+    "Two gated-MLP calls ended unresolved after cancellation requests; no result receipts exist for them.",
+    "The two completed calls are single returned observations collected without a prespecified comparative analysis plan.",
+    "Reference/candidate ratios are descriptive for the returned medians only; no uncertainty or superiority test was performed.",
+    "The candidate and reference arithmetic are not evidence of kernel fusion; every returned environment explicitly records fusion_claim=false.",
+    "Modal provider physical starts and restarts are unobservable, so provider attempt count, total GPU time, and actual cost are unknown.",
+    "The retained evidence has no attestation and is not publication eligible."
+  ],
+  "methodology": {
+    "analysis_status": "post_hoc_exploratory",
+    "design": "four retained remote attempts analyzed after execution",
+    "fusion_claim": false,
+    "performance_inference": "not_tested",
+    "publication_eligible": false,
+    "report_status": "not_created",
+    "superiority_claim": false
+  },
+  "provider_accounting": {
+    "actual_cost_usd": null,
+    "client_authorized_spawns": 4,
+    "cost_status": "unknown",
+    "provider_attempts_observable": false,
+    "provider_physical_attempts": null,
+    "total_gpu_seconds": null
+  },
+  "publication_eligible": false,
+  "schema": "heliostune.fusion-remote-exploratory.summary/1",
+  "study_id": "fusion-remote-h100-exploratory"
+}

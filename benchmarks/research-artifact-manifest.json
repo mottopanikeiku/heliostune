@@ -2397,6 +2397,57 @@
         "A100 selection uses a declared mixed PCIe/SXM engineering domain",
         "no confirmatory superiority claim"
       ]
+    },
+    {
+      "analysis_status": "post_hoc_exploratory",
+      "manifests": [
+        {
+          "bytes": 13634,
+          "kind": "json_artifact",
+          "path": "benchmarks/fusion-remote-exploratory-manifest.json",
+          "schema": "heliostune.fusion-remote-exploratory.manifest/1",
+          "sha256": "f1a6079bd1f09bd11e1f1883f6cfa063a40ce654d7507a024256b5839126aa21",
+          "status": "published_mixed_completed_unresolved"
+        }
+      ],
+      "measurement_schema": "heliostune.fusion-remote-exploratory.raw/1",
+      "outcome_status": "mixed_completed_unresolved",
+      "publication_eligible": false,
+      "raw_artifacts": [
+        {
+          "compressed_bytes": 9475,
+          "compressed_sha256": "fe732172c2a8fa3698c47a5c7a8e97e6c895703c90d86a2061ddb7a11ddeec35",
+          "compression": "zstd",
+          "kind": "compressed_json_artifact",
+          "path": "benchmarks/data/fusion-remote-exploratory.json.zst",
+          "schema": "heliostune.fusion-remote-exploratory.raw/1",
+          "status": "published_mixed_completed_unresolved",
+          "uncompressed_bytes": 83952,
+          "uncompressed_sha256": "eb91be687ba089c999a72eb8d879fdb3e844e410881e6ecfe540e8993f28957a"
+        }
+      ],
+      "reports": [
+        {
+          "bytes": 22613,
+          "kind": "self_contained_html_report",
+          "path": "site/fusion-remote-exploratory.html",
+          "schema": "html5",
+          "sha256": "1f4d81806a6682d3f5eebf1d5acdad31e0e6eacce74e992f210483941b9bb243",
+          "status": "published_mixed_completed_unresolved"
+        }
+      ],
+      "results": [
+        {
+          "bytes": 10727,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/fusion-remote-exploratory-summary.json",
+          "schema": "heliostune.fusion-remote-exploratory.summary/1",
+          "sha256": "c3638a30812a505d721463b2c34817e18b9e68d5cd1c1f9b14d4c89714527c88",
+          "status": "published_mixed_completed_unresolved"
+        }
+      ],
+      "split_design": "four retained remote attempts analyzed after execution",
+      "study_id": "fusion-remote-h100-exploratory"
     }
   ]
 }

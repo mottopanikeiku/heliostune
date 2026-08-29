@@ -1370,8 +1370,17 @@ def _fresh_directory_inventory(directory_fd: int) -> set[str]:
         raise ArtifactError("cannot enumerate pinned remote receipt directory") from exc
 
 
-def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteReceipt:
-    root_payload = _read_regular_at(directory_fd, RECEIPT_ROOT)
+def verify_remote_receipt_payloads(
+    files: Mapping[str, bytes], *, logical_output_path: str | Path
+) -> VerifiedRemoteReceipt:
+    """Verify an exact receipt inventory supplied as immutable file payloads."""
+    payloads = dict(files)
+    for name, payload in payloads.items():
+        if type(name) is not str or type(payload) is not bytes:
+            raise ArtifactError("remote receipt payload inventory must map filenames to bytes")
+    root_payload = payloads.get(RECEIPT_ROOT)
+    if root_payload is None:
+        raise ArtifactError(f"remote receipt directory inventory lacks {RECEIPT_ROOT}")
     try:
         root_text = root_payload.decode("utf-8", errors="strict")
     except UnicodeError as exc:
@@ -1429,14 +1438,14 @@ def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteRece
         wheel_data["manifest"], context="remote receipt manifest artifact"
     )
     expected_paths.update({suite_binding.path, plugin_binding.path, manifest_binding.path})
-    actual_paths = _fresh_directory_inventory(directory_fd)
+    actual_paths = set(payloads)
     if actual_paths != expected_paths:
         raise ArtifactError(
             f"remote receipt directory inventory differs: missing={sorted(expected_paths - actual_paths)}, extra={sorted(actual_paths - expected_paths)}"
         )
 
     def checked(binding: ArtifactBinding) -> bytes:
-        payload = _read_regular_at(directory_fd, binding.path)
+        payload = payloads[binding.path]
         if len(payload) != binding.bytes or sha256_bytes(payload) != binding.sha256:
             raise ArtifactError(f"remote receipt artifact digest/size mismatch: {binding.path}")
         return payload
@@ -1453,7 +1462,8 @@ def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteRece
     intent = RemoteIntent.from_dict(intent_value)
     if canonical_json_bytes(intent.to_dict()) != intent_payload:
         raise SchemaError("remote receipt intent is not canonical JSON")
-    if Path(intent.output_path).absolute() != root_path.parent.absolute():
+    logical_root_path = Path(logical_output_path).absolute() / RECEIPT_ROOT
+    if Path(intent.output_path).absolute() != logical_root_path.parent:
         raise SchemaError("remote receipt location differs from intent output_path")
     _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_payload))
     if receipt.receipt_id != request_digest or bindings["request_digest"] != request_digest:
@@ -1508,7 +1518,15 @@ def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteRece
         )
         if result.outcome != receipt.status:
             raise SchemaError("remote receipt status differs from LocalExecutionResult outcome")
-    return VerifiedRemoteReceipt(receipt, intent, records, envelope, result, root_path)
+    return VerifiedRemoteReceipt(receipt, intent, records, envelope, result, logical_root_path)
+
+
+def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteReceipt:
+    inventory = _fresh_directory_inventory(directory_fd)
+    files = {name: _read_regular_at(directory_fd, name) for name in inventory}
+    if _fresh_directory_inventory(directory_fd) != inventory:
+        raise ArtifactError("remote receipt directory inventory changed during verification")
+    return verify_remote_receipt_payloads(files, logical_output_path=root_path.parent)
 
 
 def verify_remote_receipt(path: str | Path) -> VerifiedRemoteReceipt:

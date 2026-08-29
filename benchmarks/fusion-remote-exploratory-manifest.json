@@ -1,0 +1,281 @@
+{
+  "attempts": [
+    {
+      "app": {
+        "app_id": "ap-6A3Flv17wjZa7pSgL4qtJe",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-6A3Flv17wjZa7pSgL4qtJe",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-01-unresolved",
+      "call": {
+        "function_call_id": "fc-01M15RPHFH9ENEXWD1WYBX1KNW",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "91e595e83ff9a57e6ab32b74a01f8254bd923521",
+      "manifest_sha256": "fb03fd0b4b87e393b8637c26b414e26b80497b4c097f87adbe30e9431f3c35a8",
+      "source_sha256": "a3173cddca5bd45d40608492eea6ad8056cc67808628ce6d7e0bb63fc8f53ed8",
+      "status": "unresolved",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "suite_sha256": "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "42a7fb382ac9d495592dc5750b26cf324d076b13cc945c1573f7e1e687ebbe60"
+    },
+    {
+      "app": {
+        "app_id": "ap-F06mCUOAA53kliXeB4K11V",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-F06mCUOAA53kliXeB4K11V",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-02-unresolved",
+      "call": {
+        "function_call_id": "fc-01M15XBYSXW0JBYBRXVN9YEHSP",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "f691cc1c85e28ccf574fa5257cfdcc7281ac19e8",
+      "manifest_sha256": "4b5529f4bdc6fd70b9bf0f006a956cb9cee9e5459ee30aece5ade766f8374cbe",
+      "source_sha256": "c83e55fcd9bf9acaaefe6a0f05f08055f13cd70dcdd46896bddd76ab222e4973",
+      "status": "unresolved",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "suite_sha256": "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "0ad321a8126d04c4b17897e30ffabb0af4196535d5a19c0e7e02e3dbcf15b17e"
+    },
+    {
+      "app": {
+        "app_id": "ap-0ybLik0aGa1sV9QlGbZGke",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-0ybLik0aGa1sV9QlGbZGke",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "gated-mlp-03-completed",
+      "call": {
+        "function_call_id": "fc-01M163X38NG8E1Q7X0VX53JKYP",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "4a74c1c54f1885e93a77b329460a685642ccba13",
+      "manifest_sha256": "4202b41edad8f74dd36997c08e70eabf4069b2c73900086dbb46adadaf0362f4",
+      "source_sha256": "63ab414eb942fcb09ff20e250d75242b8643f83316e01164a45596290e2e11c1",
+      "status": "completed",
+      "suite_path": "benchmarks/suites/gated-mlp-epilogue-v1.json",
+      "suite_sha256": "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "031202773ce6ad418fa94b3733fa7770a67a65b4bfac0bc55a60e4fd231e9c6b"
+    },
+    {
+      "app": {
+        "app_id": "ap-jKSyIjohIzchDqd6kIu1kY",
+        "app_url": "https://modal.com/apps/mottopanikeiku/main/ap-jKSyIjohIzchDqd6kIu1kY",
+        "artifact_binding": "none",
+        "identity_provenance": "operator_recorded"
+      },
+      "attempt_id": "residual-rmsnorm-01-completed",
+      "call": {
+        "function_call_id": "fc-01M168458F6DDQ5887S83W6S46",
+        "identity_provenance": "artifact_bound_remote_journal"
+      },
+      "head_commit": "2514bb087deebcd92ad60a596c0ddc25e901da3f",
+      "manifest_sha256": "18fd89bbe19f734f5a6d32ce700a8b17f9b9b1c29d383372ab6fc7ebd0d741e4",
+      "source_sha256": "a384a020a513e677b024ee855aaaa4d3eaee8d841f06dbb3bc64d7175e20e80f",
+      "status": "completed",
+      "suite_path": "benchmarks/suites/residual-rmsnorm-v1.json",
+      "suite_sha256": "a318a59bca434b97d073e0ae76f827814213c0a68b0c4263b19c81f98be8f9ee",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_sha256": "cf6409a72b68fed4d65d5653792858cd5b664340addf2b02f878e38574cec2f5"
+    }
+  ],
+  "commands": {
+    "check": "uv run python scripts/publish_fusion_remote_results.py --check",
+    "collection": {
+      "gated-mlp-01-unresolved": "uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/gated-mlp-epilogue-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T032317860136157",
+      "gated-mlp-02-unresolved": "uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/gated-mlp-epilogue-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T044455620412604",
+      "gated-mlp-03-completed": "uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/gated-mlp-epilogue-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271",
+      "residual-rmsnorm-01-completed": "uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/residual-rmsnorm-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545"
+    },
+    "generate": "uv run python scripts/publish_fusion_remote_results.py"
+  },
+  "inputs": {
+    "gated-mlp-01-unresolved": {
+      "operator_pointer": {
+        "bytes": 71,
+        "path": "/home/alp/gated-mlp-output-path.txt",
+        "sha256": "a9f7ffaf07ba6ff50bce7cfe130761df0b1c5404f90a50ad15a1ab9019fcc557"
+      },
+      "remote_intent": {
+        "bytes": 1168,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T032317860136157.remote-intent.json",
+        "sha256": "a7caae216034510169cd4a64d6382b49e8605d42c252375a1bdb0f8e1f768c0b"
+      },
+      "remote_journal": {
+        "bytes": 1195,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T032317860136157.remote-attempts.jsonl",
+        "sha256": "417bc1d3bbbb8ac33954f44a15c23ed0a38ae414a0d4d6b7a91e63f116947baa"
+      }
+    },
+    "gated-mlp-02-unresolved": {
+      "operator_pointer": {
+        "bytes": 71,
+        "path": "/home/alp/gated-mlp-output-path-2.txt",
+        "sha256": "3a8c4166fb3c0bf054d8a96faafc6ac026a10d53c8e5ecdd09e848308bfc51a7"
+      },
+      "remote_intent": {
+        "bytes": 1168,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T044455620412604.remote-intent.json",
+        "sha256": "285ca68e07ec5dc443e89947f72292995cf4ca2e8617076436c46c9f9c3ae35b"
+      },
+      "remote_journal": {
+        "bytes": 1195,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T044455620412604.remote-attempts.jsonl",
+        "sha256": "f8c092c4d0ca66ae6c77b083c5588af9b528abbda1033bf21509f20c84f2057a"
+      }
+    },
+    "gated-mlp-03-completed": {
+      "operator_pointer": {
+        "bytes": 71,
+        "path": "/home/alp/gated-mlp-output-path-3.txt",
+        "sha256": "b7fd6770e781bfcc3fdddf64d1104285f4c11c0cf2b17de3300c743b9cfc0c33"
+      },
+      "receipt_intent": {
+        "bytes": 1168,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/intent.json",
+        "sha256": "46b9a838d95f4c202c147c86a310e11d375c27b1673eea2c4a209fd6f625824c"
+      },
+      "receipt_journal": {
+        "bytes": 860,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/journal.jsonl",
+        "sha256": "98e6946419ff23fe254c4dbfcce3bd60b93c7fa9afb5f0df6c00d85298b9831b"
+      },
+      "receipt_plugin": {
+        "bytes": 791,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/plugin.json",
+        "sha256": "9d696f135a5e62ef622a88d85a7bb03e8fa76bddd0bf57ebf20b2eb4c1d1edc1"
+      },
+      "receipt_result": {
+        "bytes": 17099,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/result.json",
+        "sha256": "fe3bfe3bac2fe515f05273428cafcda42865280e6d1ea9c7de6b07991004af8c"
+      },
+      "receipt_root": {
+        "bytes": 2618,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/receipt.json",
+        "sha256": "d855ba03e9d14c81211c27fbeb2b037bb7ad7c83abe39062234c77f451a9f215"
+      },
+      "receipt_suite": {
+        "bytes": 5624,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/suite.json",
+        "sha256": "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8"
+      },
+      "receipt_wheel_manifest": {
+        "bytes": 651,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271/wheel.manifest.json",
+        "sha256": "4202b41edad8f74dd36997c08e70eabf4069b2c73900086dbb46adadaf0362f4"
+      },
+      "remote_intent": {
+        "bytes": 1168,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271.remote-intent.json",
+        "sha256": "46b9a838d95f4c202c147c86a310e11d375c27b1673eea2c4a209fd6f625824c"
+      },
+      "remote_journal": {
+        "bytes": 860,
+        "path": "artifacts/fusion-remote/gated-mlp-epilogue-v1-20260829T063859723199271.remote-attempts.jsonl",
+        "sha256": "98e6946419ff23fe254c4dbfcce3bd60b93c7fa9afb5f0df6c00d85298b9831b"
+      }
+    },
+    "residual-rmsnorm-01-completed": {
+      "operator_pointer": {
+        "bytes": 69,
+        "path": "/home/alp/rmsnorm-output-path.txt",
+        "sha256": "2f215b0550b80c60cf3d531512f115e2d01a0ae8087430748f0c1feca3c9dc7e"
+      },
+      "receipt_intent": {
+        "bytes": 1164,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/intent.json",
+        "sha256": "a7c9759dc7fcb2e20c8d4d34b83984ea4f0cc9eb3cfeefb608337155e0a2d2f7"
+      },
+      "receipt_journal": {
+        "bytes": 860,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/journal.jsonl",
+        "sha256": "df0c15896b973fe3e40b0b2ae254087b7e3243c1aff7d25d1c777b0f5a3f7704"
+      },
+      "receipt_plugin": {
+        "bytes": 791,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/plugin.json",
+        "sha256": "9d696f135a5e62ef622a88d85a7bb03e8fa76bddd0bf57ebf20b2eb4c1d1edc1"
+      },
+      "receipt_result": {
+        "bytes": 17237,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/result.json",
+        "sha256": "e71d39c836a3eed2b1d9c53b3ef368c83239d4815d6d2635d440005731d33649"
+      },
+      "receipt_root": {
+        "bytes": 2616,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/receipt.json",
+        "sha256": "652d699cd7debb23a5e744445b21662597913dc0aa7161121056f338ece2dc27"
+      },
+      "receipt_suite": {
+        "bytes": 5484,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/suite.json",
+        "sha256": "a318a59bca434b97d073e0ae76f827814213c0a68b0c4263b19c81f98be8f9ee"
+      },
+      "receipt_wheel_manifest": {
+        "bytes": 651,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545/wheel.manifest.json",
+        "sha256": "18fd89bbe19f734f5a6d32ce700a8b17f9b9b1c29d383372ab6fc7ebd0d741e4"
+      },
+      "remote_intent": {
+        "bytes": 1164,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545.remote-intent.json",
+        "sha256": "a7c9759dc7fcb2e20c8d4d34b83984ea4f0cc9eb3cfeefb608337155e0a2d2f7"
+      },
+      "remote_journal": {
+        "bytes": 860,
+        "path": "artifacts/fusion-remote/residual-rmsnorm-v1-20260829T075248920315545.remote-attempts.jsonl",
+        "sha256": "df0c15896b973fe3e40b0b2ae254087b7e3243c1aff7d25d1c777b0f5a3f7704"
+      }
+    }
+  },
+  "methodology": {
+    "analysis_status": "post_hoc_exploratory",
+    "claim_classification": {
+      "analysis": "exploratory",
+      "completed_correctness_timing_compile_metrics": "supported_only_as_measured_fact",
+      "fusion": "not_tested",
+      "performance": "descriptive",
+      "superiority": "not_tested"
+    },
+    "cost_status": "unknown",
+    "design": "four retained remote attempts analyzed after execution",
+    "fusion_claim": false,
+    "performance_inference": "not_tested",
+    "provider_physical_attempts": null,
+    "publication_eligible": false,
+    "report_status": "not_created",
+    "superiority_claim": false
+  },
+  "publication": {
+    "raw": {
+      "compressed_bytes": 9475,
+      "compressed_sha256": "fe732172c2a8fa3698c47a5c7a8e97e6c895703c90d86a2061ddb7a11ddeec35",
+      "decompressed_bytes": 83952,
+      "decompressed_sha256": "eb91be687ba089c999a72eb8d879fdb3e844e410881e6ecfe540e8993f28957a",
+      "format": "zstd level=19, threads=1, checksum=true, content_size=false",
+      "path": "benchmarks/data/fusion-remote-exploratory.json.zst"
+    },
+    "summary": {
+      "bytes": 10727,
+      "path": "benchmarks/results/fusion-remote-exploratory-summary.json",
+      "sha256": "c3638a30812a505d721463b2c34817e18b9e68d5cd1c1f9b14d4c89714527c88"
+    }
+  },
+  "publisher": {
+    "path": "scripts/publish_fusion_remote_results.py",
+    "sha256": "880e00772f43a32a5a89db3363f32f0524d448a7d3b30cf0604189324cf41a3a"
+  },
+  "report": {
+    "path": null,
+    "status": "not_created"
+  },
+  "schema": "heliostune.fusion-remote-exploratory.manifest/1",
+  "study_id": "fusion-remote-h100-exploratory"
+}
