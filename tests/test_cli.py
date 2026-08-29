@@ -1123,7 +1123,13 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
         in output
     )
     assert "generic_local_runtime_gpu_validation: not_run" in output
-    assert "generic_remote_runtime_backend: unimplemented" in output
+    assert (
+        "generic_remote_runtime_backend: implemented for the two frozen reference templates "
+        "via Modal receipt"
+    ) in output
+    assert "generic_remote_runtime_gpu_validation: not_run" in output
+    assert "generic_remote_receipt_schema: heliostune.remote-receipt/1" in output
+    assert "generic_remote_provider_physical_attempts: not_observable" in output
     assert (
         "Schema verification alone does not claim execution, correctness, or performance" in output
     )

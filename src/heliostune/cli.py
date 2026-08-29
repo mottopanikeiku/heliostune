@@ -754,12 +754,18 @@ def _list_scope(_args: argparse.Namespace) -> int:
                 "torch==2.8.0,cuda,compute_capability>=8.0,native_bf16,inductor",
             ),
             ("generic_local_runtime_gpu_validation", "not_run"),
-            ("generic_remote_runtime_backend", "unimplemented"),
+            (
+                "generic_remote_runtime_backend",
+                "implemented for the two frozen reference templates via Modal receipt",
+            ),
+            ("generic_remote_runtime_gpu_validation", "not_run"),
+            ("generic_remote_receipt_schema", "heliostune.remote-receipt/1"),
+            ("generic_remote_provider_physical_attempts", "not_observable"),
             (
                 "limitation",
                 "Schema verification alone does not claim execution, correctness, or performance. "
-                "The local runtime capability-probes each run; its CUDA path is not yet validated "
-                "on this project workstation.",
+                "Both runtimes capability-probe each run; neither CUDA path is validated on this "
+                "project workstation, and Modal receipts cannot observe provider restarts.",
             ),
         ),
     )

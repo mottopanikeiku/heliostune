@@ -164,6 +164,58 @@ Successful compilation is not evidence that operations fused. The written
 exploratory bundle is structurally verified only: it does not establish a
 performance conclusion, claim eligibility, or publication eligibility.
 
+### Remote Modal H100 execution
+
+Build and verify a fresh wheel and its adjacent supplemental manifest from a
+clean final Git `HEAD` immediately before each frozen-suite invocation. Run the
+gated MLP suite with:
+
+```text
+uv run python scripts/build_modal_wheel.py
+uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/gated-mlp-epilogue-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output "artifacts/fusion-remote/gated-mlp-epilogue-v1-$(date -u +%Y%m%dT%H%M%S%N)"
+```
+
+Run the residual RMSNorm suite with:
+
+```text
+uv run python scripts/build_modal_wheel.py
+uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/residual-rmsnorm-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output "artifacts/fusion-remote/residual-rmsnorm-v1-$(date -u +%Y%m%dT%H%M%S%N)"
+```
+
+Each invocation must use its freshly built wheel and a fresh, unique output
+directory; never reuse an output directory from an earlier run.
+
+Preflight opens the wheel, verifies ZIP and `RECORD` integrity, and
+byte-compares every packaged `heliostune` source/resource file with the clean
+`src/heliostune` tree. A manifest that agrees with a tampered wheel cannot
+replace that check. The exact verified suite, plugin, and manifest bytes are
+retained before dispatch and are the bytes written into the receipt; mutable
+input paths are not reread after spawning.
+
+The client creates descriptor-pinned, exclusive, fsynced intent and journal
+tombstones before its only authorized spawn. It uses `retries=0`, the strict
+`H100!` selector, one single-use container, blocked network and Modal-resource
+access, and a 3600-second **per-execution** timeout. A returned result is
+accepted only after strict request, suite, plugin, wheel, manifest, source,
+commit, selector, H100 hardware, environment, and `LocalExecutionResult`
+bindings are checked.
+
+The output is a `heliostune.remote-receipt/1` receipt, **not** a
+`heliostune.bundle/1` methodology bundle. Its root is published last by
+descriptor-relative staging and atomic no-replace rename. The root and strict
+verifier inventory the intent, journal, optional result envelope, retained
+suite/plugin/manifest bytes, wheel/source/commit bindings, and lifecycle state.
+Completed, failed, and capability-aborted returned results preserve their exact
+terminal outcome. A lost spawn acknowledgement, retrieval exception, timeout,
+interrupt, malformed result, or unproven cancellation is `unresolved`.
+
+Modal may physically start or restart the same input despite `retries=0`.
+Provider physical attempts are unobservable: the receipt proves only zero or
+one client-authorized spawn. Therefore 3600 seconds is not a total GPU-time
+bound, total GPU time has no stated upper bound, and actual cost is unknown.
+Attestation is `none`, `publication_eligible` is false, and the receipt makes no
+fusion or performance claim beyond the returned local observations.
+
 ### `gated_mlp_epilogue.v1`
 
 Each case declares:
