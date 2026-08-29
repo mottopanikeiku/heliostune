@@ -41,6 +41,7 @@ _EXPECTED_STUDY_REGISTRY = (
         "parhelion-v3-operator-authorized-engineering",
         "operator_authorized_engineering_protocol_deviation",
     ),
+    ("fusion-remote-h100-exploratory", "post_hoc_exploratory"),
 )
 
 
@@ -490,6 +491,31 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
         "site/parhelion-v3-engineering.html",
         "self_contained_html_report",
     )
+    fusion_raw = _compressed_json_entry(
+        repository,
+        "benchmarks/data/fusion-remote-exploratory.json.zst",
+        "heliostune.fusion-remote-exploratory.raw/1",
+        status="published_mixed_completed_unresolved",
+    )
+    fusion_summary = _json_entry(
+        repository,
+        "benchmarks/results/fusion-remote-exploratory-summary.json",
+        "heliostune.fusion-remote-exploratory.summary/1",
+        status="published_mixed_completed_unresolved",
+    )
+    fusion_manifest = _json_entry(
+        repository,
+        "benchmarks/fusion-remote-exploratory-manifest.json",
+        "heliostune.fusion-remote-exploratory.manifest/1",
+        status="published_mixed_completed_unresolved",
+    )
+    fusion_report = _file_entry(
+        repository,
+        "site/fusion-remote-exploratory.html",
+        "self_contained_html_report",
+        schema="html5",
+        status="published_mixed_completed_unresolved",
+    )
     catalog = {
         "schema_version": 1,
         "catalog_id": "heliostune-research-artifacts-1",
@@ -681,6 +707,18 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                     "final": "benchmarks/results/parhelion-v3-h200-engineering.json",
                     "report": "site/parhelion-v3-engineering.html",
                 },
+            },
+            {
+                "study_id": "fusion-remote-h100-exploratory",
+                "analysis_status": "post_hoc_exploratory",
+                "outcome_status": "mixed_completed_unresolved",
+                "measurement_schema": "heliostune.fusion-remote-exploratory.raw/1",
+                "split_design": "four retained remote attempts analyzed after execution",
+                "publication_eligible": False,
+                "manifests": [fusion_manifest],
+                "raw_artifacts": [fusion_raw],
+                "results": [fusion_summary],
+                "reports": [fusion_report],
             },
         ],
         "absent_freeze_aliases": baseline["absent_freeze_aliases"],

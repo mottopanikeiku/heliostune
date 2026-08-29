@@ -26,6 +26,7 @@ _EXPECTED_STUDY_IDS = {
     "h100-fp16-reduction-probe",
     "hopper-h100-engineering-benchmark",
     "parhelion-v3-operator-authorized-engineering",
+    "fusion-remote-h100-exploratory",
 }
 
 _EXPECTED_ARTIFACT_PATHS = {
@@ -98,6 +99,12 @@ _EXPECTED_ARTIFACT_PATHS = {
         "benchmarks/results/parhelion-v3-a100-selection.json",
         "benchmarks/results/parhelion-v3-h200-engineering.json",
         "site/parhelion-v3-engineering.html",
+    },
+    "fusion-remote-h100-exploratory": {
+        "benchmarks/data/fusion-remote-exploratory.json.zst",
+        "benchmarks/fusion-remote-exploratory-manifest.json",
+        "benchmarks/results/fusion-remote-exploratory-summary.json",
+        "site/fusion-remote-exploratory.html",
     },
 }
 _ARTIFACT_SECTIONS = (
@@ -182,10 +189,10 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
 
     assert facts == {
         "measurement_rows": 278_406,
-        "json_artifacts": 29,
-        "html_reports": 4,
+        "json_artifacts": 31,
+        "html_reports": 5,
         "file_artifacts": 10,
-        "compressed_raw_artifacts": 2,
+        "compressed_raw_artifacts": 3,
         "aliases": 7,
     }
 
@@ -223,11 +230,58 @@ def test_precision_catalog_uses_current_raw_schema_label() -> None:
     assert precision["raw_artifacts"][0]["schema"] == "h100-precision-probe-raw-v2"
 
 
+def test_fusion_remote_catalog_records_exact_publication_boundary() -> None:
+    fusion = _study(build_research_catalog(_REPO), "fusion-remote-h100-exploratory")
+
+    assert fusion["analysis_status"] == "post_hoc_exploratory"
+    assert fusion["outcome_status"] == "mixed_completed_unresolved"
+    assert fusion["publication_eligible"] is False
+    assert fusion["measurement_schema"] == "heliostune.fusion-remote-exploratory.raw/1"
+    assert fusion["raw_artifacts"] == [
+        {
+            "kind": "compressed_json_artifact",
+            "path": "benchmarks/data/fusion-remote-exploratory.json.zst",
+            "schema": "heliostune.fusion-remote-exploratory.raw/1",
+            "status": "published_mixed_completed_unresolved",
+            "compression": "zstd",
+            "compressed_bytes": 9475,
+            "compressed_sha256": (
+                "fe732172c2a8fa3698c47a5c7a8e97e6c895703c90d86a2061ddb7a11ddeec35"
+            ),
+            "uncompressed_bytes": 83952,
+            "uncompressed_sha256": (
+                "eb91be687ba089c999a72eb8d879fdb3e844e410881e6ecfe540e8993f28957a"
+            ),
+        }
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in fusion["results"]] == [
+        (
+            "benchmarks/results/fusion-remote-exploratory-summary.json",
+            "heliostune.fusion-remote-exploratory.summary/1",
+        )
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in fusion["manifests"]] == [
+        (
+            "benchmarks/fusion-remote-exploratory-manifest.json",
+            "heliostune.fusion-remote-exploratory.manifest/1",
+        )
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in fusion["reports"]] == [
+        ("site/fusion-remote-exploratory.html", "html5")
+    ]
+    assert all(
+        entry["status"] == "published_mixed_completed_unresolved"
+        for section in ("results", "manifests", "reports")
+        for entry in fusion[section]
+    )
+    assert not any(path.startswith("/home/") for path in _artifact_paths(fusion))
+
+
 def test_catalog_command_reports_compressed_raw_artifacts_separately(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert cli._verify_catalog(argparse.Namespace(catalog=_CATALOG)) == 0
-    assert "2 compressed raw artifacts" in capsys.readouterr().out
+    assert "3 compressed raw artifacts" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("study_id", sorted(_EXPECTED_STUDY_IDS))
@@ -295,6 +349,55 @@ def test_catalog_rejects_omitted_new_study_artifact(
         _study(catalog, "h100-fp16-reduction-probe")[section] = []
 
     _assert_mutation_fails(monkeypatch, omit)
+
+
+@pytest.mark.parametrize(
+    "section",
+    ["reports", "raw_artifacts", "manifests", "results"],
+)
+def test_catalog_rejects_omitted_fusion_remote_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    section: str,
+) -> None:
+    def omit(catalog: dict[str, Any]) -> None:
+        _study(catalog, "fusion-remote-h100-exploratory")[section] = []
+
+    _assert_mutation_fails(monkeypatch, omit)
+
+
+def test_catalog_rejects_fusion_remote_status_and_path_swap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def alter(catalog: dict[str, Any]) -> None:
+        fusion = _study(catalog, "fusion-remote-h100-exploratory")
+        fusion["analysis_status"] = "historical_confirmatory"
+        fusion["results"][0]["path"], fusion["manifests"][0]["path"] = (
+            fusion["manifests"][0]["path"],
+            fusion["results"][0]["path"],
+        )
+
+    _assert_mutation_fails(monkeypatch, alter)
+
+
+@pytest.mark.parametrize(
+    ("section", "digest_key"),
+    [
+        ("raw_artifacts", "compressed_sha256"),
+        ("results", "sha256"),
+        ("manifests", "sha256"),
+        ("reports", "sha256"),
+    ],
+)
+def test_catalog_rejects_fusion_remote_digest_change(
+    monkeypatch: pytest.MonkeyPatch,
+    section: str,
+    digest_key: str,
+) -> None:
+    def alter(catalog: dict[str, Any]) -> None:
+        entry = _study(catalog, "fusion-remote-h100-exploratory")[section][0]
+        entry[digest_key] = "0" * 64
+
+    _assert_mutation_fails(monkeypatch, alter)
 
 
 def test_every_registered_artifact_file_exists() -> None:
