@@ -76,10 +76,7 @@ def test_cpu_configs_are_the_exact_four_native_candidates() -> None:
 
 
 def test_cpu_entrypoint_registry_is_exact_and_immutable() -> None:
-    expected = {
-        f"heliostune_fusion_v2::residual_rmsnorm_w{warps}"
-        for warps in (4, 8, 16, 32)
-    }
+    expected = {f"heliostune_fusion_v2::residual_rmsnorm_w{warps}" for warps in (4, 8, 16, 32)}
     assert set(RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT) == expected
     assert tuple(RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT.values()) == RESIDUAL_RMSNORM_CONFIGS
     with pytest.raises(TypeError):
@@ -108,14 +105,9 @@ def test_cpu_module_import_does_not_load_gpu_dependencies() -> None:
 def test_cpu_module_has_no_gpu_imports_or_mlp_symbol() -> None:
     tree = ast.parse(CPU_SOURCE.read_text(encoding="utf-8"))
     top_level_imports = {
-        alias.name
-        for node in tree.body
-        if isinstance(node, ast.Import)
-        for alias in node.names
+        alias.name for node in tree.body if isinstance(node, ast.Import) for alias in node.names
     }
-    top_level_from_imports = {
-        node.module for node in tree.body if isinstance(node, ast.ImportFrom)
-    }
+    top_level_from_imports = {node.module for node in tree.body if isinstance(node, ast.ImportFrom)}
     assert "torch" not in top_level_imports | top_level_from_imports
     assert "triton" not in top_level_imports | top_level_from_imports
     assert "mlp" not in CPU_SOURCE.read_text(encoding="utf-8").lower()
@@ -200,7 +192,12 @@ def test_wrapped_launch_has_static_grid_shape_and_compile_constants() -> None:
     assert keywords["num_warps"].id == "num_warps"
     wrapper_warps = {
         ast.literal_eval(call.args[-1])
-        for name in ("residual_rmsnorm_w4", "residual_rmsnorm_w8", "residual_rmsnorm_w16", "residual_rmsnorm_w32")
+        for name in (
+            "residual_rmsnorm_w4",
+            "residual_rmsnorm_w8",
+            "residual_rmsnorm_w16",
+            "residual_rmsnorm_w32",
+        )
         for call in ast.walk(_function(name))
         if isinstance(call, ast.Call) and _call_name(call) == "_residual_rmsnorm"
     }

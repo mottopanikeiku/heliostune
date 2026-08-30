@@ -341,8 +341,7 @@ def test_inline_shape_applicability() -> None:
     triton = verify_suite(TRITON_RMS).suite
     native_arms = triton.arms[:4]
     expected_entrypoints = tuple(
-        f"heliostune_fusion_v2::residual_rmsnorm_w{warps}"
-        for warps in (4, 8, 16, 32)
+        f"heliostune_fusion_v2::residual_rmsnorm_w{warps}" for warps in (4, 8, 16, 32)
     )
     assert tuple(arm.entrypoint for arm in native_arms) == expected_entrypoints
     expected_constraints = [
@@ -444,10 +443,7 @@ def test_correctness_before_timing_static_plan() -> None:
 def test_executor_observation_limitation_exposed() -> None:
     for path in (MLP, TRITON_RMS):
         suite = verify_suite(path).suite
-        assert (
-            suite.executor_rule
-            == "timing_requires_retained_passing_correctness_observation"
-        )
+        assert suite.executor_rule == "timing_requires_retained_passing_correctness_observation"
         assert all(cell.stage in {"correctness", "timing"} for cell in suite.expected_cells)
         assert not any(
             "outcome" in cell.to_dict() or "passing" in cell.to_dict()
@@ -470,8 +466,7 @@ def test_plugin_suite_digest_and_path_closure(
 ) -> None:
     triton_plugin = verify_plugin(TRITON_PLUGIN)
     assert (
-        triton_plugin.sha256
-        == "ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815"
+        triton_plugin.sha256 == "ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815"
     )
     assert [suite.sha256 for suite in triton_plugin.suites] == [
         "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"

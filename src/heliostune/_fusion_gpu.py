@@ -69,7 +69,11 @@ def _validate_residual_rmsnorm_inputs(
         raise ValueError("x and residual must have shape (128, 4096)")
     if gamma.shape != (4096,):
         raise ValueError("gamma must have shape (4096,)")
-    if x.dtype != torch.bfloat16 or residual.dtype != torch.bfloat16 or gamma.dtype != torch.bfloat16:
+    if (
+        x.dtype != torch.bfloat16
+        or residual.dtype != torch.bfloat16
+        or gamma.dtype != torch.bfloat16
+    ):
         raise ValueError("x, residual, and gamma must have dtype torch.bfloat16")
     if not x.is_cuda or not residual.is_cuda or not gamma.is_cuda:
         raise ValueError("x, residual, and gamma must be CUDA tensors")

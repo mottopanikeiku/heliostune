@@ -509,9 +509,7 @@ class Capability:
 class Requirements:
     cuda: bool
     min_compute_capability: str | None
-    features: tuple[
-        Literal["tensor_cores", "fp8_tensor_cores", "int4_storage", "triton"], ...
-    ]
+    features: tuple[Literal["tensor_cores", "fp8_tensor_cores", "int4_storage", "triton"], ...]
 
     def __post_init__(self) -> None:
         cuda = exact_bool(self.cuda, context="requirements cuda")
