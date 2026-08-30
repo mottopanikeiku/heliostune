@@ -8,7 +8,7 @@ A measured study of retrieval, Bayesian adaptation, and source-to-target launch 
 
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
 
 ## Result
 
@@ -133,13 +133,25 @@ uv run heliostune list-scope
 ```
 
 These commands validate declarations; they do not execute a backend or establish
-correctness/performance. Separate local and Modal executors support exactly the
-two frozen fusion templates. Their first H100 results are published as
-[exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json):
-both completed correctness and timing, but no fusion, superiority, provider
-attempt-count, cost, attestation, or publication-eligibility claim is made.
-Attention, KV-cache, MoE, quantized-linear, and FP8 remain schema vocabulary and
-staged suite candidates rather than implemented backends.
+correctness/performance. Separate local and Modal executors continue to support
+exactly the two frozen reference templates, and their existing
+[exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json)
+are unchanged. Both completed correctness and timing, but no fusion,
+superiority, provider attempt-count, cost, attestation, or
+publication-eligibility claim is made.
+
+A separate `residual_rmsnorm_triton.v1` suite is now structurally available at
+an immutable new path. It freezes one BF16 `[128, 4096]` residual RMSNorm case,
+an eager reference, an Inductor comparator, and four native candidates with
+`block_size=4096`, `num_warps=4|8|16|32`, and `num_stages=1`. The native source
+uses the `heliostune_fusion_v2::residual_rmsnorm` namespace, but it is not
+integrated with either executor and has not been GPU-compiled, correctness
+checked, profiled, or timed. All capability records remain unprobed. Any future
+work must pass compile/resource, correctness, one-kernel profile, and timing
+gates in that order. Native gated MLP is absent and deferred after an
+unfavorable feasibility audit. Attention, KV-cache, MoE, quantized-linear, and
+FP8 remain schema vocabulary and staged suite candidates rather than
+implemented backends.
 
 Native zstandard inspection needs no external `zstd` executable:
 
