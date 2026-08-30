@@ -400,10 +400,15 @@ correctness, and performance observation. `list-scope` prints the closed domain
 and dtype vocabularies, the two initial template IDs, and the current backend
 status.
 
-These commands do not import plugin implementation code, run a capability
-probe, dispatch a kernel, validate numerical outputs, collect timing, verify a
-generic EvidenceBundle, or support a performance claim. Current generic local
-and remote backends for plugin/suite v1 are unimplemented.
+The declaration commands do not execute kernels or establish correctness or
+performance. Separate local and Modal executors now support exactly the two
+frozen reference templates. Their first H100 receipts are published as
+[post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json):
+both suites completed correctness and timing, but plugin capability declarations
+remain unprobed, the candidate/reference arithmetic is identical apart from
+full-graph compilation, no fusion claim is made, and receipts are not
+publication-eligible methodology bundles. No generic executor exists yet for the
+staged attention, KV-cache, MoE, quantized-linear, or FP8 domains.
 
 For the wider protocol, evidence, claim and legacy rules, see
 [METHODOLOGY.md](METHODOLOGY.md). For contributor requirements and promotion

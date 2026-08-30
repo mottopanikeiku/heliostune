@@ -1122,12 +1122,19 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
         "generic_local_runtime_backend: implemented for the two frozen reference templates"
         in output
     )
-    assert "generic_local_runtime_gpu_validation: not_run" in output
+    assert (
+        "generic_local_runtime_gpu_validation: validated remotely on H100 for both frozen templates"
+    ) in output
     assert (
         "generic_remote_runtime_backend: implemented for the two frozen reference templates "
         "via Modal receipt"
     ) in output
-    assert "generic_remote_runtime_gpu_validation: not_run" in output
+    assert (
+        "generic_remote_runtime_gpu_validation: two completed exploratory H100 receipts" in output
+    )
+    assert (
+        "generic_remote_runtime_evidence: benchmarks/results/fusion-remote-exploratory-summary.json"
+    ) in output
     assert "generic_remote_receipt_schema: heliostune.remote-receipt/1" in output
     assert "generic_remote_provider_physical_attempts: not_observable" in output
     assert (
