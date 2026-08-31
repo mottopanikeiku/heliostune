@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import pickle
+import struct
 import subprocess
 import sys
 from contextlib import nullcontext
@@ -23,6 +24,7 @@ from heliostune.fusion_execution_registry import (
     fusion_execution_spec,
 )
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult, TensorMaterialization
+from heliostune.native_fusion_executor import NativeFusionExecutionResult
 from heliostune.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
@@ -233,7 +235,7 @@ def _rewrap(transport_json: str, **updates: object) -> str:
     return canonical_json_line_bytes(wrapper).decode("utf-8")
 
 
-def _transport_for_bytes(payload: bytes) -> str:
+def _transport_for_bytes(payload: bytes, *, encoding: str = "zstd-base64") -> str:
     compressed = zstandard.ZstdCompressor(
         level=19,
         threads=0,
@@ -244,12 +246,451 @@ def _transport_for_bytes(payload: bytes) -> str:
     return canonical_json_line_bytes(
         {
             "schema": TRANSPORT_SCHEMA,
-            "encoding": "zstd-base64",
+            "encoding": encoding,
             "payload": base64.b64encode(compressed).decode("ascii"),
             "uncompressed_bytes": len(payload),
             "uncompressed_sha256": sha256_bytes(payload),
         }
     ).decode("utf-8")
+
+
+def _compact_root(payload: bytes) -> dict[str, object]:
+    value = remote._compact_decode(payload)
+    assert type(value) is dict
+    return value
+
+
+def _compact_bytes(root: dict[str, object]) -> bytes:
+    output = bytearray(remote._COMPACT_MAGIC)
+    remote._compact_write_value(output, root)
+    return bytes(output)
+
+
+def _compact_tag_count(value: object, tag: str) -> int:
+    if type(value) is dict:
+        mapping = dict(value)
+        return int(tag in mapping) + sum(_compact_tag_count(item, tag) for item in mapping.values())
+    if type(value) is list:
+        return sum(_compact_tag_count(item, tag) for item in value)
+    return 0
+
+
+def _fixture_digest(label: str) -> str:
+    return hashlib.sha256(label.encode()).hexdigest()
+
+
+def _fixture_float32(value: float) -> float:
+    return float(struct.unpack(">f", struct.pack(">f", value))[0])
+
+
+def _native_completed_envelope(tmp_path: Path) -> RemoteResultEnvelope:
+    intent, suite_bytes, _, _ = _native_intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    native_arms = (
+        "rmsnorm-triton-w4",
+        "rmsnorm-triton-w8",
+        "rmsnorm-triton-w16",
+        "rmsnorm-triton-w32",
+    )
+    eager_arm = "rmsnorm-eager-reference"
+    comparator_arm = "rmsnorm-inductor-comparator"
+    runtime_arms = (*native_arms, eager_arm, comparator_arm)
+    compile_arms = (*native_arms, comparator_arm)
+    entrypoints = {
+        **{
+            arm: f"heliostune_fusion_v2::residual_rmsnorm_w{arm.rsplit('w', 1)[1]}"
+            for arm in native_arms
+        },
+        eager_arm: "reference_template.residual_rmsnorm_reference",
+        comparator_arm: "reference_template.residual_rmsnorm_candidate",
+    }
+    configs = {
+        arm: {"block_size": 4096, "num_warps": warps, "num_stages": 1}
+        for arm, warps in zip(native_arms, (4, 8, 16, 32), strict=True)
+    }
+    tensor_hashes = {
+        tensor_id: _fixture_digest(f"materialization:{tensor_id}")
+        for tensor_id in ("input", "residual", "gamma")
+    }
+    materialization = [
+        {
+            "suite_sha256": intent.suite_sha256,
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "input_seed": 17,
+            "tensor_order": ["input", "residual", "gamma"],
+            "tensors": [
+                {
+                    "tensor_id": tensor_id,
+                    "role": role,
+                    "shape": shape,
+                    "draw": "normal_0_1_fp32_cpu",
+                    "normal_scale": scale,
+                    "normal_offset": offset,
+                    "cpu_dtype": "float32",
+                    "storage_dtype": "bfloat16",
+                    "device": "cuda:0",
+                    "contiguous": True,
+                    "alignment_bytes": 16,
+                    "alignment_satisfied": True,
+                    "storage_sha256": tensor_hashes[tensor_id],
+                }
+                for tensor_id, role, shape, scale, offset in (
+                    ("input", "input", [128, 4096], 1.0, 0.0),
+                    ("residual", "input", [128, 4096], 1.0, 0.0),
+                    ("gamma", "parameter", [4096], 0.02, 1.0),
+                )
+            ],
+        }
+        for arm in runtime_arms
+    ]
+    observations: list[dict[str, object]] = []
+    attempts: list[dict[str, object]] = []
+    for arm_index, arm in enumerate(runtime_arms):
+        correctness_key = hashlib.sha256(
+            "\0".join(
+                (
+                    "heliostune.correctness-key/1",
+                    intent.suite_sha256,
+                    "rmsnorm-case-001",
+                    arm,
+                    "17",
+                    "bf16-fp32-bf16",
+                    "highest|tf32=0|bf16rr=0|fp16rr=0|fp16acc=0",
+                )
+            ).encode()
+        ).hexdigest()
+        samples = [
+            _fixture_float32(0.020 + (0.004 * arm_index) + (sample * 0.00001))
+            for sample in range(50)
+        ]
+        for stage in ("correctness", "timing"):
+            cell_id = f"{arm}-{stage}"
+            observations.append(
+                {
+                    "cell_id": cell_id,
+                    "case_id": "rmsnorm-case-001",
+                    "arm_id": arm,
+                    "stage": stage,
+                    "status": "passed",
+                    "correctness": (
+                        {
+                            "status": "passed",
+                            "correctness_key": correctness_key,
+                            "failure_kind": None,
+                            "message": None,
+                            "output": {
+                                "shape": [128, 4096],
+                                "device": "cuda:0",
+                                "dtype": "torch.bfloat16",
+                                "layout": "torch.strided",
+                                "contiguous": True,
+                            },
+                            "input_storage_unchanged": True,
+                            "output_disjoint": True,
+                            "finite": True,
+                            "close": True,
+                            "max_abs_error": _fixture_float32(0.00390625),
+                        }
+                        if stage == "correctness"
+                        else None
+                    ),
+                    "timing": (
+                        {
+                            "status": "passed",
+                            "correctness_key": correctness_key,
+                            "failure_kind": None,
+                            "message": None,
+                            "warmups": 10,
+                            "repetitions": 50,
+                            "samples_ms": samples,
+                            "median_ms": (samples[24] + samples[25]) / 2,
+                        }
+                        if stage == "timing"
+                        else None
+                    ),
+                }
+            )
+            attempt_id = len(attempts) + 1
+            attempts.extend(
+                (
+                    {
+                        "attempt_id": attempt_id,
+                        "cell_id": cell_id,
+                        "stage": stage,
+                        "status": "running",
+                        "from_state": "pending",
+                        "to_state": "running",
+                        "reason": None,
+                    },
+                    {
+                        "attempt_id": attempt_id + 1,
+                        "cell_id": cell_id,
+                        "stage": stage,
+                        "status": "success",
+                        "from_state": "running",
+                        "to_state": "passed",
+                        "reason": None,
+                    },
+                )
+            )
+    compile_evidence: dict[str, dict[str, object]] = {}
+    for arm in compile_arms:
+        native_arm = arm in native_arms
+        compile_evidence[f"{arm}-correctness"] = {
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "entrypoint": entrypoints[arm],
+            "backend_kind": "native_triton" if native_arm else "inductor",
+            "status": "compiled",
+            "error": None,
+            "compile_ns": 813_000_000 + len(compile_evidence),
+            "backend_invoked": True,
+            "fullgraph": not native_arm,
+            "dynamic": False,
+            "mode": "native_triton" if native_arm else "default",
+            "callable_distinct": True,
+            "eager_fallback": False,
+            "kernel_name": (f"residual_rmsnorm_{arm.rsplit('w', 1)[1]}" if native_arm else None),
+            "kernel_hash": _fixture_digest(f"kernel:{arm}") if native_arm else None,
+            "config": configs[arm] if native_arm else None,
+        }
+    resource_evidence: dict[str, dict[str, object]] = {}
+    profile_evidence: dict[str, dict[str, object]] = {}
+    validation_evidence: dict[str, dict[str, object]] = {}
+    for arm in native_arms:
+        cell_id = f"{arm}-correctness"
+        kernel_name = f"residual_rmsnorm_{arm.rsplit('w', 1)[1]}"
+        kernel_hash = _fixture_digest(f"kernel:{arm}")
+        resource_evidence[cell_id] = {
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "entrypoint": entrypoints[arm],
+            "status": "compiled",
+            "error": None,
+            "kernel_name": kernel_name,
+            "kernel_hash": kernel_hash,
+            "target": {"backend": "cuda", "arch": "90", "warp_size": 32},
+            "metadata": {
+                "shared": 2048,
+                "num_warps": configs[arm]["num_warps"],
+                "num_ctas": 1,
+                "num_stages": 1,
+            },
+            "n_regs": 56,
+            "n_spills": 0,
+            "n_max_threads": 1024,
+            "asm_stages": [
+                {
+                    "stage": "cubin",
+                    "bytes": 18_000,
+                    "sha256": _fixture_digest(f"asm:{arm}:cubin"),
+                }
+            ],
+            "resource_gate_passed": True,
+        }
+        event_names = [kernel_name]
+        profile_evidence[cell_id] = {
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "entrypoint": entrypoints[arm],
+            "status": "profiled",
+            "error": None,
+            "method": "torch.profiler.cuda_events",
+            "warmed": True,
+            "expected_kernel_name": kernel_name,
+            "expected_kernel_hash": kernel_hash,
+            "config": configs[arm],
+            "invocation_count": 1,
+            "cuda_event_count": 1,
+            "cuda_event_names_sample": event_names,
+            "cuda_event_names_sha256": _fixture_digest("\0".join(event_names)),
+            "exact_name_match_count": 1,
+            "output_revalidated": True,
+            "inputs_revalidated": True,
+            "one_kernel_gate_passed": True,
+        }
+        validation_evidence[cell_id] = {
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "entrypoint": entrypoints[arm],
+            "status": "validated",
+            "error": None,
+            "probes": [
+                {
+                    "id": probe,
+                    "passed": True,
+                    "deterministic": True,
+                    "inputs_unchanged": True,
+                    "output_disjoint": True,
+                    "value_class_match": True,
+                    "sign_match": True,
+                    "finite_close": True,
+                    "max_abs_error": _fixture_float32(error),
+                }
+                for probe, error in (
+                    ("zeros", 0.0),
+                    ("cancellation", 0.001953125),
+                    ("overflow", 0.00390625),
+                )
+            ],
+            "validation_gate_passed": True,
+        }
+    stage_outcomes = {
+        f"{arm}-correctness": {
+            "case_id": "rmsnorm-case-001",
+            "arm_id": arm,
+            "entrypoint": entrypoints[arm],
+            "backend_kind": (
+                "native_triton"
+                if arm in native_arms
+                else "eager"
+                if arm == eager_arm
+                else "inductor"
+            ),
+            "status": "completed",
+            "failure_kind": None,
+            "error": None,
+            "correctness_passed": True,
+            "resource_passed": True if arm in native_arms else None,
+            "profile_passed": True if arm in native_arms else None,
+            "validation_passed": True if arm in native_arms else None,
+            "timing_allowed": True,
+        }
+        for arm in runtime_arms
+    }
+    environment = {
+        "schema": "heliostune.local-environment/2",
+        "python": "3.11.14",
+        "implementation": "CPython",
+        "platform": "Linux-6.8.0-x86_64",
+        "torch_version": "2.8.0+cu128",
+        "triton_version": "3.4.0",
+        "cuda_version": "12.8",
+        "rocm_version": None,
+        "device_index": 0,
+        "device_name": "NVIDIA H100 80GB HBM3",
+        "compute_capability": [9, 0],
+        "precision_policy": {
+            "float32_matmul_precision": "highest",
+            "allow_tf32": False,
+            "allow_bf16_reduced_precision_reduction": False,
+            "allow_fp16_reduced_precision_reduction": False,
+            "allow_fp16_accumulation": False,
+        },
+        "autocast_policy": {
+            "device_type": "cuda",
+            "enabled": False,
+            "dtype": None,
+            "cache_enabled": None,
+        },
+        "backend_invoked": True,
+        "fusion_claim": False,
+    }
+    package_dir = ROOT / "src/heliostune"
+    package_sources = source_entries(package_dir)
+    source_names = (
+        "fusion_kernels.py",
+        "_fusion_gpu.py",
+        "native_fusion_executor.py",
+        "local_executor.py",
+    )
+    executor_sources = {
+        "schema": "heliostune.executor-sources/1",
+        "package_source_sha256": source_digest(package_sources),
+        "package_source_count": len(package_sources),
+        "sources": [
+            {
+                "path": name,
+                "bytes": len((package_dir / name).read_bytes()),
+                "sha256": sha256_bytes((package_dir / name).read_bytes()),
+            }
+            for name in source_names
+        ],
+    }
+    cell_ids = [f"{arm}-{stage}" for arm in runtime_arms for stage in ("correctness", "timing")]
+    result = {
+        "schema": "heliostune.local_executor/2",
+        "verified_suite_path": intent.suite_path,
+        "verified_suite_sha256": intent.suite_sha256,
+        "suite_id": "residual-rmsnorm-triton",
+        "capability": {
+            "available": True,
+            "reasons": [],
+            "torch_version": "2.8.0+cu128",
+            "cuda_version": "12.8",
+            "rocm_version": None,
+            "device_index": 0,
+            "device_name": "NVIDIA H100 80GB HBM3",
+            "compute_capability": [9, 0],
+            "native_bf16": True,
+            "inductor_available": True,
+            "allocation_succeeded": True,
+            "detail": None,
+        },
+        "materialization": materialization,
+        "observations": observations,
+        "attempts": attempts,
+        "environment": environment,
+        "stage_outcomes": stage_outcomes,
+        "compile_evidence": compile_evidence,
+        "resource_evidence": resource_evidence,
+        "profile_evidence": profile_evidence,
+        "validation_evidence": validation_evidence,
+        "executor_sources": executor_sources,
+        "summary": {
+            "expected_cell_ids": cell_ids,
+            "terminal_cell_ids": cell_ids,
+            "passed": 12,
+            "failed": 0,
+            "blocked": 0,
+            "all_cells_terminal": True,
+            "counts": {
+                "stage_completed": 6,
+                "stage_failed": 0,
+                "stage_blocked": 0,
+                "compile_compiled": 5,
+                "compile_failed": 0,
+                "compile_blocked": 0,
+                "resource_passed": 4,
+                "resource_failed": 0,
+                "resource_blocked": 0,
+                "profile_passed": 4,
+                "profile_failed": 0,
+                "profile_blocked": 0,
+                "validation_passed": 4,
+                "validation_failed": 0,
+                "validation_blocked": 0,
+            },
+            "outcome": "completed",
+            "fusion_claim": False,
+        },
+        "outcome": "completed",
+    }
+    parsed_result = NativeFusionExecutionResult.from_dict(
+        result,
+        verified_suite_path=intent.suite_path,
+        verified_suite_sha256=intent.suite_sha256,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert parsed_result.to_dict() == result
+    return RemoteResultEnvelope(
+        request_digest=request_digest,
+        suite_path=intent.suite_path,
+        suite_sha256=intent.suite_sha256,
+        plugin_path=intent.plugin_path,
+        plugin_sha256=intent.plugin_sha256,
+        wheel_filename=intent.wheel_filename,
+        wheel_sha256=intent.wheel_sha256,
+        manifest_sha256=intent.manifest_sha256,
+        head_commit=intent.head_commit,
+        source_sha256=intent.source_sha256,
+        gpu=intent.gpu,
+        gpu_selector=intent.gpu_selector,
+        hardware=_hardware(torch_version="2.8.0+cu128"),
+        environment=parsed_result.environment,
+        result=parsed_result.to_dict(),
+    )
 
 
 def _failed_compile_result(
@@ -532,6 +973,303 @@ def test_realistic_completed_four_cell_transport_is_deterministic_and_inline(
     assert RemoteResultEnvelope.from_transport_json(transport) == envelope
 
 
+def test_native_completed_transport_uses_compact_fallback_with_margin(tmp_path: Path) -> None:
+    envelope = _native_completed_envelope(tmp_path)
+    envelope_bytes = envelope.to_json().encode("utf-8")
+    legacy = _transport_for_bytes(envelope_bytes)
+    legacy_wrapper = json.loads(legacy)
+    assert type(legacy_wrapper) is dict
+    legacy_frame = base64.b64decode(str(legacy_wrapper["payload"]), validate=True)
+    assert zstandard.ZstdDecompressor().decompress(legacy_frame) == envelope_bytes
+
+    transport = envelope.to_transport_json()
+    wrapper = json.loads(transport)
+    assert type(wrapper) is dict
+    compact_size = len(transport.encode("utf-8"))
+    legacy_size = len(legacy.encode("utf-8"))
+    packed_size = int(wrapper["uncompressed_bytes"])
+    serialized_size = len(pickle.dumps(transport, protocol=4))
+    margin_limit = (REMOTE_RESULT_TRANSPORT_MAX_BYTES * 9) // 10
+    assert legacy_size > REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert packed_size <= REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    assert compact_size <= margin_limit
+    assert serialized_size <= margin_limit
+    assert wrapper["encoding"] == "zstd-base64-compact-v1"
+    assert transport == envelope.to_transport_json()
+    assert RemoteResultEnvelope.from_transport_json(transport) == envelope
+
+    intent, suite_bytes, _, _ = _native_intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    assert request_digest == envelope.request_digest
+    parsed_envelope, parsed_result = validate_remote_result(
+        transport,
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert parsed_envelope == envelope
+    assert isinstance(parsed_result, NativeFusionExecutionResult)
+    assert parsed_result.to_dict() == envelope.result
+    assert parsed_envelope.result == parsed_result.to_dict()
+
+    result = envelope.result
+    assert type(result) is dict
+    assert len(result["materialization"]) == 6
+    assert len(result["observations"]) == 12
+    assert len(result["attempts"]) == 24
+    assert len(result["stage_outcomes"]) == 6
+    assert len(result["compile_evidence"]) == 5
+    assert len(result["resource_evidence"]) == 4
+    assert len(result["validation_evidence"]) == 4
+    assert len(result["profile_evidence"]) == 4
+    compact_frame = base64.b64decode(str(wrapper["payload"]), validate=True)
+    packed = zstandard.ZstdDecompressor().decompress(compact_frame)
+    assert len(packed) == packed_size
+    compact_root = _compact_root(packed)
+    assert _compact_tag_count(compact_root, "$f4") == 6
+    assert _compact_tag_count(compact_root, "$f8") == 0
+
+
+def test_compact_uint64_codec_is_bounded_canonical_and_rejects_continuation_bomb() -> None:
+    encoded_max = bytearray()
+    remote._compact_write_uint(encoded_max, (1 << 64) - 1)
+    assert bytes(encoded_max) == (b"\xff" * 9) + b"\x01"
+    assert remote._compact_read_uint(bytes(encoded_max), 0) == ((1 << 64) - 1, 10)
+
+    for unsupported in (-1, 1 << 64):
+        output = bytearray()
+        with pytest.raises(SchemaError, match="outside the uint64 range"):
+            remote._compact_write_uint(output, unsupported)
+        assert output == b""
+
+    for supported in (-(1 << 63), (1 << 63) - 1):
+        output = bytearray()
+        remote._compact_write_value(output, supported)
+        decoded, offset = remote._compact_read_value(bytes(output), 0)
+        assert (decoded, offset) == (supported, len(output))
+
+    for unsupported in (-(1 << 63) - 1, 1 << 63):
+        output = bytearray()
+        with pytest.raises(SchemaError, match="outside the int64 range"):
+            remote._compact_write_value(output, unsupported)
+        assert output == b""
+
+    for malformed, match in (
+        (b"\x80\x00", "noncanonical integer"),
+        ((b"\xff" * 9) + b"\x00", "noncanonical integer"),
+        ((b"\xff" * 9) + b"\x02", "outside the uint64 range"),
+        ((b"\xff" * 10), "outside the uint64 range"),
+    ):
+        with pytest.raises(SchemaError, match=match):
+            remote._compact_read_uint(malformed, 0)
+
+    continuation_count = REMOTE_RESULT_ENVELOPE_MAX_BYTES - len(remote._COMPACT_MAGIC) - 1
+    packed = remote._COMPACT_MAGIC + b"\x07" + (b"\xff" * continuation_count)
+    transport = _transport_for_bytes(packed, encoding="zstd-base64-compact-v1")
+    wrapper = json.loads(transport)
+    assert len(packed) == REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    assert int(wrapper["uncompressed_bytes"]) == REMOTE_RESULT_ENVELOPE_MAX_BYTES
+    assert len(transport.encode("utf-8")) <= (REMOTE_RESULT_TRANSPORT_MAX_BYTES * 9) // 10
+    with pytest.raises(SchemaError, match="outside the uint64 range"):
+        RemoteResultEnvelope.from_transport_json(transport)
+
+
+def test_compact_float64_fallback_and_exact_digest_whitelist(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    envelope = replace(
+        base,
+        result={
+            "samples_ms": [0.1],
+            "digest": "a" * 64,
+            "arbitrary_sha256": "b" * 64,
+            "sha256": "c" * 64,
+        },
+    )
+    compact = remote._compact_envelope_bytes(envelope.to_dict())
+    compact_root = _compact_root(compact)
+    packed_envelope = compact_root["envelope"]
+    assert type(packed_envelope) is dict
+    packed_result = packed_envelope["result"]
+    assert type(packed_result) is dict
+
+    assert set(packed_result["samples_ms"]) == {"$f8"}
+    assert packed_result["digest"] == "a" * 64
+    assert packed_result["arbitrary_sha256"] == "b" * 64
+    sha_tag = packed_result["sha256"]
+    assert type(sha_tag) is dict
+    assert set(sha_tag) == {"$h"}
+    assert sha_tag["$h"] == bytes.fromhex("c" * 64)
+    assert remote._compact_unpack_value(packed_envelope) == envelope.to_dict()
+    transport = _transport_for_bytes(compact, encoding="zstd-base64-compact-v1")
+    with pytest.raises(SchemaError, match="canonical encoding"):
+        RemoteResultEnvelope.from_transport_json(transport)
+
+
+def test_compact_rejects_malformed_ambiguous_and_colliding_tags(tmp_path: Path) -> None:
+    envelope = _native_completed_envelope(tmp_path)
+    compact = remote._compact_envelope_bytes(envelope.to_dict())
+    root = _compact_root(compact)
+    packed_envelope = root["envelope"]
+    assert type(packed_envelope) is dict
+    digest_mapping = packed_envelope["request_digest"]
+    assert type(digest_mapping) is dict
+    digest_tag = digest_mapping["$h"]
+    assert type(digest_tag) is bytes
+
+    malformed_roots: list[tuple[dict[str, object], str]] = []
+    wrong_length = _compact_root(compact)
+    wrong_length_envelope = wrong_length["envelope"]
+    assert type(wrong_length_envelope) is dict
+    wrong_length_envelope["request_digest"] = {"$h": b"\x00"}
+    malformed_roots.append((wrong_length, "wrong byte length"))
+    wrong_type = _compact_root(compact)
+    wrong_type_envelope = wrong_type["envelope"]
+    assert type(wrong_type_envelope) is dict
+    wrong_type_envelope["request_digest"] = {"$h": "not-bytes"}
+    malformed_roots.append((wrong_type, "wrong byte length"))
+    ambiguous = _compact_root(compact)
+    ambiguous_envelope = ambiguous["envelope"]
+    assert type(ambiguous_envelope) is dict
+    ambiguous_envelope["request_digest"] = {"$h": digest_tag, "$f4": b""}
+    malformed_roots.append((ambiguous, "ambiguous tag"))
+    wrong_context = _compact_root(compact)
+    wrong_context_envelope = wrong_context["envelope"]
+    assert type(wrong_context_envelope) is dict
+    wrong_context_result = wrong_context_envelope["result"]
+    assert type(wrong_context_result) is dict
+    wrong_context_result["ordinary"] = {"$h": digest_tag}
+    malformed_roots.append((wrong_context, "not valid for this field"))
+    wrong_float_length = _compact_root(compact)
+    wrong_float_envelope = wrong_float_length["envelope"]
+    assert type(wrong_float_envelope) is dict
+    wrong_float_result = wrong_float_envelope["result"]
+    assert type(wrong_float_result) is dict
+    wrong_float_observations = wrong_float_result["observations"]
+    assert type(wrong_float_observations) is list
+    timing = next(
+        item["timing"]
+        for item in wrong_float_observations
+        if type(item) is dict and item["timing"] is not None
+    )
+    assert type(timing) is dict
+    timing["samples_ms"] = {"$f4": b"\x00"}
+    malformed_roots.append((wrong_float_length, "wrong decoded byte length"))
+
+    for malformed, match in malformed_roots:
+        with pytest.raises(SchemaError, match=match):
+            RemoteResultEnvelope.from_transport_json(
+                _transport_for_bytes(
+                    _compact_bytes(malformed),
+                    encoding="zstd-base64-compact-v1",
+                )
+            )
+
+    collision = envelope.to_dict()
+    assert isinstance(collision["result"], dict)
+    collision["result"]["collision"] = {"$h": digest_tag}
+    with pytest.raises(SchemaError, match="reserved tag"):
+        remote._compact_envelope_bytes(collision)
+    with pytest.raises(SchemaError, match="finite floats"):
+        remote._compact_envelope_bytes(
+            {**envelope.to_dict(), "result": {"samples_ms": [float("inf")]}}
+        )
+
+
+def test_compact_rejects_noncanonical_float_width_binary_zstd_and_wrapper(
+    tmp_path: Path,
+) -> None:
+    envelope = _native_completed_envelope(tmp_path)
+    compact = remote._compact_envelope_bytes(envelope.to_dict())
+    transport = _transport_for_bytes(compact, encoding="zstd-base64-compact-v1")
+    wrapper = json.loads(transport)
+    assert type(wrapper) is dict
+
+    root = _compact_root(compact)
+    packed_envelope = root["envelope"]
+    assert type(packed_envelope) is dict
+    packed_result = packed_envelope["result"]
+    assert type(packed_result) is dict
+    observations = packed_result["observations"]
+    assert type(observations) is list
+    timing = next(
+        item["timing"] for item in observations if type(item) is dict and item["timing"] is not None
+    )
+    assert type(timing) is dict
+    packed_samples = timing["samples_ms"]
+    assert type(packed_samples) is dict
+    raw_float32 = packed_samples["$f4"]
+    assert type(raw_float32) is bytes
+    float32_values = struct.unpack(f">{len(raw_float32) // 4}f", raw_float32)
+    float64_raw = struct.pack(f">{len(float32_values)}d", *float32_values)
+    timing["samples_ms"] = {"$f8": float64_raw}
+    nonminimal = _compact_bytes(root)
+    with pytest.raises(SchemaError, match="canonical compact form"):
+        RemoteResultEnvelope.from_transport_json(
+            _transport_for_bytes(nonminimal, encoding="zstd-base64-compact-v1")
+        )
+
+    with pytest.raises(SchemaError, match="binary magic"):
+        RemoteResultEnvelope.from_transport_json(
+            _transport_for_bytes(
+                compact.removeprefix(remote._COMPACT_MAGIC),
+                encoding="zstd-base64-compact-v1",
+            )
+        )
+
+    with pytest.raises(SchemaError, match="trailing bytes"):
+        RemoteResultEnvelope.from_transport_json(
+            _transport_for_bytes(
+                compact + b"\x00",
+                encoding="zstd-base64-compact-v1",
+            )
+        )
+
+    noncanonical_frame = zstandard.ZstdCompressor(
+        level=1,
+        write_checksum=False,
+        write_content_size=True,
+        write_dict_id=False,
+    ).compress(compact)
+    with pytest.raises(SchemaError, match="canonical zstd frame"):
+        RemoteResultEnvelope.from_transport_json(
+            _rewrap(
+                transport,
+                payload=base64.b64encode(noncanonical_frame).decode("ascii"),
+            )
+        )
+
+    with pytest.raises(SchemaError, match="digest does not match"):
+        RemoteResultEnvelope.from_transport_json(_rewrap(transport, uncompressed_sha256="0" * 64))
+    with pytest.raises(SchemaError, match="byte count"):
+        RemoteResultEnvelope.from_transport_json(
+            _rewrap(
+                transport,
+                uncompressed_bytes=int(wrapper["uncompressed_bytes"]) + 1,
+            )
+        )
+    frame = base64.b64decode(str(wrapper["payload"]), validate=True)
+    with pytest.raises(SchemaError, match="one bounded zstd frame"):
+        RemoteResultEnvelope.from_transport_json(
+            _rewrap(
+                transport,
+                payload=base64.b64encode(frame + b"trailing").decode("ascii"),
+            )
+        )
+
+
+def test_legacy_transport_wrapper_bytes_are_unchanged(tmp_path: Path) -> None:
+    intent, suite_bytes, _, _ = _intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    envelope = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
+    expected = _transport_for_bytes(envelope.to_json().encode("utf-8"))
+
+    assert envelope.to_transport_json() == expected
+    assert json.loads(expected)["encoding"] == "zstd-base64"
+    assert RemoteResultEnvelope.from_transport_json(expected) == envelope
+
+
 def test_transport_freezes_exact_utf8_boundary_and_bounded_error(tmp_path: Path) -> None:
     intent, suite_bytes, _, _ = _intent(tmp_path)
     intent = replace(intent, output_path="/tmp/heliostune-transport-boundary")
@@ -539,16 +1277,16 @@ def test_transport_freezes_exact_utf8_boundary_and_bounded_error(tmp_path: Path)
     base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
     entropy = "".join(hashlib.sha256(str(index).encode()).hexdigest() for index in range(1000))
 
-    at_limit = replace(base, result={"padding": entropy[:6609]}).to_transport_json()
+    at_limit = replace(base, result={"padding": entropy[:7080]}).to_transport_json()
 
     assert len(pickle.dumps(at_limit, protocol=4)) < 8 * 1024
-    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_TRANSPORT_MAX_BYTES
-    assert RemoteResultEnvelope.from_transport_json(at_limit).result == {"padding": entropy[:6609]}
+    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_TRANSPORT_MAX_BYTES - 1
+    assert RemoteResultEnvelope.from_transport_json(at_limit).result == {"padding": entropy[:7080]}
     with pytest.raises(SchemaError, match="inline limit") as caught:
-        replace(base, result={"padding": entropy[:6614]}).to_transport_json()
+        replace(base, result={"padding": entropy[:7081]}).to_transport_json()
     assert len(str(caught.value).encode("utf-8")) < 128
     with pytest.raises(SchemaError, match="inline limit"):
-        RemoteResultEnvelope.from_transport_json(at_limit + "x")
+        RemoteResultEnvelope.from_transport_json(at_limit + "xx")
 
 
 @pytest.mark.parametrize(
