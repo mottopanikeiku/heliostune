@@ -814,8 +814,6 @@ def _validate_raw(raw: bytes) -> tuple[dict[str, object], tuple[AnalyzedAttempt,
                 or verified.result.outcome != "completed"
             ):
                 _fail(f"{spec.attempt_id} is not an exact completed receipt/result")
-            if not isinstance(verified.result, LocalExecutionResult):
-                _fail(f"{spec.attempt_id} historical publication requires a legacy local result")
             if (
                 verified.receipt.to_dict() != attempt["receipt"]
                 or verified.intent.to_dict() != attempt["intent"]

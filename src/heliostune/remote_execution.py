@@ -1277,7 +1277,7 @@ class VerifiedRemoteReceipt:
     intent: RemoteIntent
     journal: tuple[RemoteJournalRecord, ...]
     envelope: RemoteResultEnvelope | None
-    result: LocalExecutionResult | NativeFusionExecutionResult | None
+    result: LocalExecutionResult | None
     root_path: Path
 
 
@@ -1586,7 +1586,14 @@ def verify_remote_receipt_payloads(
         )
         if result.outcome != receipt.status:
             raise SchemaError("remote receipt status differs from LocalExecutionResult outcome")
-    return VerifiedRemoteReceipt(receipt, intent, records, envelope, result, logical_root_path)
+    return VerifiedRemoteReceipt(
+        receipt,
+        intent,
+        records,
+        envelope,
+        cast(LocalExecutionResult | None, result),
+        logical_root_path,
+    )
 
 
 def _verify_receipt_fd(directory_fd: int, root_path: Path) -> VerifiedRemoteReceipt:
