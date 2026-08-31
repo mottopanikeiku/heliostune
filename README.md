@@ -133,25 +133,70 @@ uv run heliostune list-scope
 ```
 
 These commands validate declarations; they do not execute a backend or establish
-correctness/performance. Separate local and Modal executors continue to support
-exactly the two frozen reference templates, and their existing
-[exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json)
-are unchanged. Both completed correctness and timing, but no fusion,
-superiority, provider attempt-count, cost, attestation, or
+correctness/performance. The generic local and Modal branches for the two frozen
+reference templates, and their existing
+[exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json),
+are unchanged. Both legacy suites completed correctness and timing, but no
+fusion, superiority, provider attempt-count, cost, attestation, or
 publication-eligibility claim is made.
 
-A separate `residual_rmsnorm_triton.v1` suite is now structurally available at
-an immutable new path. It freezes one BF16 `[128, 4096]` residual RMSNorm case,
-an eager reference, an Inductor comparator, and four native candidates with
-`block_size=4096`, `num_warps=4|8|16|32`, and `num_stages=1`. The native source
-uses the `heliostune_fusion_v2::residual_rmsnorm` namespace, but it is not
-integrated with either executor and has not been GPU-compiled, correctness
-checked, profiled, or timed. All capability records remain unprobed. Any future
-work must pass compile/resource, correctness, one-kernel profile, and timing
-gates in that order. Native gated MLP is absent and deferred after an
-unfavorable feasibility audit. Attention, KV-cache, MoE, quantized-linear, and
-FP8 remain schema vocabulary and staged suite candidates rather than
-implemented backends.
+The exact
+[`residual_rmsnorm_triton.v1` suite](benchmarks/suites/residual-rmsnorm-triton-v1.json)
+and
+[`fusion-triton-rmsnorm-plugin` plugin](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json)
+now have a digest-dispatched native executor. This is implementation status, not
+capability evidence: no retained SM90 execution exists, all six arms' local and
+remote capability declarations remain `unprobed`, and nothing here says that
+the current host can execute the suite. On an exact H100 SM90 environment with
+the pinned GPU dependencies, the local invocation is:
+
+```bash
+uv run --extra gpu heliostune run-local-suite \
+  benchmarks/suites/residual-rmsnorm-triton-v1.json \
+  --plugin benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json \
+  --output /tmp/heliostune-native-rmsnorm
+```
+
+The local result schema is `heliostune.local_executor/2`; its native protocol
+binds `heliostune.native_fusion_executor/2` and is published as a strict
+`heliostune.bundle/1` exploratory bundle. Each of the four
+`block_size=4096`, `num_warps=4|8|16|32`, `num_stages=1` candidates must pass,
+in order: compile plus complete zero-spill resource evidence; canonical
+correctness plus deterministic `zeros`, `cancellation`, and structured
+`overflow` probes; exactly one matching CUDA profiler event for one invocation;
+and the frozen 10-warmup/50-repetition timing policy. A failed gate is retained,
+blocks that arm's later gates, and is never replaced by eager fallback or retry.
+The deterministic stage-gate analyzer compares the fastest fully eligible
+candidate with the faster passing eager/Inductor baseline and authorizes only
+exploratory expansion at a speedup of at least `1.10x`; it emits no claim.
+
+The guarded paid Modal path uses executor API
+`heliostune.modal_fusion_executor/2`:
+
+```bash
+uv run python scripts/build_modal_wheel.py
+uv run --extra modal modal run modal_fusion_executor.py::main \
+  --suite benchmarks/suites/residual-rmsnorm-triton-v1.json \
+  --plugin benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json \
+  --output "artifacts/fusion-remote/residual-rmsnorm-triton-v1-$(date -u +%Y%m%dT%H%M%S%N)"
+```
+
+Do not make that paid call without explicit authorization and approved bounds.
+It requires a clean committed `HEAD`, the freshly built and verified wheel plus
+adjacent manifest, and a fresh output path. The client permits one spawn and no
+retry, but Modal's physical starts/restarts are unobservable, so total GPU time
+and cost have no stated upper bound. A remote run publishes
+`heliostune.remote-receipt/1`, not a methodology bundle. Local and remote
+artifacts bind the exact plugin/suite bytes, package-wide source identity, the
+four critical executor-source path/size/digests, and, remotely, the verified
+wheel, manifest, commit, request, journal, and returned result. Failures and
+blocked cells remain evidence; lost acknowledgement, timeout, interruption, or
+unproven cancellation remains `unresolved`. No native correctness,
+one-kernel/fusion, or performance result is reported.
+
+Native gated MLP is absent and deferred after an unfavorable feasibility audit.
+Attention, KV-cache, MoE, quantized-linear, and FP8 remain schema vocabulary and
+staged suite candidates rather than implemented backends.
 
 Native zstandard inspection needs no external `zstd` executable:
 

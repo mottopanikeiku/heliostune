@@ -38,8 +38,8 @@ Read [Experiment scope](EXPERIMENT_SCOPE.md) before changing
 domain/dtype vocabularies. Keep vocabulary membership, structural schema
 support, frozen-template inclusion, source registry availability, local/remote
 backend capability, correctness observations, and performance observations as
-separate states. Schema or template validation and a lazy native source
-registry must not be described as execution support.
+separate states. Schema or template validation and a lazy native source registry
+alone must not be described as execution support.
 
 A plugin suite reference must remain a normalized relative path with the exact
 suite SHA-256. Changing template semantics, cases, arms, numeric contracts,
@@ -72,19 +72,52 @@ For a new or promoted suite, the pull request must:
    summary without converting declaration support into a correctness or
    performance claim.
 
-Native residual RMSNorm is structurally available as a separate immutable
-plugin/suite and lazy source registry, but it is not executor-integrated. Its
-four configurations fix `block_size=4096`, `num_warps=4|8|16|32`, and
-`num_stages=1`. Runtime promotion must proceed in order through compile/resource
-inspection, correctness, a one-kernel profile, and timing; a failure blocks
-later gates. Do not add a run command or claim runtime, correctness, fusion, or
-performance support before retained evidence exists. Native gated MLP is
-deferred after an unfavorable feasibility audit and must remain absent from
-this increment. Attention/KV cache, quantized linear, MoE, and FP8 are
-catalog/design candidates until separate promotion revisions meet the above
-requirements. A scope or template pull request does not authorize a paid
-campaign; paid execution needs its own frozen protocol, approved bounds,
-committed bytes, and evidence controls.
+Native residual RMSNorm is executor-integrated only for the exact immutable
+[`benchmarks/suites/residual-rmsnorm-triton-v1.json`](benchmarks/suites/residual-rmsnorm-triton-v1.json)
+and
+[`benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json`](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json)
+pair. The local result is `heliostune.local_executor/2`, published through
+`heliostune.native_fusion_executor/2` as a strict `heliostune.bundle/1`; the
+digest-selected Modal API is `heliostune.modal_fusion_executor/2`, published as
+`heliostune.remote-receipt/1`. Implementation is not capability: no retained
+SM90 run exists, all six arms' local and remote declarations remain `unprobed`,
+and contributors must not describe the suite as available or executable on
+their current host.
+
+The four native configurations remain fixed at `block_size=4096`,
+`num_warps=4|8|16|32`, and `num_stages=1`. Preserve the gate order: compile and
+complete zero-spill resource evidence; canonical correctness and deterministic
+`zeros`/`cancellation`/structured-`overflow` probes; exactly one matching CUDA
+profiler event for one invocation with input/output revalidation; then exactly
+10 warmups and 50 timing repetitions. A failure must be retained without eager
+fallback or retry and must block that arm's later gates. Capability rejection
+must invoke no backend and retain all cells as blocked.
+
+Do not substitute copied or renamed declarations in either documented command.
+Local invocation is restricted to the exact H100 SM90, PyTorch 2.8.0, and Triton
+3.4.0 predicate. Before any paid Modal invocation, follow the clean committed
+wheel rule above, obtain explicit authorization and approved bounds, use a fresh
+unique output path, and preserve the one-spawn journal. `retries=0` does not make
+Modal physical starts observable; never state a total GPU-time or cost bound and
+never retry an unresolved receipt.
+
+Preserve complete source custody: exact plugin/suite bytes, the package-wide
+source digest and count, and the path/size/digest inventory for
+`fusion_kernels.py`, `_fusion_gpu.py`, `native_fusion_executor.py`, and
+`local_executor.py`. Remote custody additionally binds the byte-verified wheel,
+adjacent manifest, clean commit, request, journal, and returned result. Do not
+weaken descriptor-pinned publication, atomic no-replace output, or failure and
+unresolved-state retention.
+
+The deterministic stage gate may authorize exploratory expansion only at
+`1.10x` or better versus the faster complete eager/Inductor baseline. It remains
+non-confirmatory, makes no correctness, fusion, or performance claim, and is not
+publication eligible. Native gated MLP is deferred after an unfavorable
+feasibility audit and must remain absent from this increment. Attention/KV
+cache, quantized linear, MoE, and FP8 are catalog/design candidates until
+separate promotion revisions meet the above requirements. A scope or template
+pull request does not authorize a paid campaign; paid execution needs its own
+frozen protocol, approved bounds, committed bytes, and evidence controls.
 
 The published Parhelion and Hopper studies remain immutable legacy plugins.
 Do not relabel or migrate them to plugin/suite v1 merely because a declaration

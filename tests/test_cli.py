@@ -9,7 +9,7 @@ from importlib.metadata import version
 from io import BytesIO, StringIO
 from pathlib import Path
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 import zstandard
@@ -1110,7 +1110,8 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
 
     output = capsys.readouterr().out
     assert (
-        "frozen_executable_suite_templates: gated_mlp_epilogue.v1,residual_rmsnorm.v1"
+        "frozen_executable_suite_templates: "
+        "gated_mlp_epilogue.v1,residual_rmsnorm.v1,residual_rmsnorm_triton.v1"
     ) in output
     assert "template_input_storage_dtypes: fp16,bf16" in output
     assert "template_domains: fused_mlp,rmsnorm_residual" in output
@@ -1125,6 +1126,8 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
     assert (
         "generic_local_runtime_gpu_validation: validated remotely on H100 for both frozen templates"
     ) in output
+    assert "native_local_runtime_backend: implemented for residual_rmsnorm_triton.v1" in output
+    assert "native_local_runtime_gpu_evidence: unobserved" in output
     assert (
         "generic_remote_runtime_backend: implemented for the two frozen reference templates "
         "via Modal receipt"
@@ -1178,11 +1181,40 @@ def _fake_local_result(
     outcome: str,
     capability: str,
     suite_id: str = "gated_mlp_epilogue.v1",
-) -> SimpleNamespace:
-    return SimpleNamespace(
-        outcome=outcome,
-        suite_id=suite_id,
-        capability=SimpleNamespace(available=capability == "available"),
+) -> object:
+    from heliostune.local_executor import (
+        RMSNORM_SUITE_SHA256,
+        CapabilityProbe,
+        LocalExecutionResult,
+    )
+
+    available = capability == "available"
+    return LocalExecutionResult(
+        "suite.json",
+        RMSNORM_SUITE_SHA256,
+        b"",
+        suite_id,
+        CapabilityProbe(
+            available,
+            () if available else ("cuda_unavailable",),
+            "2.8.0" if available else None,
+            "12.8" if available else None,
+            None,
+            0 if available else None,
+            "fake CUDA device" if available else None,
+            (9, 0) if available else None,
+            available,
+            available,
+            available,
+            None if available else "unavailable",
+        ),
+        (),
+        (),
+        (),
+        {},
+        {},
+        {},
+        cast(Any, outcome),
     )
 
 
@@ -1221,7 +1253,7 @@ def test_run_local_suite_completed_writes_and_reports_bundle(
     result = _fake_local_result(outcome="completed", capability="available")
     calls: list[tuple[object, Path, Path]] = []
 
-    monkeypatch.setattr(local_executor, "run_local_suite", lambda path: result)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda path: result)
 
     def write_bundle(
         observed: object,
@@ -1264,6 +1296,205 @@ def test_run_local_suite_completed_writes_and_reports_bundle(
     assert "publication eligible" not in printed.lower()
 
 
+def test_run_local_suite_dispatches_native_digest_and_type_to_native_writer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heliostune import (
+        local_bundle,
+        local_executor,
+        native_fusion_bundle,
+        native_fusion_executor,
+    )
+    from heliostune.local_executor import CapabilityProbe
+
+    repository = Path(cli.__file__).resolve().parents[2]
+    suite = repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
+    plugin = repository / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+    capability = CapabilityProbe(
+        False,
+        ("torch_missing",),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        False,
+        "strict CPU CLI fake",
+    )
+    monkeypatch.setattr(
+        native_fusion_executor,
+        "_probe_capability",
+        lambda: (capability, None, None),
+    )
+    result = native_fusion_executor.run_native_fusion_suite(suite)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda _path: result)
+    monkeypatch.setattr(
+        local_bundle,
+        "write_local_bundle",
+        lambda *_args, **_kwargs: pytest.fail("legacy writer received native result"),
+    )
+    calls: list[tuple[object, Path, Path]] = []
+
+    def write_bundle(
+        observed: object,
+        *,
+        plugin_path: Path,
+        output_dir: Path,
+    ) -> SimpleNamespace:
+        calls.append((observed, plugin_path, output_dir))
+        return _fake_verified_local_bundle(
+            output_dir / "bundle.json",
+            expected=12,
+            terminal=12,
+            successes=0,
+            failures=12,
+        )
+
+    monkeypatch.setattr(native_fusion_bundle, "write_native_fusion_bundle", write_bundle)
+    output = tmp_path / "native"
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--plugin",
+                str(plugin),
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    assert calls == [(result, plugin, output)]
+
+
+@pytest.mark.parametrize(
+    "hazard",
+    ("bad-plugin", "missing-plugin", "symlink-parent", "changed-source"),
+)
+def test_native_preflight_hazards_prevent_execution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    hazard: str,
+) -> None:
+    from heliostune import local_executor, native_fusion_bundle
+
+    repository = Path(cli.__file__).resolve().parents[2]
+    suite = repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
+    plugin = repository / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+    output = tmp_path / "native"
+    if hazard == "bad-plugin":
+        plugin = repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+    elif hazard == "missing-plugin":
+        plugin = tmp_path / "missing-plugin.json"
+    elif hazard == "symlink-parent":
+        real_parent = tmp_path / "real-parent"
+        real_parent.mkdir()
+        linked_parent = tmp_path / "linked-parent"
+        linked_parent.symlink_to(real_parent, target_is_directory=True)
+        output = linked_parent / "native"
+    else:
+        monkeypatch.setattr(
+            native_fusion_bundle,
+            "_bound_executor_sources",
+            lambda: (_ for _ in ()).throw(
+                ArtifactError("native executor sources changed after module import")
+            ),
+        )
+
+    executed = False
+
+    def forbidden_execute(_path: Path) -> object:
+        nonlocal executed
+        executed = True
+        raise AssertionError("native execution must not start after failed preflight")
+
+    monkeypatch.setattr(local_executor, "execute_local_suite", forbidden_execute)
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--plugin",
+                str(plugin),
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    assert executed is False
+
+
+def test_native_source_race_after_execution_is_rejected(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from heliostune import local_executor, native_fusion_bundle, native_fusion_executor
+    from heliostune.local_executor import CapabilityProbe
+
+    repository = Path(cli.__file__).resolve().parents[2]
+    suite = repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
+    plugin = repository / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+    capability = CapabilityProbe(
+        False,
+        ("torch_missing",),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        False,
+        "strict CPU source-race fake",
+    )
+    monkeypatch.setattr(
+        native_fusion_executor,
+        "_probe_capability",
+        lambda: (capability, None, None),
+    )
+    result = native_fusion_executor.run_native_fusion_suite(suite)
+    changed_sources = {
+        "schema": "heliostune.executor-sources/1",
+        "sources": [
+            dict(cast(dict[str, object], item))
+            for item in cast(list[object], result.executor_sources["sources"])
+        ],
+    }
+    cast(list[dict[str, object]], changed_sources["sources"])[0]["sha256"] = "0" * 64
+
+    def execute_then_mutate(_path: Path) -> object:
+        monkeypatch.setattr(
+            native_fusion_bundle,
+            "_bound_executor_sources",
+            lambda: changed_sources,
+        )
+        return result
+
+    monkeypatch.setattr(local_executor, "execute_local_suite", execute_then_mutate)
+    output = tmp_path / "native"
+    assert (
+        cli.main(
+            [
+                "run-local-suite",
+                str(suite),
+                "--plugin",
+                str(plugin),
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    assert not output.exists()
+
+
 @pytest.mark.parametrize(
     ("outcome", "capability", "successes", "failures"),
     [
@@ -1285,7 +1516,7 @@ def test_run_local_suite_noncompleted_still_writes_bundle_and_exits_nonzero(
     output = tmp_path / outcome
     result = _fake_local_result(outcome=outcome, capability=capability)
     written: list[object] = []
-    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda _path: result)
 
     def write_bundle(
         observed: object,
@@ -1336,7 +1567,7 @@ def test_run_local_suite_rejects_protected_repository_output_before_execution(
     def unexpected_run(_path: Path) -> object:
         raise AssertionError("executor ran before output protection")
 
-    monkeypatch.setattr(local_executor, "run_local_suite", unexpected_run)
+    monkeypatch.setattr(local_executor, "execute_local_suite", unexpected_run)
     repository = Path(cli.__file__).resolve().parents[2]
     suite = tmp_path / "external-suite-copy.json"
     output = repository / protected_name / "local-suite-test-output"
@@ -1374,7 +1605,7 @@ def test_run_local_suite_rejects_existing_nonempty_destination(
     def unexpected_run(_path: Path) -> object:
         raise AssertionError("executor ran before destination protection")
 
-    monkeypatch.setattr(local_executor, "run_local_suite", unexpected_run)
+    monkeypatch.setattr(local_executor, "execute_local_suite", unexpected_run)
 
     assert (
         cli.main(
@@ -1402,7 +1633,7 @@ def test_run_local_suite_accepts_existing_empty_destination(
     output = tmp_path / "empty"
     output.mkdir()
     result = _fake_local_result(outcome="completed", capability="available")
-    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda _path: result)
 
     def write_bundle(
         observed: object,
@@ -1431,17 +1662,27 @@ def test_run_local_suite_accepts_existing_empty_destination(
     )
 
 
-def test_run_local_suite_uses_default_plugin_only_for_committed_templates(
+@pytest.mark.parametrize(
+    ("suite_name", "plugin_name"),
+    [
+        ("gated-mlp-epilogue-v1.json", "fusion-reference-plugin-v1.json"),
+        ("residual-rmsnorm-v1.json", "fusion-reference-plugin-v1.json"),
+        ("residual-rmsnorm-triton-v1.json", "fusion-triton-rmsnorm-plugin-v1.json"),
+    ],
+)
+def test_run_local_suite_uses_digest_family_default_plugin_only_for_committed_templates(
+    suite_name: str,
+    plugin_name: str,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from heliostune import local_bundle, local_executor
 
     repository = Path(cli.__file__).resolve().parents[2]
-    suite = repository / "benchmarks/suites/gated-mlp-epilogue-v1.json"
-    expected_plugin = repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+    suite = repository / "benchmarks/suites" / suite_name
+    expected_plugin = repository / "benchmarks/plugins" / plugin_name
     result = _fake_local_result(outcome="completed", capability="available")
-    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda _path: result)
     monkeypatch.setattr(cli, "__file__", "/wheel/site-packages/heliostune/cli.py")
 
     def write_bundle(
@@ -1466,13 +1707,15 @@ def test_run_local_suite_uses_default_plugin_only_for_committed_templates(
         )
         == 0
     )
+    copied_suite = tmp_path / suite_name
+    copied_suite.write_bytes(suite.read_bytes())
     assert (
         cli.main(
             [
                 "run-local-suite",
-                str(tmp_path / "other-suite.json"),
+                str(copied_suite),
                 "--output",
-                str(tmp_path / "other-output"),
+                str(tmp_path / "copied-output"),
             ]
         )
         == 2
@@ -1493,7 +1736,7 @@ def test_run_local_suite_escapes_unusual_identifiers_and_bundle_root(
         capability="available",
         suite_id=unusual_id,
     )
-    monkeypatch.setattr(local_executor, "run_local_suite", lambda _path: result)
+    monkeypatch.setattr(local_executor, "execute_local_suite", lambda _path: result)
     unusual_root = output / "[bold]literal[/bold]\nsecond"
     monkeypatch.setattr(
         local_bundle,
