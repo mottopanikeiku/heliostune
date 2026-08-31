@@ -414,7 +414,9 @@ def test_native_remote_request_dispatches_through_common_local_executor(
         return SimpleNamespace(to_transport_json=lambda: "native-transport")
 
     monkeypatch.setattr(entrypoint, "validate_wheel_manifest", validate_wheel)
-    monkeypatch.setattr("heliostune.kernel.get_hardware_profile", hardware_profile)
+    fake_kernel = types.ModuleType("heliostune.kernel")
+    fake_kernel.get_hardware_profile = hardware_profile
+    monkeypatch.setitem(sys.modules, "heliostune.kernel", fake_kernel)
     monkeypatch.setattr("heliostune.hardware.validate_hardware", validate_observed_hardware)
     monkeypatch.setattr("heliostune.local_executor.execute_local_suite", execute)
     monkeypatch.setattr("heliostune.remote_execution.RemoteResultEnvelope", envelope)
@@ -451,10 +453,6 @@ def test_remote_registry_mismatch_precedes_wheel_hardware_and_execution(
         entrypoint,
         "validate_wheel_manifest",
         lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede wheel validation"),
-    )
-    monkeypatch.setattr(
-        "heliostune.kernel.get_hardware_profile",
-        lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede hardware probing"),
     )
     monkeypatch.setattr(
         "heliostune.local_executor.execute_local_suite",

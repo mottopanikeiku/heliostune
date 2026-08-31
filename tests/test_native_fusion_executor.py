@@ -126,9 +126,7 @@ def test_frozen_digest_and_cpu_import_safety() -> None:
         ("source_bytes", "at least"),
     ],
 )
-def test_executor_source_inventory_rejects_substitution_and_loss(
-    mutation: str, match: str
-) -> None:
+def test_executor_source_inventory_rejects_substitution_and_loss(mutation: str, match: str) -> None:
     inventory = _capture_executor_sources()
     if mutation == "source_path":
         cast(list[dict[str, object]], inventory["sources"])[0]["path"] = "substitute.py"
@@ -265,7 +263,9 @@ def test_comparator_rejects_every_eager_fallback_guard(
     config = SimpleNamespace(disable=guard == "disabled", suppress_errors=guard == "suppressed")
     if guard == "environment":
         monkeypatch.setenv("TORCHDYNAMO_DISABLE", "yes")
-    assert expected in cast(str, _force_eager_reason(SimpleNamespace(_dynamo=SimpleNamespace(config=config))))
+    assert expected in cast(
+        str, _force_eager_reason(SimpleNamespace(_dynamo=SimpleNamespace(config=config)))
+    )
 
 
 @pytest.mark.parametrize("compile_return", ["noncallable", "original"])
@@ -1190,7 +1190,6 @@ def test_failed_validation_status_cannot_hide_success_or_drop_its_error(mutation
         _parse_validation(record, cell)
 
 
-
 @pytest.mark.parametrize(
     ("field", "value"),
     [
@@ -1256,7 +1255,9 @@ def test_result_cross_links_reject_order_attempt_and_outcome_custody_tampering(
     payload = deepcopy(aborted.to_dict())
     if mutation == "observation_order":
         cast(list[object], payload["observations"]).reverse()
-        cast(list[object], cast(dict[str, object], payload["summary"])["terminal_cell_ids"]).reverse()
+        cast(
+            list[object], cast(dict[str, object], payload["summary"])["terminal_cell_ids"]
+        ).reverse()
     elif mutation == "attempt_id":
         cast(list[dict[str, object]], payload["attempts"])[0]["attempt_id"] = 2
     else:
@@ -1456,9 +1457,7 @@ def test_passing_correctness_cannot_bypass_paid_validation_or_profile_failure(
 
     fusion = _install_native_pipeline_fakes(monkeypatch)
     fake_torch = SimpleNamespace(cuda=SimpleNamespace(synchronize=lambda _device: None))
-    monkeypatch.setattr(
-        executor, "_probe_capability", lambda: (_available(), fake_torch, "3.4.0")
-    )
+    monkeypatch.setattr(executor, "_probe_capability", lambda: (_available(), fake_torch, "3.4.0"))
     monkeypatch.setattr(fusion, "compiled_kernel_evidence", _fake_compiled_resource)
     monkeypatch.setattr(fusion, "load_residual_rmsnorm", lambda _entrypoint: object())
     monkeypatch.setattr(legacy, "_residual_rmsnorm", lambda *_args: object())

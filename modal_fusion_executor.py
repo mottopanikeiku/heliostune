@@ -286,8 +286,6 @@ image = build_image(_MODAL_WHEEL)
 def execute_fusion_suite(request_json: str) -> str:
     """Validate and execute one suite, returning one compressed transport wrapper."""
     from heliostune.fusion_execution_registry import fusion_execution_spec
-    from heliostune.hardware import expectation_for_gpu, validate_hardware
-    from heliostune.kernel import get_hardware_profile
     from heliostune.local_executor import execute_local_suite
     from heliostune.remote_execution import (
         RemoteResultEnvelope,
@@ -340,6 +338,8 @@ def execute_fusion_suite(request_json: str) -> str:
         for field, observed in observed_wheel.items():
             if getattr(intent, field) != observed:
                 raise RuntimeError(f"remote {field} does not match the request intent")
+        from heliostune.hardware import expectation_for_gpu, validate_hardware
+        from heliostune.kernel import get_hardware_profile
 
         hardware = get_hardware_profile("H100")
         validate_hardware(hardware, expectation_for_gpu("H100"))
