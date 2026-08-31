@@ -23,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
   "numpy>=1.26,<2.5",
-  "rich>=13.7,<15",
+  "rich>=13.7,<16",
   "zstandard==0.25.0",
 ]
 
