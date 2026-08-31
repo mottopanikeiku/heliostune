@@ -14,16 +14,21 @@ import stat
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 import zstandard
 
 from heliostune.artifacts import strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.fusion_execution_registry import FusionExecutionSpec, fusion_execution_spec
 from heliostune.hardware import expectation_for_gpu, validate_hardware
-from heliostune.local_executor import LocalExecutionResult
+from heliostune.local_executor import LocalExecutionResult, parse_local_execution_result
 from heliostune.schema import HardwareProfile
+from heliostune.scope import Plugin, Suite
 from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
+
+if TYPE_CHECKING:
+    from heliostune.native_fusion_executor import NativeFusionExecutionResult
 
 INTENT_SCHEMA = "heliostune.remote-intent/1"
 REQUEST_SCHEMA = "heliostune.remote-request/1"
@@ -1037,7 +1042,7 @@ _RESULT_FIELDS = {
 
 def validate_remote_result(
     payload: str, *, intent: RemoteIntent, request_digest: str, verified_suite_bytes: bytes
-) -> tuple[RemoteResultEnvelope, LocalExecutionResult]:
+) -> tuple[RemoteResultEnvelope, LocalExecutionResult | NativeFusionExecutionResult]:
     envelope = RemoteResultEnvelope.from_transport_json(payload)
     return _validate_remote_result_envelope(
         envelope,
@@ -1053,7 +1058,7 @@ def _validate_remote_result_envelope(
     intent: RemoteIntent,
     request_digest: str,
     verified_suite_bytes: bytes,
-) -> tuple[RemoteResultEnvelope, LocalExecutionResult]:
+) -> tuple[RemoteResultEnvelope, LocalExecutionResult | NativeFusionExecutionResult]:
     expected = {
         "request_digest": request_digest,
         "suite_path": intent.suite_path,
@@ -1084,12 +1089,21 @@ def _validate_remote_result_envelope(
     )
     if serialized_path != intent.suite_path:
         raise SchemaError("remote result verified_suite_path does not match the request intent")
-    local_result = LocalExecutionResult.from_dict(
+    local_result = parse_local_execution_result(
         envelope.result,
         verified_suite_path=intent.suite_path,
         verified_suite_sha256=intent.suite_sha256,
         verified_suite_bytes=verified_suite_bytes,
     )
+    if fusion_execution_spec(intent.suite_sha256).modal_executor_api.endswith("/2"):
+        from heliostune.native_fusion_executor import NativeFusionExecutionResult
+
+        if not isinstance(local_result, NativeFusionExecutionResult):
+            raise SchemaError("remote native result has the wrong execution result type")
+        if local_result.executor_sources["package_source_sha256"] != intent.source_sha256:
+            raise SchemaError(
+                "remote native result package source digest does not match the request intent"
+            )
     capability = local_result.capability
     hardware_evidence = {
         "device_name": capability.device_name,
@@ -1263,7 +1277,7 @@ class VerifiedRemoteReceipt:
     intent: RemoteIntent
     journal: tuple[RemoteJournalRecord, ...]
     envelope: RemoteResultEnvelope | None
-    result: LocalExecutionResult | None
+    result: LocalExecutionResult | NativeFusionExecutionResult | None
     root_path: Path
 
 
@@ -1278,8 +1292,9 @@ def _receipt_bindings(
     plugin: ArtifactBinding,
     manifest: ArtifactBinding,
 ) -> dict[str, object]:
+    spec = fusion_execution_spec(intent.suite_sha256)
     return {
-        "executor_api": EXECUTOR_API,
+        "executor_api": spec.modal_executor_api,
         "request_digest": request_digest,
         "suite": {"logical_path": intent.suite_path, **suite.to_dict()},
         "plugin": {"logical_path": intent.plugin_path, **plugin.to_dict()},
@@ -1299,6 +1314,55 @@ def _receipt_bindings(
         "restrict_modal_access": intent.restrict_modal_access,
         "one_suite_per_call": intent.one_suite_per_call,
     }
+
+
+def _parse_bound_suite(payload: bytes, *, source: str) -> Suite:
+    try:
+        text = payload.decode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise SchemaError("remote receipt suite must be UTF-8") from exc
+    return Suite.from_dict(strict_json_loads(text, source=source))
+
+
+def _parse_bound_plugin(payload: bytes, *, source: str) -> Plugin:
+    try:
+        text = payload.decode("utf-8", errors="strict")
+    except UnicodeError as exc:
+        raise SchemaError("remote receipt plugin must be UTF-8") from exc
+    return Plugin.from_dict(strict_json_loads(text, source=source))
+
+
+def _validate_receipt_execution_artifacts(
+    intent: RemoteIntent,
+    suite_payload: bytes,
+    plugin_payload: bytes,
+    spec: FusionExecutionSpec,
+) -> None:
+    if sha256_bytes(suite_payload) != spec.suite_sha256:
+        raise SchemaError("remote receipt suite digest differs from frozen execution registry")
+    if (
+        intent.plugin_sha256 != spec.plugin_sha256
+        or sha256_bytes(plugin_payload) != spec.plugin_sha256
+    ):
+        raise SchemaError("remote receipt plugin digest differs from frozen execution registry")
+    suite = _parse_bound_suite(suite_payload, source=intent.suite_path)
+    plugin = _parse_bound_plugin(plugin_payload, source=intent.plugin_path)
+    if (suite.suite_id, suite.revision) != (spec.suite_id, spec.suite_revision):
+        raise SchemaError("remote receipt suite identity differs from frozen execution registry")
+    if (suite.plugin_id, suite.plugin_version) != (spec.plugin_id, spec.plugin_version):
+        raise SchemaError("remote receipt suite plugin identity differs from frozen execution registry")
+    if (plugin.plugin_id, plugin.version) != (spec.plugin_id, spec.plugin_version):
+        raise SchemaError("remote receipt plugin identity differs from frozen execution registry")
+    matching_refs = [
+        ref
+        for ref in plugin.suite_refs
+        if (ref.suite_id, ref.revision, ref.sha256)
+        == (spec.suite_id, spec.suite_revision, spec.suite_sha256)
+    ]
+    if len(matching_refs) != 1:
+        raise SchemaError(
+            "remote receipt plugin must contain exactly one ref for the bound suite identity"
+        )
 
 
 def _parse_journal(
@@ -1465,6 +1529,10 @@ def verify_remote_receipt_payloads(
     logical_root_path = Path(logical_output_path).absolute() / RECEIPT_ROOT
     if Path(intent.output_path).absolute() != logical_root_path.parent:
         raise SchemaError("remote receipt location differs from intent output_path")
+    execution_spec = fusion_execution_spec(intent.suite_sha256)
+    _validate_receipt_execution_artifacts(
+        intent, suite_payload, plugin_payload, execution_spec
+    )
     _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_payload))
     if receipt.receipt_id != request_digest or bindings["request_digest"] != request_digest:
         raise SchemaError("remote receipt ID/request digest binding differs")
@@ -1499,7 +1567,7 @@ def verify_remote_receipt_payloads(
     if terminal != receipt.status:
         raise SchemaError("remote receipt status differs from journal terminal state")
     envelope: RemoteResultEnvelope | None = None
-    result: LocalExecutionResult | None = None
+    result: LocalExecutionResult | NativeFusionExecutionResult | None = None
     if receipt.status == "unresolved":
         if result_payload is not None:
             raise SchemaError("unresolved remote receipt cannot contain a validated result")
