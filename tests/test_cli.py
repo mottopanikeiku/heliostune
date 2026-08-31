@@ -1472,7 +1472,7 @@ def test_native_source_race_after_execution_is_rejected(
     def execute_then_mutate(_path: Path) -> object:
         monkeypatch.setattr(
             native_fusion_bundle,
-            "_capture_executor_sources",
+            "_bound_executor_sources",
             lambda: changed_sources,
         )
         return result
