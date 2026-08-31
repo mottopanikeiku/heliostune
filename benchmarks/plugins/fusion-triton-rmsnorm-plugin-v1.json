@@ -1,0 +1,25 @@
+{
+  "schema": "heliostune.plugin/1",
+  "plugin_id": "fusion-triton-rmsnorm-plugin",
+  "version": 1,
+  "template_status": "reference_template_not_execution_freeze",
+  "domains": [
+    "rmsnorm_residual"
+  ],
+  "arm_ids": [
+    "rmsnorm-triton-w4",
+    "rmsnorm-triton-w8",
+    "rmsnorm-triton-w16",
+    "rmsnorm-triton-w32",
+    "rmsnorm-eager-reference",
+    "rmsnorm-inductor-comparator"
+  ],
+  "suite_refs": [
+    {
+      "path": "../suites/residual-rmsnorm-triton-v1.json",
+      "sha256": "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f",
+      "suite_id": "residual-rmsnorm-triton",
+      "revision": 1
+    }
+  ]
+}

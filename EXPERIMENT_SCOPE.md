@@ -23,7 +23,7 @@ one "supported" label.
 |---|---|---|---|
 | Vocabulary | A domain, dtype, shape operator, or case option is a recognized closed enum value. | Strict plugin/suite parser and `heliostune list-scope`. | That any frozen suite uses it or any backend can execute it. |
 | Schema | A `heliostune.plugin/1` or `heliostune.suite/1` document has exact JSON types, no unknown or duplicate fields, and satisfies its cross-field rules. | `verify-plugin` and `verify-suite`. | That referenced code imports, a GPU is present, or a case is correct or fast. |
-| Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two initial suite template JSON files and their SHA-256 values. | That a local or remote backend is implemented. |
+| Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two runtime-integrated reference templates and the separate native Triton structural template, with their SHA-256 values below. | That a local or remote backend is implemented for that template. |
 | Backend capability | A particular arm was not probed, or a retained probe found it available or unavailable. Local and remote are separate. | Suite arm `local_capability` and `remote_capability`: `unprobed`, `available`, or `unavailable`. | Correctness, performance, portability to another target, or claim eligibility. |
 | Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A narrow local executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
 | Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A narrow local executor/bundle observation, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
@@ -128,16 +128,17 @@ revision, capable arm and baseline set, retained capability evidence, and
 passing correctness observations. Advanced dtypes cannot be added to either
 initial suite by editing its bytes.
 
-## Frozen initial fusion suites
+## Frozen reference-template fusion suites
 
-Only two suite template IDs are currently executable-suite declarations:
+Only two suite template IDs are integrated with the existing local and remote
+executors:
 
 1. `gated_mlp_epilogue.v1`
 2. `residual_rmsnorm.v1`
 
-“Executable-suite declaration” means the case semantics and execution plan are
-closed enough for the narrow local executor described below. It does not mean a
-generic executor is implemented.
+Their closed case semantics and execution plans remain unchanged. Runtime
+integration for these two declarations does not imply runtime integration for
+another structurally valid template.
 
 The committed reference declarations are:
 
@@ -152,9 +153,77 @@ bytes and hashes are frozen reference declarations, not a capability probe,
 execution freeze, or permission to dispatch work. Changing any byte produces a
 different artifact identity and requires an explicit new revision.
 
+## Native Triton residual RMSNorm structural suite
+
+The first native Triton candidate is committed at new immutable paths without
+changing either reference plugin, either reference suite, or any existing
+runtime evidence byte:
+
+| Artifact | ID | Path | SHA-256 |
+|---|---|---|---|
+| Plugin | `fusion-triton-rmsnorm-plugin` | [`benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json`](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json) | `ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815` |
+| Suite | `residual-rmsnorm-triton` | [`benchmarks/suites/residual-rmsnorm-triton-v1.json`](benchmarks/suites/residual-rmsnorm-triton-v1.json) | `23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f` |
+
+`residual_rmsnorm_triton.v1` is structurally available only. Its
+`reference_template_not_execution_freeze` status freezes declaration identity;
+it does not add the suite to the existing executors, establish local or remote
+capability, or authorize dispatch. All six arms have both capability states
+`unprobed` with null evidence digests.
+
+The suite freezes one case: contiguous BF16 `x` and `residual` tensors of shape
+`[128, 4096]`, a BF16 `gamma` tensor of shape `[4096]`, pre-normalization
+residual addition, epsilon `1e-5`, FP32 arithmetic and reduction, and one BF16
+output. Its arms are one eager reference, one Inductor comparator, and these
+four native candidates:
+
+| Arm | Structural entrypoint key | `block_size` | `num_warps` | `num_stages` |
+|---|---|---:|---:|---:|
+| `rmsnorm-triton-w4` | `heliostune_fusion_v2::residual_rmsnorm_w4` | 4096 | 4 | 1 |
+| `rmsnorm-triton-w8` | `heliostune_fusion_v2::residual_rmsnorm_w8` | 4096 | 8 | 1 |
+| `rmsnorm-triton-w16` | `heliostune_fusion_v2::residual_rmsnorm_w16` | 4096 | 16 | 1 |
+| `rmsnorm-triton-w32` | `heliostune_fusion_v2::residual_rmsnorm_w32` | 4096 | 32 | 1 |
+
+The static plan contains exactly twelve cells: one correctness cell followed
+by one timing cell for each of the six arms. These are planned cells, not
+observations.
+
+The source-only registry in `heliostune.fusion_kernels` exports
+`RMSNormTritonConfig`, `RESIDUAL_RMSNORM_CONFIGS`,
+`RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT`, and
+`load_residual_rmsnorm(entrypoint)`. The loader reaches the GPU-only
+`heliostune._fusion_gpu` module lazily; ordinary development and declaration
+imports do not require PyTorch or Triton. The registered custom-op namespace is
+`heliostune_fusion_v2::residual_rmsnorm`. Source and structural registration
+are not executor integration: no GPU path in this change has compiled or
+launched the op.
+
+The reviewed source byte identities for this revision are:
+
+| Source | Path | SHA-256 |
+|---|---|---|
+| CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `f7cc1c188ae5c602ef42237a8efdd71df5f0aba707a03db577127b91cb449e2a` |
+| GPU-only implementation | [`src/heliostune/_fusion_gpu.py`](src/heliostune/_fusion_gpu.py) | `e67cdd079209f96b9abb5bdac29cd2b33b388863a9064fef0fca525a0cbc8d92` |
+
+These digests inventory source bytes; they are not capability or execution
+evidence.
+
+Any future execution must pass the gates in this order:
+
+1. compile and resource inspection;
+2. correctness against the frozen eager reference;
+3. a profile showing one kernel for the candidate invocation; and
+4. timing under the frozen policy.
+
+A failure stops the later gates. Until all applicable gates produce retained
+observations, the suite makes no runtime, correctness, one-kernel, fusion, or
+performance claim.
+
+## Existing reference-template execution and semantics
+
 ### Local CUDA execution
 
-`heliostune run-local-suite SUITE --output DIR` executes only these two frozen
+`heliostune run-local-suite SUITE --output DIR` remains unchanged and executes
+only the two frozen
 templates on a qualifying NVIDIA CUDA device; use `--plugin PLUGIN` when the
 suite is not the committed template path. It requires the `gpu` extra (including
 exactly PyTorch 2.8.0), native BF16 support, compute capability 8.0 or newer, and
@@ -330,6 +399,10 @@ Catalog inclusion may record vocabulary and design status. It is not template
 status, capability evidence, correctness, performance, or authorization for a
 paid run.
 
+A native gated-MLP candidate is explicitly deferred after an unfavorable
+feasibility audit. No native gated-MLP plugin, suite, kernel, or execution plan
+is included in this revision.
+
 ## Promotion rules and implementation order
 
 A catalog-only candidate becomes an executable suite only through a separate
@@ -352,10 +425,12 @@ timing protocol and complete evidence lifecycle. A paid campaign additionally
 needs an independently approved, frozen paid plan; nothing in this roadmap
 promises or authorizes one.
 
-The implemented local executor stops at the frozen gated MLP and residual
-RMSNorm reference templates. Attention/KV-cache, quantized-linear, MoE and FP8
-work require their own suite revisions, backend implementations, and promotion
-reviews rather than being folded into either initial template.
+The implemented local and remote executors stop at the frozen gated MLP and
+residual RMSNorm reference templates. The native Triton RMSNorm declaration and
+source registry remain outside those executors. Attention/KV-cache,
+quantized-linear, MoE and FP8 work require their own suite revisions, backend
+implementations, and promotion reviews rather than being folded into an
+existing template.
 
 ## Focused acceptance boundary
 
@@ -376,12 +451,15 @@ acceptance tests in `tests/test_scope.py`:
 12. `test_vocabulary_vs_execution_separation`
 
 Together they cover legacy-byte non-regression, strict closed roots and exact
-types, dtype/quantization cross-rules, capability evidence, both case-semantic
-unions, inline shape applicability, static and runtime correctness gates,
-standalone plugin → suite custody, and the separation between vocabulary and
-execution. Those declaration tests do not stand in for the separate executor,
-observation, bundle-custody, analysis, or publication acceptance tests described
-in [METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
+types, dtype/quantization cross-rules, capability evidence, all frozen
+case-semantic unions, inline shape applicability, static and runtime
+correctness gates, standalone plugin → suite custody, the native structural
+template's exact six-arm/twelve-cell closure, and the separation between
+vocabulary, structural source availability, and execution. Those declaration
+tests do not stand in for the separate executor, GPU compilation/resource,
+correctness, profile, observation, bundle-custody, analysis, or publication
+acceptance tests described in
+[METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
 
 ## Inspect and verify
 
@@ -397,18 +475,22 @@ uv run heliostune list-scope
 path and digest. `verify-suite` checks one strict standalone suite. Their
 success output reports structure and counts and explicitly disclaims execution,
 correctness, and performance observation. `list-scope` prints the closed domain
-and dtype vocabularies, the two initial template IDs, and the current backend
-status.
+and dtype vocabularies, the two runtime-integrated reference template IDs, and
+their current backend status. The native Triton RMSNorm suite is accepted by
+the structural verifier but is deliberately not listed as a frozen executable
+template.
 
 The declaration commands do not execute kernels or establish correctness or
-performance. Separate local and Modal executors now support exactly the two
-frozen reference templates. Their first H100 receipts are published as
-[post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json):
-both suites completed correctness and timing, but plugin capability declarations
-remain unprobed, the candidate/reference arithmetic is identical apart from
-full-graph compilation, no fusion claim is made, and receipts are not
-publication-eligible methodology bundles. No generic executor exists yet for the
-staged attention, KV-cache, MoE, quantized-linear, or FP8 domains.
+performance. Separate local and Modal executors continue to support exactly
+the two frozen reference templates, whose existing
+[post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json)
+is unchanged: both suites completed correctness and timing, but plugin
+capability declarations remain unprobed, the candidate/reference arithmetic is
+identical apart from full-graph compilation, no fusion claim is made, and
+receipts are not publication-eligible methodology bundles. The new native
+Triton suite and source registry have no executor integration or GPU
+observations. No generic executor exists for them or for the staged attention,
+KV-cache, MoE, quantized-linear, or FP8 domains.
 
 For the wider protocol, evidence, claim and legacy rules, see
 [METHODOLOGY.md](METHODOLOGY.md). For contributor requirements and promotion
