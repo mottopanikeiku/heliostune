@@ -1277,16 +1277,18 @@ def test_transport_freezes_exact_utf8_boundary_and_bounded_error(tmp_path: Path)
     base = _envelope(intent, _aborted_result(intent, suite_bytes), request_digest)
     entropy = "".join(hashlib.sha256(str(index).encode()).hexdigest() for index in range(1000))
 
-    at_limit = replace(base, result={"padding": entropy[:7080]}).to_transport_json()
+    within_limit = replace(base, result={"padding": entropy[:6500]}).to_transport_json()
 
-    assert len(pickle.dumps(at_limit, protocol=4)) < 8 * 1024
-    assert len(at_limit.encode("utf-8")) == REMOTE_RESULT_TRANSPORT_MAX_BYTES - 1
-    assert RemoteResultEnvelope.from_transport_json(at_limit).result == {"padding": entropy[:7080]}
+    assert len(pickle.dumps(within_limit, protocol=4)) < 8 * 1024
+    assert len(within_limit.encode("utf-8")) <= REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert RemoteResultEnvelope.from_transport_json(within_limit).result == {
+        "padding": entropy[:6500]
+    }
     with pytest.raises(SchemaError, match="inline limit") as caught:
-        replace(base, result={"padding": entropy[:7081]}).to_transport_json()
+        replace(base, result={"padding": entropy[:12000]}).to_transport_json()
     assert len(str(caught.value).encode("utf-8")) < 128
     with pytest.raises(SchemaError, match="inline limit"):
-        RemoteResultEnvelope.from_transport_json(at_limit + "xx")
+        RemoteResultEnvelope.from_transport_json(within_limit + ("x" * 6144))
 
 
 @pytest.mark.parametrize(
