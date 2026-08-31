@@ -7,11 +7,43 @@ CPU-only discovery code.
 
 from collections.abc import Callable
 from types import MappingProxyType
+from typing import Protocol
 
 import torch
 import triton
 import triton.language as tl
 from torch.library import triton_op, wrap_triton
+
+
+class _RMSNormTritonConfig(Protocol):
+    @property
+    def config_id(self) -> str: ...
+
+    @property
+    def entrypoint(self) -> str: ...
+
+    @property
+    def block_size(self) -> int: ...
+
+    @property
+    def num_warps(self) -> int: ...
+
+    @property
+    def num_stages(self) -> int: ...
+
+
+_COMPILE_CONFIGS = frozenset(
+    {
+        (
+            f"rmsnorm-triton-w{num_warps}",
+            f"heliostune_fusion_v2::residual_rmsnorm_w{num_warps}",
+            4096,
+            num_warps,
+            1,
+        )
+        for num_warps in (4, 8, 16, 32)
+    }
+)
 
 
 @triton.jit
@@ -81,6 +113,51 @@ def _validate_residual_rmsnorm_inputs(
         raise ValueError("x, residual, and gamma must be on the same CUDA device")
     if not x.is_contiguous() or not residual.is_contiguous() or not gamma.is_contiguous():
         raise ValueError("x, residual, and gamma must be contiguous")
+
+
+def _validate_compile_config(config: _RMSNormTritonConfig) -> None:
+    try:
+        values = (
+            config.config_id,
+            config.entrypoint,
+            config.block_size,
+            config.num_warps,
+            config.num_stages,
+        )
+    except AttributeError as exc:
+        raise ValueError("invalid residual RMSNorm compile config") from exc
+    if (
+        type(values[0]) is not str
+        or type(values[1]) is not str
+        or any(type(value) is not int for value in values[2:])
+        or values not in _COMPILE_CONFIGS
+    ):
+        raise ValueError("unsupported residual RMSNorm compile config")
+
+
+def compile_residual_rmsnorm(
+    config: _RMSNormTritonConfig,
+    x: torch.Tensor,
+    residual: torch.Tensor,
+    gamma: torch.Tensor,
+) -> object:
+    """Compile one exact candidate and initialize handles without launching it."""
+    _validate_compile_config(config)
+    _validate_residual_rmsnorm_inputs(x, residual, gamma)
+    output = torch.empty_like(x)
+    compiled = _residual_rmsnorm_kernel.warmup(
+        x,
+        residual,
+        gamma,
+        output,
+        grid=(128,),
+        N_COLS=4096,
+        BLOCK_SIZE=config.block_size,
+        num_warps=config.num_warps,
+        num_stages=config.num_stages,
+    )
+    _ = compiled.run
+    return compiled
 
 
 def residual_rmsnorm_w4(
