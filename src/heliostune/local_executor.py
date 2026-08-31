@@ -12,11 +12,14 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from .artifacts import strict_json_loads
 from .errors import SchemaError
 from .scope import Case, ExpectedCell, GatedMLPSemantics, RMSNormSemantics, Suite, verify_suite
+
+if TYPE_CHECKING:
+    from .native_fusion_executor import NativeFusionExecutionResult
 from .validation import (
     exact_bool,
     exact_fields,
@@ -1038,6 +1041,7 @@ def _parse_summary(
 
 GATED_MLP_SUITE_SHA256 = "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8"
 RMSNORM_SUITE_SHA256 = "a318a59bca434b97d073e0ae76f827814213c0a68b0c4263b19c81f98be8f9ee"
+NATIVE_RMSNORM_SUITE_SHA256 = "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"
 
 _FROZEN_SUITE_SHA256: Mapping[str, str] = MappingProxyType(
     {
@@ -1860,7 +1864,7 @@ def _resolve_draw_schedule(suite: Suite, case: Case) -> tuple[_DrawInstruction, 
         offset = 0.0
         if suite.template_id == "gated_mlp_epilogue.v1" and tensor.role == "parameter":
             scale = 1.0 / math.sqrt(dimensions["hidden"])
-        if suite.template_id == "residual_rmsnorm.v1" and tensor.id == "gamma":
+        if suite.template_id in {"residual_rmsnorm.v1", "residual_rmsnorm_triton.v1"} and tensor.id == "gamma":
             scale = 0.02
             offset = 1.0
         schedule.append(_DrawInstruction(tensor.id, tensor.role, shape, scale, offset))
@@ -2637,15 +2641,63 @@ def run_local_suite(suite_path: str | Path) -> LocalExecutionResult:
     )
 
 
+def _unsupported_suite_digest(digest: str) -> SchemaError:
+    return SchemaError(f"local execution is closed to unsupported suite SHA-256 {digest}")
+
+
+def execute_local_suite(
+    suite_path: str | Path,
+) -> LocalExecutionResult | NativeFusionExecutionResult:
+    digest = verify_suite(suite_path).sha256
+    if digest in {GATED_MLP_SUITE_SHA256, RMSNORM_SUITE_SHA256}:
+        return run_local_suite(suite_path)
+    if digest == NATIVE_RMSNORM_SUITE_SHA256:
+        native = importlib.import_module("heliostune.native_fusion_executor")
+        return cast("NativeFusionExecutionResult", native.run_native_fusion_suite(suite_path))
+    raise _unsupported_suite_digest(digest)
+
+
+def parse_local_execution_result(
+    value: object,
+    *,
+    verified_suite_path: str,
+    verified_suite_sha256: str,
+    verified_suite_bytes: bytes,
+) -> LocalExecutionResult | NativeFusionExecutionResult:
+    digest = _digest(verified_suite_sha256, "verified local suite SHA-256")
+    if digest in {GATED_MLP_SUITE_SHA256, RMSNORM_SUITE_SHA256}:
+        return LocalExecutionResult.from_dict(
+            value,
+            verified_suite_path=verified_suite_path,
+            verified_suite_sha256=digest,
+            verified_suite_bytes=verified_suite_bytes,
+        )
+    if digest == NATIVE_RMSNORM_SUITE_SHA256:
+        native = importlib.import_module("heliostune.native_fusion_executor")
+        return cast(
+            "NativeFusionExecutionResult",
+            native.NativeFusionExecutionResult.from_dict(
+                value,
+                verified_suite_path=verified_suite_path,
+                verified_suite_sha256=digest,
+                verified_suite_bytes=verified_suite_bytes,
+            ),
+        )
+    raise _unsupported_suite_digest(digest)
+
+
 __all__ = [
     "GATED_MLP_SUITE_SHA256",
     "RMSNORM_SUITE_SHA256",
+    "NATIVE_RMSNORM_SUITE_SHA256",
     "CapabilityProbe",
     "TensorMaterialization",
     "CorrectnessObservation",
     "TimingObservation",
     "CellObservation",
     "LocalExecutionResult",
+    "execute_local_suite",
+    "parse_local_execution_result",
     "probe_local_capability",
     "run_local_suite",
 ]

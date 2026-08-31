@@ -758,6 +758,14 @@ def _list_scope(_args: argparse.Namespace) -> int:
                 "validated remotely on H100 for both frozen templates",
             ),
             (
+                "native_local_runtime_backend",
+                "implemented for residual_rmsnorm_triton.v1",
+            ),
+            (
+                "native_local_runtime_gpu_evidence",
+                "unobserved",
+            ),
+            (
                 "generic_remote_runtime_backend",
                 "implemented for the two frozen reference templates via Modal receipt",
             ),
@@ -774,8 +782,9 @@ def _list_scope(_args: argparse.Namespace) -> int:
             (
                 "limitation",
                 "Schema verification alone does not claim execution, correctness, or performance. "
-                "The two frozen templates have exploratory H100 receipts only; plugin capability "
-                "declarations remain unprobed and Modal provider restarts remain unobservable.",
+                "The two generic frozen templates have exploratory H100 receipts only; native "
+                "local runtime GPU evidence is unobserved; plugin capability declarations remain "
+                "unprobed and Modal provider restarts remain unobservable.",
             ),
         ),
     )
@@ -962,14 +971,22 @@ def _local_plugin_path(suite: Path, explicit_plugin: Path | None) -> Path:
             "--plugin is required unless SUITE resolves to a committed reference template"
         )
     templates = {
-        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").resolve(),
-        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").resolve(),
+        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ),
+        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ),
+        (repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+        ),
     }
-    if suite.resolve() not in templates:
+    try:
+        return templates[suite.resolve()]
+    except KeyError:
         raise ArtifactError(
             "--plugin is required unless SUITE resolves to a committed reference template"
-        )
-    return repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ) from None
 
 
 def _run_local_suite(args: argparse.Namespace) -> int:
@@ -977,9 +994,9 @@ def _run_local_suite(args: argparse.Namespace) -> int:
     plugin_path = _local_plugin_path(args.suite, args.plugin)
 
     from heliostune.local_bundle import write_local_bundle
-    from heliostune.local_executor import run_local_suite
+    from heliostune.local_executor import execute_local_suite
 
-    result = run_local_suite(args.suite)
+    result = execute_local_suite(args.suite)
     if output_dir.exists():
         try:
             output_dir.rmdir()

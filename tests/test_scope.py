@@ -290,6 +290,10 @@ def test_rmsnorm_semantics() -> None:
         assert triton[field] == legacy[field]
     assert "mlp" not in json.dumps(triton).lower()
     assert Suite.from_dict(triton).template_id == "residual_rmsnorm_triton.v1"
+    assert all(
+        arm.local_capability.state == arm.remote_capability.state == "unprobed"
+        for arm in Suite.from_dict(triton).arms
+    )
     suite = _json(RMS)
     tensors = suite["tensors"]
     suite_cases = suite["cases"]
@@ -600,7 +604,11 @@ def test_vocabulary_vs_execution_separation() -> None:
         "moe",
         "quantized_linear",
     }
-    assert EXECUTABLE_TEMPLATE_IDS == ("gated_mlp_epilogue.v1", "residual_rmsnorm.v1")
+    assert EXECUTABLE_TEMPLATE_IDS == (
+        "gated_mlp_epilogue.v1",
+        "residual_rmsnorm.v1",
+        "residual_rmsnorm_triton.v1",
+    )
     advanced = NumericContract.from_dict(_advanced_contract())
     assert not advanced.is_initially_executable
     for path in (MLP, TRITON_RMS):

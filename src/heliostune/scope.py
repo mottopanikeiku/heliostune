@@ -44,8 +44,12 @@ DOMAIN_VOCABULARY = (
     "moe",
     "quantized_linear",
 )
-EXECUTABLE_TEMPLATE_IDS = ("gated_mlp_epilogue.v1", "residual_rmsnorm.v1")
-_SUITE_TEMPLATE_IDS = (*EXECUTABLE_TEMPLATE_IDS, "residual_rmsnorm_triton.v1")
+EXECUTABLE_TEMPLATE_IDS = (
+    "gated_mlp_epilogue.v1",
+    "residual_rmsnorm.v1",
+    "residual_rmsnorm_triton.v1",
+)
+_SUITE_TEMPLATE_IDS = EXECUTABLE_TEMPLATE_IDS
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 

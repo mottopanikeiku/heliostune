@@ -20,6 +20,7 @@ from heliostune.scope import Suite, load_suite
 ROOT = Path(__file__).parents[1]
 MLP = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
 RMS = ROOT / "benchmarks/suites/residual-rmsnorm-v1.json"
+TRITON_RMS = ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
 
 
 class FakeCuda:
@@ -157,6 +158,111 @@ def suite_dict(path: Path) -> dict[str, Any]:
 def test_frozen_hash_registry_matches_current_committed_suite_bytes() -> None:
     assert hashlib.sha256(MLP.read_bytes()).hexdigest() == local.GATED_MLP_SUITE_SHA256
     assert hashlib.sha256(RMS.read_bytes()).hexdigest() == local.RMSNORM_SUITE_SHA256
+    assert (
+        hashlib.sha256(TRITON_RMS.read_bytes()).hexdigest()
+        == local.NATIVE_RMSNORM_SUITE_SHA256
+    )
+
+
+def test_execute_local_suite_dispatches_legacy_without_native_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sentinel = object()
+    calls: list[Path] = []
+
+    def legacy(path: str | Path) -> object:
+        calls.append(Path(path))
+        return sentinel
+
+    def unexpected_import(name: str) -> object:
+        raise AssertionError(f"legacy dispatch imported {name}")
+
+    monkeypatch.setattr(local, "run_local_suite", legacy)
+    monkeypatch.setattr(importlib, "import_module", unexpected_import)
+    assert local.execute_local_suite(MLP) is sentinel
+    assert local.execute_local_suite(RMS) is sentinel
+    assert calls == [MLP, RMS]
+
+
+def test_execute_and_parse_native_suite_import_lazily_by_exact_digest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    copied = tmp_path / "renamed-native-suite.json"
+    copied.write_bytes(TRITON_RMS.read_bytes())
+    executed = object()
+    parsed = object()
+    imports: list[str] = []
+    parser_calls: list[tuple[object, dict[str, object]]] = []
+
+    class FakeNativeResult:
+        @classmethod
+        def from_dict(cls, value: object, **kwargs: object) -> object:
+            parser_calls.append((value, kwargs))
+            return parsed
+
+    fake_module = SimpleNamespace(
+        NativeFusionExecutionResult=FakeNativeResult,
+        run_native_fusion_suite=lambda path: executed if Path(path) == copied else None,
+    )
+
+    def load(name: str) -> object:
+        imports.append(name)
+        assert name == "heliostune.native_fusion_executor"
+        return fake_module
+
+    monkeypatch.setattr(importlib, "import_module", load)
+    assert imports == []
+    assert local.execute_local_suite(copied) is executed
+
+    payload = copied.read_bytes()
+    serialized = {"schema": "heliostune.local_executor/2"}
+    assert (
+        local.parse_local_execution_result(
+            serialized,
+            verified_suite_path="logical/native-suite.json",
+            verified_suite_sha256=local.NATIVE_RMSNORM_SUITE_SHA256,
+            verified_suite_bytes=payload,
+        )
+        is parsed
+    )
+    assert imports == [
+        "heliostune.native_fusion_executor",
+        "heliostune.native_fusion_executor",
+    ]
+    assert parser_calls == [
+        (
+            serialized,
+            {
+                "verified_suite_path": "logical/native-suite.json",
+                "verified_suite_sha256": local.NATIVE_RMSNORM_SUITE_SHA256,
+                "verified_suite_bytes": payload,
+            },
+        )
+    ]
+
+
+def test_dispatchers_fail_closed_for_unknown_digest_without_native_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    unknown = tmp_path / "unknown.json"
+    unknown_suite = suite_dict(MLP)
+    unknown_suite["timing_policies"][0]["warmups"] = 11
+    unknown.write_text(json.dumps(unknown_suite))
+    payload = unknown.read_bytes()
+    monkeypatch.setattr(
+        importlib,
+        "import_module",
+        lambda name: (_ for _ in ()).throw(AssertionError(f"unexpected import {name}")),
+    )
+    with pytest.raises(SchemaError, match="unsupported suite SHA-256"):
+        local.execute_local_suite(unknown)
+    with pytest.raises(SchemaError, match="unsupported suite SHA-256"):
+        local.parse_local_execution_result(
+            {},
+            verified_suite_path="unknown.json",
+            verified_suite_sha256=hashlib.sha256(payload).hexdigest(),
+            verified_suite_bytes=payload,
+        )
 
 
 def test_exact_copied_suite_bytes_are_accepted(
@@ -172,7 +278,6 @@ def test_exact_copied_suite_bytes_are_accepted(
     result = local.run_local_suite(copied)
     assert result.outcome == "aborted"
     assert result.verified_suite_sha256 == local.GATED_MLP_SUITE_SHA256
-
 
 def test_exact_frozen_acceptance_rejects_valid_requirement_policy_and_semantic_drift(
     tmp_path: Path,
@@ -241,10 +346,11 @@ def test_draw_schedules_follow_declared_order_and_distributions() -> None:
     assert [item.tensor_id for item in draws] == ["input", "gate_weight", "up_weight"]
     assert draws[0].shape == (8, 4096)
     assert draws[1].normal_scale == 1 / math.sqrt(4096)
-    rms = load_suite(RMS)
-    draws = local._resolve_draw_schedule(rms, rms.cases[0])
-    assert [item.tensor_id for item in draws] == ["input", "residual", "gamma"]
-    assert (draws[-1].normal_scale, draws[-1].normal_offset) == (0.02, 1.0)
+    for path in (RMS, TRITON_RMS):
+        rms = load_suite(path)
+        draws = local._resolve_draw_schedule(rms, rms.cases[0])
+        assert [item.tensor_id for item in draws] == ["input", "residual", "gamma"]
+        assert (draws[-1].normal_scale, draws[-1].normal_offset) == (0.02, 1.0)
 
 
 class FakeStorage:
@@ -675,7 +781,7 @@ def test_gated_candidate_is_exact_reference_arithmetic_compiled_fullgraph() -> N
     compiled_torch = EquationTorch()
 
     def kernel(*arguments: EquationTensor) -> EquationTensor:
-        return local._gated_mlp_candidate(compiled_torch, *arguments)
+        return cast(EquationTensor, local._gated_mlp_candidate(compiled_torch, *arguments))
 
     backend_state: dict[str, bool] = {}
     compiled = local._compile_candidate(compiled_torch, kernel, backend_state)
@@ -910,23 +1016,34 @@ def _parse_result(
     )
 
 
+@pytest.mark.parametrize("suite_path", [MLP, RMS])
 def test_execution_result_from_dict_roundtrips_and_injects_verified_suite(
+    suite_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def missing(_name: str) -> Any:
         raise ModuleNotFoundError("no torch")
 
     monkeypatch.setattr(importlib, "import_module", missing)
-    result = local.run_local_suite(MLP)
+    result = local.run_local_suite(suite_path)
     serialized = result.to_dict()
     serialized["verified_suite_path"] = "/tmp/private-remote-suite.json"
-    parsed = _parse_result(serialized)
+    payload = suite_path.read_bytes()
+    parsed = cast(
+        local.LocalExecutionResult,
+        local.parse_local_execution_result(
+            serialized,
+            verified_suite_path="logical/suite.json",
+            verified_suite_sha256=hashlib.sha256(payload).hexdigest(),
+            verified_suite_bytes=payload,
+        ),
+    )
 
     assert parsed.to_dict() == {
         **serialized,
         "verified_suite_path": "logical/suite.json",
     }
-    assert parsed.verified_suite_bytes == MLP.read_bytes()
+    assert parsed.verified_suite_bytes == suite_path.read_bytes()
     assert isinstance(parsed.capability.reasons, tuple)
     assert isinstance(parsed.materialization, tuple)
     assert isinstance(parsed.observations, tuple)
