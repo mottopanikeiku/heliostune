@@ -758,6 +758,14 @@ def _list_scope(_args: argparse.Namespace) -> int:
                 "validated remotely on H100 for both frozen templates",
             ),
             (
+                "native_local_runtime_backend",
+                "implemented for residual_rmsnorm_triton.v1",
+            ),
+            (
+                "native_local_runtime_gpu_evidence",
+                "unobserved",
+            ),
+            (
                 "generic_remote_runtime_backend",
                 "implemented for the two frozen reference templates via Modal receipt",
             ),
@@ -774,8 +782,9 @@ def _list_scope(_args: argparse.Namespace) -> int:
             (
                 "limitation",
                 "Schema verification alone does not claim execution, correctness, or performance. "
-                "The two frozen templates have exploratory H100 receipts only; plugin capability "
-                "declarations remain unprobed and Modal provider restarts remain unobservable.",
+                "The two generic frozen templates have exploratory H100 receipts only; native "
+                "local runtime GPU evidence is unobserved; plugin capability declarations remain "
+                "unprobed and Modal provider restarts remain unobservable.",
             ),
         ),
     )
@@ -962,36 +971,87 @@ def _local_plugin_path(suite: Path, explicit_plugin: Path | None) -> Path:
             "--plugin is required unless SUITE resolves to a committed reference template"
         )
     templates = {
-        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").resolve(),
-        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").resolve(),
+        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ),
+        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ),
+        (repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json").resolve(): (
+            repository / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+        ),
     }
-    if suite.resolve() not in templates:
+    try:
+        return templates[suite.resolve()]
+    except KeyError:
         raise ArtifactError(
             "--plugin is required unless SUITE resolves to a committed reference template"
-        )
-    return repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+        ) from None
 
 
 def _run_local_suite(args: argparse.Namespace) -> int:
     output_dir = _local_output_directory(args.output)
     plugin_path = _local_plugin_path(args.suite, args.plugin)
 
-    from heliostune.local_bundle import write_local_bundle
-    from heliostune.local_executor import run_local_suite
+    from heliostune.local_executor import (
+        NATIVE_RMSNORM_SUITE_SHA256,
+        LocalExecutionResult,
+        execute_local_suite,
+    )
+    from heliostune.scope import verify_suite
 
-    result = run_local_suite(args.suite)
-    if output_dir.exists():
+    try:
+        selected_suite = verify_suite(args.suite)
+    except HeliostuneError:
+        selected_suite = None
+    native_selected = (
+        selected_suite is not None and selected_suite.sha256 == NATIVE_RMSNORM_SUITE_SHA256
+    )
+    if native_selected:
+        if output_dir.exists():
+            try:
+                output_dir.rmdir()
+            except OSError as exc:
+                raise ArtifactError(
+                    f"local suite output directory is no longer empty: {output_dir}"
+                ) from exc
+        from heliostune.native_fusion_bundle import preflight_native_fusion_bundle
+
+        preflight_native_fusion_bundle(
+            args.suite,
+            plugin_path=plugin_path,
+            output_dir=output_dir,
+        )
+
+    result = execute_local_suite(args.suite)
+    if not native_selected and output_dir.exists():
         try:
             output_dir.rmdir()
         except OSError as exc:
             raise ArtifactError(
                 f"local suite output directory is no longer empty: {output_dir}"
             ) from exc
-    verified = write_local_bundle(
-        result,
-        plugin_path=plugin_path,
-        output_dir=output_dir,
-    )
+    if result.verified_suite_sha256 == NATIVE_RMSNORM_SUITE_SHA256:
+        from heliostune.native_fusion_bundle import write_native_fusion_bundle
+        from heliostune.native_fusion_executor import NativeFusionExecutionResult
+
+        if not isinstance(result, NativeFusionExecutionResult):
+            raise SchemaError("native suite digest returned a non-native execution result")
+        verified = write_native_fusion_bundle(
+            result,
+            plugin_path=plugin_path,
+            output_dir=output_dir,
+        )
+    else:
+        from heliostune.local_bundle import write_local_bundle
+
+        if not isinstance(result, LocalExecutionResult):
+            raise SchemaError("legacy suite digest returned a non-legacy execution result")
+        verified = write_local_bundle(
+            result,
+            plugin_path=plugin_path,
+            output_dir=output_dir,
+        )
     coverage = verified.bundle.coverage
     facts: list[tuple[str, str | int | Path]] = [
         ("suite", result.suite_id),

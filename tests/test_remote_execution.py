@@ -5,8 +5,12 @@ import hashlib
 import json
 import os
 import pickle
+import subprocess
+import sys
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import zstandard
@@ -14,7 +18,11 @@ import zstandard
 import heliostune.local_executor as local
 import heliostune.remote_execution as remote
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.local_executor import CapabilityProbe, LocalExecutionResult
+from heliostune.fusion_execution_registry import (
+    FUSION_EXECUTION_REGISTRY,
+    fusion_execution_spec,
+)
+from heliostune.local_executor import CapabilityProbe, LocalExecutionResult, TensorMaterialization
 from heliostune.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
@@ -41,10 +49,13 @@ from heliostune.remote_execution import (
 )
 from heliostune.schema import HardwareProfile
 from heliostune.scope import verify_suite
+from heliostune.wheel_verifier import source_digest, source_entries
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITE = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
 PLUGIN = ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+NATIVE_SUITE = ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
+NATIVE_PLUGIN = ROOT / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
 
 
 def _intent(tmp_path: Path) -> tuple[RemoteIntent, bytes, bytes, bytes]:
@@ -63,6 +74,29 @@ def _intent(tmp_path: Path) -> tuple[RemoteIntent, bytes, bytes, bytes]:
             manifest_sha256=sha256_bytes(manifest),
             head_commit="4" * 40,
             source_sha256="5" * 64,
+        ),
+        suite.bytes,
+        plugin,
+        manifest,
+    )
+
+
+def _native_intent(tmp_path: Path) -> tuple[RemoteIntent, bytes, bytes, bytes]:
+    suite = verify_suite(NATIVE_SUITE)
+    plugin = NATIVE_PLUGIN.read_bytes()
+    manifest = b'{"supplemental":true}\n'
+    return (
+        RemoteIntent(
+            suite_path=str(NATIVE_SUITE),
+            output_path=str((tmp_path / "native-receipt").absolute()),
+            suite_sha256=suite.sha256,
+            plugin_path=str(NATIVE_PLUGIN),
+            plugin_sha256=sha256_bytes(plugin),
+            wheel_filename="heliostune-1.0.0-py3-none-any.whl",
+            wheel_sha256="2" * 64,
+            manifest_sha256=sha256_bytes(manifest),
+            head_commit="4" * 40,
+            source_sha256=source_digest(source_entries(ROOT / "src/heliostune")),
         ),
         suite.bytes,
         plugin,
@@ -646,6 +680,7 @@ def test_failed_compile_huge_error_envelope_is_bounded_and_validates(tmp_path: P
     )
     assert parsed_envelope.to_json() == envelope.to_json()
     assert parsed_envelope.result["outcome"] == "failed"
+    assert isinstance(parsed_result, LocalExecutionResult)
     assert parsed_result.compile_outcomes["mlp-candidate"]["error"] == compile_error
 
 
@@ -1218,3 +1253,302 @@ def test_open_existing_records_rejects_noncanonical_or_illegal_journal(
 
     with pytest.raises(SchemaError, match="sequence or request binding"):
         open_remote_records(intent.output_path)
+
+
+def test_frozen_execution_registry_selects_legacy_and_native_modal_apis() -> None:
+    assert tuple(FUSION_EXECUTION_REGISTRY) == (
+        "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8",
+        "a318a59bca434b97d073e0ae76f827814213c0a68b0c4263b19c81f98be8f9ee",
+        "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f",
+    )
+    assert fusion_execution_spec(verify_suite(SUITE).sha256).modal_executor_api.endswith("/1")
+    native = fusion_execution_spec(verify_suite(NATIVE_SUITE).sha256)
+    assert native.modal_executor_api == "heliostune.modal_fusion_executor/2"
+    assert (native.suite_id, native.plugin_id) == (
+        "residual-rmsnorm-triton",
+        "fusion-triton-rmsnorm-plugin",
+    )
+    with pytest.raises(SchemaError, match="unsupported suite"):
+        fusion_execution_spec("0" * 64)
+    with pytest.raises(SchemaError, match="64-character lowercase"):
+        fusion_execution_spec("A" * 64)
+    with pytest.raises(TypeError):
+        FUSION_EXECUTION_REGISTRY[native.suite_sha256] = native  # type: ignore[index]
+
+
+def test_four_distinct_native_compiler_errors_fit_and_round_trip_transport(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import heliostune.fusion_kernels as fusion
+    import heliostune.local_executor as legacy
+    import heliostune.native_fusion_executor as native
+
+    intent, suite_bytes, _, _ = _native_intent(tmp_path)
+    capability = CapabilityProbe(
+        True,
+        (),
+        "2.8.0",
+        "12.8",
+        None,
+        0,
+        _hardware().device_name,
+        (9, 0),
+        True,
+        True,
+        True,
+        None,
+    )
+    registry = SimpleNamespace(lookup_backend=lambda _name: lambda graph, _inputs: graph)
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(synchronize=lambda _device: None),
+        _dynamo=SimpleNamespace(
+            config=SimpleNamespace(disable=False, suppress_errors=False),
+            backends=SimpleNamespace(registry=registry),
+        ),
+    )
+    monkeypatch.setattr(native, "_probe_capability", lambda: (capability, fake_torch, "3.4.0"))
+    monkeypatch.setattr(legacy, "_precision_flags", lambda _torch: nullcontext())
+    monkeypatch.setattr(legacy, "_cuda_autocast_disabled", lambda _torch: nullcontext())
+
+    def materialize(
+        _torch: object,
+        _suite: object,
+        _case: object,
+        arm: str,
+        digest: str,
+        _device: int,
+    ) -> tuple[dict[str, object], TensorMaterialization]:
+        descriptors = tuple(
+            {
+                "tensor_id": tensor_id,
+                "role": role,
+                "shape": shape,
+                "draw": "normal_0_1_fp32_cpu",
+                "normal_scale": scale,
+                "normal_offset": offset,
+                "cpu_dtype": "float32",
+                "storage_dtype": "bfloat16",
+                "device": "cuda:0",
+                "contiguous": True,
+                "alignment_bytes": 16,
+                "alignment_satisfied": True,
+                "storage_sha256": storage_digest,
+            }
+            for tensor_id, role, shape, scale, offset, storage_digest in (
+                ("input", "input", [128, 4096], 1.0, 0.0, "1" * 64),
+                ("residual", "input", [128, 4096], 1.0, 0.0, "2" * 64),
+                ("gamma", "parameter", [4096], 0.02, 1.0, "3" * 64),
+            )
+        )
+        return (
+            {"input": object(), "residual": object(), "gamma": object()},
+            TensorMaterialization(
+                digest,
+                "rmsnorm-case-001",
+                arm,
+                17,
+                ("input", "residual", "gamma"),
+                descriptors,
+            ),
+        )
+
+    monkeypatch.setattr(legacy, "_materialize_arm", materialize)
+    monkeypatch.setattr(legacy, "_residual_rmsnorm", lambda *_args: object())
+    errors = {
+        native._ENTRYPOINT[arm]: "".join(
+            hashlib.sha256(f"{arm}:{index}".encode()).hexdigest() for index in range(24)
+        )
+        for arm in native._NATIVE
+    }
+
+    def fail_compile(entrypoint: str, *_args: object) -> object:
+        raise RuntimeError(errors[entrypoint])
+
+    monkeypatch.setattr(fusion, "compile_residual_rmsnorm", fail_compile)
+    result = native.run_native_fusion_suite(NATIVE_SUITE)
+    compiler_errors = [
+        str(result.compile_evidence[f"{arm}-correctness"]["error"]) for arm in native._NATIVE
+    ]
+    assert len(set(compiler_errors)) == 4
+    assert all(
+        error.startswith("RuntimeError: ")
+        and len(error.encode("utf-8")) <= 384
+        and "...[truncated sha256=" in error
+        for error in compiler_errors
+    )
+    assert result.executor_sources["package_source_sha256"] == intent.source_sha256
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    envelope = RemoteResultEnvelope(
+        request_digest=request_digest,
+        suite_path=intent.suite_path,
+        suite_sha256=intent.suite_sha256,
+        plugin_path=intent.plugin_path,
+        plugin_sha256=intent.plugin_sha256,
+        wheel_filename=intent.wheel_filename,
+        wheel_sha256=intent.wheel_sha256,
+        manifest_sha256=intent.manifest_sha256,
+        head_commit=intent.head_commit,
+        source_sha256=intent.source_sha256,
+        gpu=intent.gpu,
+        gpu_selector=intent.gpu_selector,
+        hardware=_hardware(),
+        environment=result.environment,
+        result=result.to_dict(),
+    )
+
+    transport = envelope.to_transport_json()
+    assert len(transport.encode("utf-8")) < REMOTE_RESULT_TRANSPORT_MAX_BYTES
+    assert RemoteResultEnvelope.from_transport_json(transport) == envelope
+    _, parsed = validate_remote_result(
+        transport,
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert parsed.to_dict() == result.to_dict()
+
+
+def test_native_aborted_result_and_receipt_round_trip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import heliostune.native_fusion_executor as native
+
+    intent, suite_bytes, plugin_bytes, manifest_bytes = _native_intent(tmp_path)
+    capability = CapabilityProbe(
+        False,
+        ("torch_missing",),
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        False,
+        "strict CPU fake",
+    )
+    monkeypatch.setattr(native, "_probe_capability", lambda: (capability, None, None))
+    result = native.run_native_fusion_suite(NATIVE_SUITE)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    envelope = RemoteResultEnvelope(
+        request_digest=request_digest,
+        suite_path=intent.suite_path,
+        suite_sha256=intent.suite_sha256,
+        plugin_path=intent.plugin_path,
+        plugin_sha256=intent.plugin_sha256,
+        wheel_filename=intent.wheel_filename,
+        wheel_sha256=intent.wheel_sha256,
+        manifest_sha256=intent.manifest_sha256,
+        head_commit=intent.head_commit,
+        source_sha256=intent.source_sha256,
+        gpu=intent.gpu,
+        gpu_selector=intent.gpu_selector,
+        hardware=_hardware(),
+        environment=result.environment,
+        result=result.to_dict(),
+    )
+    records = create_remote_records(intent.output_path, intent, request_digest)
+    try:
+        records.journal.append("spawned", call_id="fc-native-abort")
+        records.journal.append("retrieval_started", call_id="fc-native-abort")
+        records.journal.append("aborted", call_id="fc-native-abort")
+        write_remote_receipt(
+            records,
+            status="aborted",
+            request_digest=request_digest,
+            suite_bytes=suite_bytes,
+            plugin_bytes=plugin_bytes,
+            manifest_bytes=manifest_bytes,
+            result_payload=envelope.to_json(),
+            client_spawn_count=1,
+        )
+    finally:
+        records.close()
+
+    verified = verify_remote_receipt(intent.output_path)
+    assert isinstance(verified.result, native.NativeFusionExecutionResult)
+    assert verified.result.to_dict() == result.to_dict()
+    assert verified.receipt.bindings["executor_api"] == "heliostune.modal_fusion_executor/2"
+    _, parsed = validate_remote_result(
+        envelope.to_transport_json(),
+        intent=intent,
+        request_digest=request_digest,
+        verified_suite_bytes=suite_bytes,
+    )
+    assert isinstance(parsed, native.NativeFusionExecutionResult)
+
+    wrong_schema = envelope.to_dict()
+    assert isinstance(wrong_schema["result"], dict)
+    wrong_schema["result"]["schema"] = "heliostune.local_executor/1"
+    with pytest.raises(SchemaError, match="native fusion result schema"):
+        validate_remote_result(
+            RemoteResultEnvelope.from_json(
+                canonical_json_bytes(wrong_schema).decode()
+            ).to_transport_json(),
+            intent=intent,
+            request_digest=request_digest,
+            verified_suite_bytes=suite_bytes,
+        )
+    wrong_source = envelope.to_dict()
+    assert isinstance(wrong_source["result"], dict)
+    assert isinstance(wrong_source["result"]["executor_sources"], dict)
+    wrong_source["result"]["executor_sources"]["package_source_sha256"] = "0" * 64
+    with pytest.raises(SchemaError, match="package source digest"):
+        validate_remote_result(
+            RemoteResultEnvelope.from_json(
+                canonical_json_bytes(wrong_source).decode()
+            ).to_transport_json(),
+            intent=intent,
+            request_digest=request_digest,
+            verified_suite_bytes=suite_bytes,
+        )
+
+
+def test_unresolved_native_receipt_binds_modal_v2_and_rejects_wrong_api(tmp_path: Path) -> None:
+    intent, suite_bytes, plugin_bytes, manifest_bytes = _native_intent(tmp_path)
+    _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_bytes))
+    records = create_remote_records(intent.output_path, intent, request_digest)
+    try:
+        records.journal.append("spawn_acknowledgement_lost", detail="transport lost")
+        records.journal.append("unresolved", detail="transport lost")
+        write_remote_receipt(
+            records,
+            status="unresolved",
+            request_digest=request_digest,
+            suite_bytes=suite_bytes,
+            plugin_bytes=plugin_bytes,
+            manifest_bytes=manifest_bytes,
+            result_payload=None,
+            client_spawn_count=1,
+        )
+    finally:
+        records.close()
+
+    root_path = Path(intent.output_path) / "receipt.json"
+    root = json.loads(root_path.read_text())
+    assert root["bindings"]["executor_api"] == "heliostune.modal_fusion_executor/2"
+    assert verify_remote_receipt(intent.output_path).receipt.status == "unresolved"
+    root["bindings"]["executor_api"] = "heliostune.modal_fusion_executor/1"
+    root_path.write_bytes(canonical_json_bytes(root))
+    with pytest.raises(SchemaError, match="exact intent policy"):
+        verify_remote_receipt(intent.output_path)
+
+
+def test_remote_execution_import_does_not_load_gpu_modules() -> None:
+    check = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            (
+                "import sys; import heliostune.remote_execution; "
+                "assert 'heliostune.native_fusion_executor' not in sys.modules; "
+                "assert 'torch' not in sys.modules; assert 'triton' not in sys.modules"
+            ),
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert check.returncode == 0, check.stderr

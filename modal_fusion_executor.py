@@ -285,32 +285,25 @@ image = build_image(_MODAL_WHEEL)
 )
 def execute_fusion_suite(request_json: str) -> str:
     """Validate and execute one suite, returning one compressed transport wrapper."""
-    from heliostune.hardware import expectation_for_gpu, validate_hardware
-    from heliostune.kernel import get_hardware_profile
-    from heliostune.local_executor import run_local_suite
+    from heliostune.fusion_execution_registry import fusion_execution_spec
+    from heliostune.local_executor import execute_local_suite
     from heliostune.remote_execution import (
         RemoteResultEnvelope,
         decode_remote_request,
         sha256_bytes,
     )
+    from heliostune.scope import verify_suite
 
     intent, suite_bytes, request_digest = decode_remote_request(request_json)
-    wheel = configured_modal_wheel()
-    provenance = validate_wheel_manifest(wheel, remote=True)
-    observed_wheel = {
-        "wheel_filename": wheel.name,
-        "wheel_sha256": provenance.wheel_sha256,
-        "manifest_sha256": provenance.manifest_sha256,
-        "head_commit": provenance.head_commit,
-        "source_sha256": provenance.source_sha256,
-    }
-    for field, observed in observed_wheel.items():
-        if getattr(intent, field) != observed:
-            raise RuntimeError(f"remote {field} does not match the request intent")
-    if sha256_bytes(suite_bytes) != intent.suite_sha256:
-        raise RuntimeError("remote suite bytes do not match the request intent")
-    hardware = get_hardware_profile("H100")
-    validate_hardware(hardware, expectation_for_gpu("H100"))
+    execution = fusion_execution_spec(intent.suite_sha256)
+    if (
+        intent.suite_sha256 != execution.suite_sha256
+        or sha256_bytes(suite_bytes) != execution.suite_sha256
+    ):
+        raise RuntimeError("remote suite bytes are outside the frozen execution registry")
+    if intent.plugin_sha256 != execution.plugin_sha256:
+        raise RuntimeError("remote plugin is outside the frozen execution registry")
+
     with tempfile.TemporaryDirectory(prefix="heliostune-fusion-remote-") as temporary:
         os.chmod(temporary, 0o700)
         suite_path = Path(temporary) / "suite.json"
@@ -325,9 +318,35 @@ def execute_fusion_suite(request_json: str) -> str:
             os.fsync(descriptor)
         finally:
             os.close(descriptor)
-        result = run_local_suite(suite_path)
+        verified_suite = verify_suite(suite_path)
+        if (
+            verified_suite.sha256 != execution.suite_sha256
+            or verified_suite.suite.suite_id != execution.suite_id
+            or verified_suite.suite.revision != execution.suite_revision
+        ):
+            raise RuntimeError("remote suite identity is outside the frozen execution registry")
+
+        wheel = configured_modal_wheel()
+        provenance = validate_wheel_manifest(wheel, remote=True)
+        observed_wheel = {
+            "wheel_filename": wheel.name,
+            "wheel_sha256": provenance.wheel_sha256,
+            "manifest_sha256": provenance.manifest_sha256,
+            "head_commit": provenance.head_commit,
+            "source_sha256": provenance.source_sha256,
+        }
+        for field, observed in observed_wheel.items():
+            if getattr(intent, field) != observed:
+                raise RuntimeError(f"remote {field} does not match the request intent")
+        from heliostune.hardware import expectation_for_gpu, validate_hardware
+        from heliostune.kernel import get_hardware_profile
+
+        hardware = get_hardware_profile("H100")
+        validate_hardware(hardware, expectation_for_gpu("H100"))
+        result = execute_local_suite(suite_path)
+
     if (
-        result.verified_suite_sha256 != intent.suite_sha256
+        result.verified_suite_sha256 != execution.suite_sha256
         or result.verified_suite_bytes != suite_bytes
     ):
         raise RuntimeError("local executor changed the verified remote suite byte binding")
@@ -364,7 +383,7 @@ class _LocalPlan:
 
 
 def _preflight(suite: str | Path, plugin: str | Path, output: str | Path) -> _LocalPlan:
-    from heliostune.local_executor import GATED_MLP_SUITE_SHA256, RMSNORM_SUITE_SHA256
+    from heliostune.fusion_execution_registry import fusion_execution_spec
     from heliostune.remote_execution import (
         RemoteIntent,
         decode_remote_request,
@@ -378,20 +397,26 @@ def _preflight(suite: str | Path, plugin: str | Path, output: str | Path) -> _Lo
     plugin_path = Path(plugin)
     output_path, _, _ = protect_remote_output(output)
     verified_suite = verify_suite(suite_path)
-    if verified_suite.sha256 not in {GATED_MLP_SUITE_SHA256, RMSNORM_SUITE_SHA256}:
-        raise ValueError("--suite must be one of the two frozen fusion suites")
+    execution = fusion_execution_spec(verified_suite.sha256)
+    if (
+        verified_suite.sha256 != execution.suite_sha256
+        or verified_suite.suite.suite_id != execution.suite_id
+        or verified_suite.suite.revision != execution.suite_revision
+    ):
+        raise ValueError("--suite identity does not match the frozen execution registry")
     verified_plugin = verify_plugin(plugin_path)
     if (
-        verified_plugin.plugin.plugin_id != "fusion-reference-plugin"
-        or verified_plugin.plugin.version != 1
+        sha256_bytes(verified_plugin.bytes) != execution.plugin_sha256
+        or verified_plugin.plugin.plugin_id != execution.plugin_id
+        or verified_plugin.plugin.version != execution.plugin_version
     ):
-        raise ValueError("--plugin must be the frozen fusion-reference-plugin version 1")
+        raise ValueError("--plugin does not match the selected frozen execution registry entry")
     matches = tuple(
         item
         for item in verified_plugin.suites
-        if item.sha256 == verified_suite.sha256
-        and item.suite.suite_id == verified_suite.suite.suite_id
-        and item.suite.revision == verified_suite.suite.revision
+        if item.sha256 == execution.suite_sha256
+        and item.suite.suite_id == execution.suite_id
+        and item.suite.revision == execution.suite_revision
     )
     if len(matches) != 1:
         raise ValueError("--plugin does not bind the selected frozen suite exactly once")
@@ -401,7 +426,7 @@ def _preflight(suite: str | Path, plugin: str | Path, output: str | Path) -> _Lo
         output_path=str(output_path),
         suite_sha256=verified_suite.sha256,
         plugin_path=str(plugin_path),
-        plugin_sha256=sha256_bytes(verified_plugin.bytes),
+        plugin_sha256=execution.plugin_sha256,
         wheel_filename=provenance.wheel.name,
         wheel_sha256=provenance.wheel_sha256,
         manifest_sha256=provenance.manifest_sha256,

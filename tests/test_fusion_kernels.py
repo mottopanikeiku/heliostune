@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import subprocess
 import sys
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, dataclass, replace
+from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from types import ModuleType, SimpleNamespace
+from typing import Any, NamedTuple
 
 import pytest
 
@@ -13,6 +16,8 @@ from heliostune.fusion_kernels import (
     RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT,
     RESIDUAL_RMSNORM_CONFIGS,
     RMSNormTritonConfig,
+    compile_residual_rmsnorm,
+    compiled_kernel_evidence,
     load_residual_rmsnorm,
 )
 
@@ -261,6 +266,216 @@ def test_invalid_entrypoint_fails_before_lazy_gpu_import(monkeypatch: pytest.Mon
     with pytest.raises(ValueError, match="unknown residual RMSNorm entrypoint"):
         load_residual_rmsnorm("os.system")
     assert "heliostune._fusion_gpu" not in sys.modules
+
+
+def test_invalid_compile_entrypoint_fails_before_lazy_gpu_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delitem(sys.modules, "heliostune._fusion_gpu", raising=False)
+    with pytest.raises(ValueError, match="unknown residual RMSNorm entrypoint"):
+        compile_residual_rmsnorm("os.system", object(), object(), object())
+    assert "heliostune._fusion_gpu" not in sys.modules
+
+
+def test_gpu_compile_path_warms_without_launch_and_touches_run_handle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    launches: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    warmups: list[tuple[tuple[object, ...], dict[str, object]]] = []
+    run_accesses: list[None] = []
+    allocations: list[object] = []
+
+    class FakeTensor:
+        shape: tuple[int, ...]
+        dtype: object
+        is_cuda = True
+        device = "cuda:0"
+
+        def __init__(self, shape: tuple[int, ...], dtype: object) -> None:
+            self.shape = shape
+            self.dtype = dtype
+
+        def is_contiguous(self) -> bool:
+            return True
+
+    class FakeCompiled:
+        @property
+        def run(self) -> object:
+            run_accesses.append(None)
+            return object()
+
+    class FakeJITKernel:
+        def __init__(self, function: object) -> None:
+            self.function = function
+
+        def __call__(self, *args: object, **kwargs: object) -> None:
+            launches.append((args, kwargs))
+
+        def warmup(self, *args: object, **kwargs: object) -> FakeCompiled:
+            warmups.append((args, kwargs))
+            return FakeCompiled()
+
+    bfloat16 = object()
+    torch_module = ModuleType("torch")
+    torch_module.Tensor = FakeTensor  # type: ignore[attr-defined]
+    torch_module.bfloat16 = bfloat16  # type: ignore[attr-defined]
+
+    def empty_like(value: object) -> object:
+        output = object()
+        allocations.append(value)
+        return output
+
+    torch_module.empty_like = empty_like  # type: ignore[attr-defined]
+    torch_library = ModuleType("torch.library")
+
+    def triton_op(*args: object, **kwargs: object) -> Any:
+        del args, kwargs
+        return lambda function: function
+
+    torch_library.triton_op = triton_op  # type: ignore[attr-defined]
+    torch_library.wrap_triton = lambda kernel: kernel  # type: ignore[attr-defined]
+    triton_module = ModuleType("triton")
+    triton_module.jit = FakeJITKernel  # type: ignore[attr-defined]
+    language_module = ModuleType("triton.language")
+    language_module.constexpr = object()  # type: ignore[attr-defined]
+    triton_module.language = language_module  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "torch", torch_module)
+    monkeypatch.setitem(sys.modules, "torch.library", torch_library)
+    monkeypatch.setitem(sys.modules, "triton", triton_module)
+    monkeypatch.setitem(sys.modules, "triton.language", language_module)
+
+    spec = importlib.util.spec_from_file_location("_fusion_gpu_fake", GPU_SOURCE)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    x = FakeTensor((128, 4096), bfloat16)
+    residual = FakeTensor((128, 4096), bfloat16)
+    gamma = FakeTensor((4096,), bfloat16)
+    config = RESIDUAL_RMSNORM_CONFIGS[1]
+    compiled = module.compile_residual_rmsnorm(config, x, residual, gamma)
+    assert isinstance(compiled, FakeCompiled)
+    assert allocations == [x]
+    assert launches == []
+    assert run_accesses == [None]
+    assert len(warmups) == 1
+    args, kwargs = warmups[0]
+    assert args[:3] == (x, residual, gamma)
+    assert len(args) == 4
+    assert kwargs == {
+        "grid": (128,),
+        "N_COLS": 4096,
+        "BLOCK_SIZE": 4096,
+        "num_warps": 8,
+        "num_stages": 1,
+    }
+
+    invalid = replace(config, num_warps=7)
+    with pytest.raises(ValueError, match="unsupported residual RMSNorm compile config"):
+        module.compile_residual_rmsnorm(invalid, x, residual, gamma)
+    assert len(warmups) == 1
+
+
+def test_compiled_kernel_evidence_is_exact_hashed_and_sorted() -> None:
+    @dataclass(frozen=True)
+    class Target:
+        backend: str
+        arch: str
+        warp_size: int
+
+    class Metadata(NamedTuple):
+        shared: int
+        num_warps: int
+        num_ctas: int
+        num_stages: int
+        cluster_dims: tuple[int, int, int]
+        target: Target
+
+    text = "α ptx\n"
+    binary = b"\x00\xffcubin"
+    compiled = SimpleNamespace(
+        hash="kernel-hash",
+        name="residual_rmsnorm",
+        metadata=Metadata(2048, 8, 1, 1, (1, 1, 1), Target("cuda", "sm90", 32)),
+        n_regs=64,
+        n_spills=0,
+        n_max_threads=256,
+        asm={"ptx": text, "cubin": binary},
+    )
+
+    evidence = compiled_kernel_evidence(compiled, RESIDUAL_RMSNORM_CONFIGS[1])
+    assert set(evidence) == {
+        "status",
+        "error",
+        "kernel_name",
+        "kernel_hash",
+        "target",
+        "metadata",
+        "n_regs",
+        "n_spills",
+        "n_max_threads",
+        "asm_stages",
+        "resource_gate_passed",
+    }
+    assert evidence["status"] == "compiled"
+    assert evidence["error"] is None
+    assert evidence["kernel_name"] == "residual_rmsnorm"
+    assert evidence["kernel_hash"] == "kernel-hash"
+    assert evidence["target"] == {"backend": "cuda", "arch": "sm90", "warp_size": 32}
+    assert evidence["metadata"] == {
+        "shared": 2048,
+        "num_warps": 8,
+        "num_ctas": 1,
+        "num_stages": 1,
+        "cluster_dims": [1, 1, 1],
+        "target": {"backend": "cuda", "arch": "sm90", "warp_size": 32},
+    }
+    assert evidence["resource_gate_passed"] is True
+    assert evidence["asm_stages"] == [
+        {
+            "stage": "cubin",
+            "bytes": len(binary),
+            "sha256": sha256(binary).hexdigest(),
+        },
+        {
+            "stage": "ptx",
+            "bytes": len(text.encode()),
+            "sha256": sha256(text.encode()).hexdigest(),
+        },
+    ]
+
+
+def test_compiled_kernel_evidence_rejects_missing_or_invalid_metadata() -> None:
+    valid = SimpleNamespace(
+        hash="hash",
+        name="name",
+        metadata={
+            "shared": 0,
+            "num_warps": 4,
+            "num_ctas": 1,
+            "num_stages": 1,
+            "target": {"backend": "cuda", "arch": "sm90", "warp_size": 32},
+        },
+        n_regs=1,
+        n_spills=0,
+        n_max_threads=1,
+        asm={"ptx": ""},
+    )
+    with pytest.raises(ValueError, match="metadata"):
+        compiled_kernel_evidence(
+            SimpleNamespace(**{**vars(valid), "metadata": object()}),
+            RESIDUAL_RMSNORM_CONFIGS[0],
+        )
+    with pytest.raises(ValueError, match="n_regs"):
+        compiled_kernel_evidence(
+            SimpleNamespace(**{**vars(valid), "n_regs": True}),
+            RESIDUAL_RMSNORM_CONFIGS[0],
+        )
+    with pytest.raises(ValueError, match="four registered"):
+        compiled_kernel_evidence(
+            valid,
+            replace(RESIDUAL_RMSNORM_CONFIGS[0], block_size=2048),
+        )
 
 
 def test_gpu_smoke_matches_fp32_reference_when_pinned_cuda_stack_is_available() -> None:
