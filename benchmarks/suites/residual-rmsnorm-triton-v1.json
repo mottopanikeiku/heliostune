@@ -1,0 +1,461 @@
+{
+  "schema": "heliostune.suite/1",
+  "suite_id": "residual-rmsnorm-triton",
+  "revision": 1,
+  "plugin_id": "fusion-triton-rmsnorm-plugin",
+  "plugin_version": 1,
+  "template_id": "residual_rmsnorm_triton.v1",
+  "template_status": "reference_template_not_execution_freeze",
+  "domain": "rmsnorm_residual",
+  "numeric_contracts": [
+    {
+      "id": "bf16-fp32-bf16",
+      "input": {
+        "name": "bf16",
+        "usage": "input",
+        "packing": null
+      },
+      "storage": {
+        "name": "bf16",
+        "usage": "storage",
+        "packing": null
+      },
+      "accumulation": {
+        "name": "fp32",
+        "usage": "compute",
+        "packing": null
+      },
+      "output": {
+        "name": "bf16",
+        "usage": "output",
+        "packing": null
+      },
+      "tf32": false,
+      "quantization": null
+    }
+  ],
+  "tensors": [
+    {
+      "id": "input",
+      "role": "input",
+      "shape": [
+        "tokens",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "residual",
+      "role": "input",
+      "shape": [
+        "tokens",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "gamma",
+      "role": "parameter",
+      "shape": [
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "output",
+      "role": "output",
+      "shape": [
+        "tokens",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    }
+  ],
+  "arms": [
+    {
+      "id": "rmsnorm-triton-w4",
+      "role": "candidate",
+      "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [
+        {
+          "dimension": "tokens",
+          "op": "equal",
+          "value": 128
+        },
+        {
+          "dimension": "hidden",
+          "op": "equal",
+          "value": 4096
+        }
+      ],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "9.0",
+        "features": [
+          "tensor_cores",
+          "triton"
+        ]
+      }
+    },
+    {
+      "id": "rmsnorm-triton-w8",
+      "role": "candidate",
+      "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [
+        {
+          "dimension": "tokens",
+          "op": "equal",
+          "value": 128
+        },
+        {
+          "dimension": "hidden",
+          "op": "equal",
+          "value": 4096
+        }
+      ],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "9.0",
+        "features": [
+          "tensor_cores",
+          "triton"
+        ]
+      }
+    },
+    {
+      "id": "rmsnorm-triton-w16",
+      "role": "candidate",
+      "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [
+        {
+          "dimension": "tokens",
+          "op": "equal",
+          "value": 128
+        },
+        {
+          "dimension": "hidden",
+          "op": "equal",
+          "value": 4096
+        }
+      ],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "9.0",
+        "features": [
+          "tensor_cores",
+          "triton"
+        ]
+      }
+    },
+    {
+      "id": "rmsnorm-triton-w32",
+      "role": "candidate",
+      "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [
+        {
+          "dimension": "tokens",
+          "op": "equal",
+          "value": 128
+        },
+        {
+          "dimension": "hidden",
+          "op": "equal",
+          "value": 4096
+        }
+      ],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "9.0",
+        "features": [
+          "tensor_cores",
+          "triton"
+        ]
+      }
+    },
+    {
+      "id": "rmsnorm-eager-reference",
+      "role": "reference",
+      "entrypoint": "reference_template.residual_rmsnorm_reference",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "8.0",
+        "features": [
+          "tensor_cores"
+        ]
+      }
+    },
+    {
+      "id": "rmsnorm-inductor-comparator",
+      "role": "comparator",
+      "entrypoint": "reference_template.residual_rmsnorm_candidate",
+      "domains": [
+        "rmsnorm_residual"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "8.0",
+        "features": [
+          "tensor_cores",
+          "triton"
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "rmsnorm-case-001",
+      "numeric_contract_id": "bf16-fp32-bf16",
+      "input_seed": 17,
+      "shape": {
+        "tokens": 128,
+        "hidden": 4096
+      },
+      "semantics": {
+        "kind": "rmsnorm_residual",
+        "epsilon": 1e-05,
+        "gamma": true,
+        "residual_position": "pre",
+        "output_arity": 1,
+        "fusion_boundary": [
+          "residual_add",
+          "rms_normalize",
+          "gamma_multiply"
+        ]
+      }
+    }
+  ],
+  "correctness_policies": [
+    {
+      "id": "default-correctness",
+      "reference_arm_id": "rmsnorm-eager-reference",
+      "atol": 1e-05,
+      "rtol": 0.0078125
+    }
+  ],
+  "timing_policies": [
+    {
+      "id": "default-timing",
+      "warmups": 10,
+      "repetitions": 50,
+      "statistic": "median"
+    }
+  ],
+  "expected_cells": [
+    {
+      "id": "rmsnorm-triton-w4-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w4",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-triton-w4-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w4",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "rmsnorm-triton-w8-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w8",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-triton-w8-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w8",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "rmsnorm-triton-w16-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w16",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-triton-w16-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w16",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "rmsnorm-triton-w32-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w32",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-triton-w32-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-triton-w32",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "rmsnorm-eager-reference-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-eager-reference",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-eager-reference-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-eager-reference",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "rmsnorm-inductor-comparator-correctness",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-inductor-comparator",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "rmsnorm-inductor-comparator-timing",
+      "case_id": "rmsnorm-case-001",
+      "arm_id": "rmsnorm-inductor-comparator",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    }
+  ],
+  "executor_rule": "timing_requires_retained_passing_correctness_observation"
+}

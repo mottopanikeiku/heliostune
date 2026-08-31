@@ -45,6 +45,7 @@ DOMAIN_VOCABULARY = (
     "quantized_linear",
 )
 EXECUTABLE_TEMPLATE_IDS = ("gated_mlp_epilogue.v1", "residual_rmsnorm.v1")
+_SUITE_TEMPLATE_IDS = (*EXECUTABLE_TEMPLATE_IDS, "residual_rmsnorm_triton.v1")
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
 
 
@@ -508,7 +509,7 @@ class Capability:
 class Requirements:
     cuda: bool
     min_compute_capability: str | None
-    features: tuple[Literal["tensor_cores", "fp8_tensor_cores", "int4_storage"], ...]
+    features: tuple[Literal["tensor_cores", "fp8_tensor_cores", "int4_storage", "triton"], ...]
 
     def __post_init__(self) -> None:
         cuda = exact_bool(self.cuda, context="requirements cuda")
@@ -517,7 +518,7 @@ class Requirements:
         )
         if not cuda and capability is not None:
             raise SchemaError("min_compute_capability requires cuda")
-        allowed = ("tensor_cores", "fp8_tensor_cores", "int4_storage")
+        allowed = ("tensor_cores", "fp8_tensor_cores", "int4_storage", "triton")
         for feature in self.features:
             _enum(feature, allowed, "requirements feature")
         if len(set(self.features)) != len(self.features):
@@ -532,7 +533,13 @@ class Requirements:
         return cls(
             exact_bool(data["cuda"], context="requirements cuda"),
             _nullable_string(data["min_compute_capability"], "requirements min_compute_capability"),
-            cast(tuple[Literal["tensor_cores", "fp8_tensor_cores", "int4_storage"], ...], features),
+            cast(
+                tuple[
+                    Literal["tensor_cores", "fp8_tensor_cores", "int4_storage", "triton"],
+                    ...,
+                ],
+                features,
+            ),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -868,7 +875,10 @@ def _validate_case_tensor_graph(
             raise SchemaError("gated MLP output_arity must equal the declared output tensor count")
         return
 
-    if template_id != "residual_rmsnorm.v1" or not isinstance(case.semantics, RMSNormSemantics):
+    if template_id not in (
+        "residual_rmsnorm.v1",
+        "residual_rmsnorm_triton.v1",
+    ) or not isinstance(case.semantics, RMSNormSemantics):
         raise SchemaError("case semantics do not match the suite template")
     rms_semantics = case.semantics
     if not {"tokens", "hidden"} <= shape.keys():
@@ -1050,8 +1060,8 @@ class Suite:
         exact_int(self.revision, context="suite revision", minimum=1)
         nonblank_string(self.plugin_id, context="suite plugin_id")
         exact_int(self.plugin_version, context="suite plugin_version", minimum=1)
-        if self.template_id not in EXECUTABLE_TEMPLATE_IDS:
-            raise SchemaError(f"unknown executable template_id {self.template_id!r}")
+        if self.template_id not in _SUITE_TEMPLATE_IDS:
+            raise SchemaError(f"unknown suite template_id {self.template_id!r}")
         if self.template_status != "reference_template_not_execution_freeze":
             raise SchemaError(
                 "suite must be labeled as a reference template, not an execution freeze"
@@ -1060,6 +1070,7 @@ class Suite:
         expected_domain = {
             "gated_mlp_epilogue.v1": "fused_mlp",
             "residual_rmsnorm.v1": "rmsnorm_residual",
+            "residual_rmsnorm_triton.v1": "rmsnorm_residual",
         }[self.template_id]
         if domain != expected_domain:
             raise SchemaError("suite template_id and domain disagree")
@@ -1108,9 +1119,10 @@ class Suite:
                 case.semantics, GatedMLPSemantics
             ):
                 raise SchemaError("gated MLP suite requires gated MLP case semantics")
-            if self.template_id == "residual_rmsnorm.v1" and not isinstance(
-                case.semantics, RMSNormSemantics
-            ):
+            if self.template_id in (
+                "residual_rmsnorm.v1",
+                "residual_rmsnorm_triton.v1",
+            ) and not isinstance(case.semantics, RMSNormSemantics):
                 raise SchemaError("RMSNorm suite requires RMSNorm case semantics")
             _validate_case_tensor_graph(self.template_id, self.tensors, case)
         # Tensor declarations are suite-global and shared by every case. Arms advertise

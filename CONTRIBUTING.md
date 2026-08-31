@@ -29,17 +29,17 @@ A tag matching `v*` runs the shared `checks.yml` workflow first; the release job
 
 The normative contract for new evidence is [HeliosTune methodology v1](METHODOLOGY.md). A new study must use the exact `heliostune.protocol/1` and `heliostune.bundle/1` schemas or be explicitly cataloged as legacy; wrapping older bytes never upgrades their eligibility.
 
-Files already present under `site/`, the historical benchmark manifest, frozen Parhelion v2 protocol/manifests, and existing compressed data/result artifacts are immutable. New analysis uses a new path, records input/source/output SHA-256 digests, distinguishes confirmatory from post-hoc work, and reports negative, null, or failed outcomes without substitution. Pull requests that alter evidence must state the study ID, analysis status, sampling unit, conditioning set, and chain of custody.
+Files already present under `site/`, the historical benchmark manifest, frozen Parhelion v2 protocol/manifests, existing compressed data/result artifacts, and the two reference fusion plugin/suite declarations are immutable. New analysis or structural candidates use new paths, record input/source/output SHA-256 digests as applicable, distinguish confirmatory from post-hoc work, and report negative, null, or failed outcomes without substitution. Pull requests that alter evidence must state the study ID, analysis status, sampling unit, conditioning set, and chain of custody.
 
 ## Experiment-scope changes
 
 Read [Experiment scope](EXPERIMENT_SCOPE.md) before changing
 `heliostune.plugin/1`, `heliostune.suite/1`, their templates, or the closed
 domain/dtype vocabularies. Keep vocabulary membership, structural schema
-support, frozen-template inclusion, local/remote backend capability,
-correctness observations, and performance observations as separate states.
-Schema or template validation must not import plugin code or be described as
-execution support.
+support, frozen-template inclusion, source registry availability, local/remote
+backend capability, correctness observations, and performance observations as
+separate states. Schema or template validation and a lazy native source
+registry must not be described as execution support.
 
 A plugin suite reference must remain a normalized relative path with the exact
 suite SHA-256. Changing template semantics, cases, arms, numeric contracts,
@@ -48,14 +48,14 @@ cells creates a new suite revision and hash; do not edit a frozen template in
 place. Generic EvidenceBundle transitive plugin → suite custody is not
 implemented and must not be claimed until its verifier and tests exist.
 
-The initial templates permit only FP16/BF16 input/storage, FP32 accumulation,
-FP16/BF16/FP32 output, null quantization, and disabled TF32. Advanced dtype
-work requires a separate revision with explicit format, storage/packing,
-scale/zero-point, accumulator/output, rounding/saturation, precision-readback,
-reference, and error semantics as applicable. A timing plan must have an
-earlier correctness cell for the same case, arm, and input seed; an executor
-must also retain a passing observation for that exact key before timing
-dispatch.
+The two runtime-integrated reference templates permit only FP16/BF16
+input/storage, FP32 accumulation, FP16/BF16/FP32 output, null quantization, and
+disabled TF32. Advanced dtype work requires a separate revision with explicit
+format, storage/packing, scale/zero-point, accumulator/output,
+rounding/saturation, precision-readback, reference, and error semantics as
+applicable. A timing plan must have an earlier correctness cell for the same
+case, arm, and input seed; an executor must also retain a passing observation
+for that exact key before timing dispatch.
 
 For a new or promoted suite, the pull request must:
 
@@ -72,11 +72,19 @@ For a new or promoted suite, the pull request must:
    summary without converting declaration support into a correctness or
    performance claim.
 
-Implementation priority is fused gated MLP, then residual RMSNorm. Attention/KV
-cache, quantized linear, MoE, and FP8 are catalog/design candidates until
-separate promotion revisions meet the above requirements. A scope or template
-pull request does not authorize a paid campaign; paid execution needs its own
-frozen protocol, approved bounds, committed bytes, and evidence controls.
+Native residual RMSNorm is structurally available as a separate immutable
+plugin/suite and lazy source registry, but it is not executor-integrated. Its
+four configurations fix `block_size=4096`, `num_warps=4|8|16|32`, and
+`num_stages=1`. Runtime promotion must proceed in order through compile/resource
+inspection, correctness, a one-kernel profile, and timing; a failure blocks
+later gates. Do not add a run command or claim runtime, correctness, fusion, or
+performance support before retained evidence exists. Native gated MLP is
+deferred after an unfavorable feasibility audit and must remain absent from
+this increment. Attention/KV cache, quantized linear, MoE, and FP8 are
+catalog/design candidates until separate promotion revisions meet the above
+requirements. A scope or template pull request does not authorize a paid
+campaign; paid execution needs its own frozen protocol, approved bounds,
+committed bytes, and evidence controls.
 
 The published Parhelion and Hopper studies remain immutable legacy plugins.
 Do not relabel or migrate them to plugin/suite v1 merely because a declaration

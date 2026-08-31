@@ -10,6 +10,7 @@ import pytest
 
 import heliostune.scope as scope_module
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.fusion_kernels import RESIDUAL_RMSNORM_CONFIGS
 from heliostune.scope import (
     DOMAIN_VOCABULARY,
     DTYPE_VOCABULARY,
@@ -33,6 +34,8 @@ ROOT = Path(__file__).parents[1]
 PLUGIN = ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"
 MLP = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
 RMS = ROOT / "benchmarks/suites/residual-rmsnorm-v1.json"
+TRITON_PLUGIN = ROOT / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+TRITON_RMS = ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
 
 
 def _json(path: Path) -> dict[str, object]:
@@ -73,6 +76,9 @@ def test_legacy_byte_preservation_snapshots() -> None:
         "benchmarks/methodology-protocol-v1-template.json": "69f082a8dd481935e66ec1830a0554d4fc0d06799c30297b50e8dfeff918e47e",
         "benchmarks/parhelion-v2-development-protocol.json": "ae544f798284528ed888a4c46d79b7419d5790cc8c967ad2897e9030f22374c8",
         "benchmarks/parhelion-v3-development-protocol.json": "755ea87959edbeb1d50f1d9a5dea46ed6cd5e1aa5f8f964416767546109139cb",
+        "benchmarks/plugins/fusion-reference-plugin-v1.json": "9d696f135a5e62ef622a88d85a7bb03e8fa76bddd0bf57ebf20b2eb4c1d1edc1",
+        "benchmarks/suites/gated-mlp-epilogue-v1.json": "407487a6aa7dc157dcd4aa7bcab698168813bf0a79916d70d91163dc384fe8a8",
+        "benchmarks/suites/residual-rmsnorm-v1.json": "a318a59bca434b97d073e0ae76f827814213c0a68b0c4263b19c81f98be8f9ee",
     }
     assert {
         name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in expected
@@ -80,12 +86,19 @@ def test_legacy_byte_preservation_snapshots() -> None:
 
 
 def test_exact_key_and_type_roundtrip() -> None:
-    for path, loader in ((MLP, load_suite), (RMS, load_suite), (PLUGIN, load_plugin)):
+    declarations = (
+        (MLP, load_suite, Suite),
+        (RMS, load_suite, Suite),
+        (TRITON_RMS, load_suite, Suite),
+        (PLUGIN, load_plugin, type(load_plugin(PLUGIN))),
+        (TRITON_PLUGIN, load_plugin, type(load_plugin(TRITON_PLUGIN))),
+    )
+    for path, loader, model in declarations:
         original = _json(path)
         assert loader(path).to_dict() == original
         unknown = copy.deepcopy(original)
         unknown["unknown"] = None
-        _reject(Suite if path != PLUGIN else type(load_plugin(PLUGIN)), unknown)
+        _reject(model, unknown)
     wrong_bool = _json(MLP)
     wrong_bool["revision"] = True
     _reject(Suite, wrong_bool)
@@ -271,6 +284,12 @@ def test_rmsnorm_semantics() -> None:
     _reject(RMSNormSemantics, {**raw, "output_arity": 3})
     _reject(RMSNormSemantics, {**raw, "residual_position": "around"})
     _reject(RMSNormSemantics, {**raw, "fusion_boundary": list(reversed(raw["fusion_boundary"]))})
+    legacy = _json(RMS)
+    triton = _json(TRITON_RMS)
+    for field in ("numeric_contracts", "tensors", "cases"):
+        assert triton[field] == legacy[field]
+    assert "mlp" not in json.dumps(triton).lower()
+    assert Suite.from_dict(triton).template_id == "residual_rmsnorm_triton.v1"
     suite = _json(RMS)
     tensors = suite["tensors"]
     suite_cases = suite["cases"]
@@ -319,6 +338,43 @@ def test_inline_shape_applicability() -> None:
         {"dimension": "missing", "op": "equal", "value": 1}
     ).applies(shape)
     _reject(ShapeConstraint, {"dimension": "m", "op": "divisible_by", "value": True})
+    triton = verify_suite(TRITON_RMS).suite
+    native_arms = triton.arms[:4]
+    expected_entrypoints = tuple(
+        f"heliostune_fusion_v2::residual_rmsnorm_w{warps}" for warps in (4, 8, 16, 32)
+    )
+    assert tuple(arm.entrypoint for arm in native_arms) == expected_entrypoints
+    expected_constraints = [
+        {"dimension": "tokens", "op": "equal", "value": 128},
+        {"dimension": "hidden", "op": "equal", "value": 4096},
+    ]
+    assert tuple(
+        (
+            config.config_id,
+            config.entrypoint,
+            config.block_size,
+            config.num_warps,
+            config.num_stages,
+        )
+        for config in RESIDUAL_RMSNORM_CONFIGS
+    ) == tuple(
+        (arm.id, arm.entrypoint, 4096, warps, 1)
+        for arm, warps in zip(native_arms, (4, 8, 16, 32), strict=True)
+    )
+    assert all(
+        [constraint.to_dict() for constraint in arm.constraints] == expected_constraints
+        for arm in native_arms
+    )
+    assert all(
+        arm.requirements.min_compute_capability == "9.0"
+        and arm.requirements.features == ("tensor_cores", "triton")
+        for arm in native_arms
+    )
+    eager, inductor = triton.arms[4:]
+    assert eager.requirements.min_compute_capability == "8.0"
+    assert eager.requirements.features == ("tensor_cores",)
+    assert inductor.requirements.min_compute_capability == "8.0"
+    assert inductor.requirements.features == ("tensor_cores", "triton")
     suite = _json(MLP)
     cases = suite["cases"]
     assert type(cases) is list and type(cases[0]) is dict and type(cases[0]["shape"]) is dict
@@ -363,17 +419,42 @@ def test_correctness_before_timing_static_plan() -> None:
     assert type(cells) is list and type(cells[1]) is dict
     cells[1]["input_seed"] = 18
     _reject(Suite, suite)
+    triton = verify_suite(TRITON_RMS).suite
+    assert len(triton.arms) == 6
+    assert len(triton.expected_cells) == 12
+    for index, arm in enumerate(triton.arms):
+        correctness, timing = triton.expected_cells[index * 2 : index * 2 + 2]
+        assert correctness.arm_id == timing.arm_id == arm.id
+        assert correctness.stage == "correctness"
+        assert correctness.timing_policy_id is None
+        assert timing.stage == "timing"
+        assert timing.timing_policy_id == "default-timing"
+    assert triton.correctness_policies[0].reference_arm_id == "rmsnorm-eager-reference"
+    assert triton.correctness_policies[0].atol == 1e-5
+    assert triton.correctness_policies[0].rtol == 0.0078125
+    timing_policy = triton.timing_policies[0]
+    assert (
+        timing_policy.warmups,
+        timing_policy.repetitions,
+        timing_policy.statistic,
+    ) == (10, 50, "median")
 
 
 def test_executor_observation_limitation_exposed() -> None:
-    verified = verify_suite(MLP)
-    assert (
-        verified.suite.executor_rule == "timing_requires_retained_passing_correctness_observation"
-    )
-    assert all(cell.stage in {"correctness", "timing"} for cell in verified.suite.expected_cells)
-    assert not any(
-        "outcome" in cell.to_dict() or "passing" in cell.to_dict()
-        for cell in verified.suite.expected_cells
+    for path in (MLP, TRITON_RMS):
+        suite = verify_suite(path).suite
+        assert suite.executor_rule == "timing_requires_retained_passing_correctness_observation"
+        assert all(cell.stage in {"correctness", "timing"} for cell in suite.expected_cells)
+        assert not any(
+            "outcome" in cell.to_dict() or "passing" in cell.to_dict()
+            for cell in suite.expected_cells
+        )
+    triton = verify_suite(TRITON_RMS).suite
+    assert all(
+        arm.local_capability.state == arm.remote_capability.state == "unprobed"
+        and arm.local_capability.evidence_sha256 is None
+        and arm.remote_capability.evidence_sha256 is None
+        for arm in triton.arms
     )
     changed = _json(MLP)
     changed["executor_rule"] = "static_correctness_implies_passing"
@@ -383,6 +464,25 @@ def test_executor_observation_limitation_exposed() -> None:
 def test_plugin_suite_digest_and_path_closure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    triton_plugin = verify_plugin(TRITON_PLUGIN)
+    assert (
+        triton_plugin.sha256 == "ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815"
+    )
+    assert [suite.sha256 for suite in triton_plugin.suites] == [
+        "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"
+    ]
+    assert triton_plugin.plugin.domains == ("rmsnorm_residual",)
+    assert triton_plugin.plugin.arm_ids == tuple(
+        arm.id for arm in triton_plugin.suites[0].suite.arms
+    )
+    assert [arm.role for arm in triton_plugin.suites[0].suite.arms] == [
+        "candidate",
+        "candidate",
+        "candidate",
+        "candidate",
+        "reference",
+        "comparator",
+    ]
     plugins = tmp_path / "plugins"
     suites = tmp_path / "suites"
     plugins.mkdir()
@@ -503,20 +603,21 @@ def test_vocabulary_vs_execution_separation() -> None:
     assert EXECUTABLE_TEMPLATE_IDS == ("gated_mlp_epilogue.v1", "residual_rmsnorm.v1")
     advanced = NumericContract.from_dict(_advanced_contract())
     assert not advanced.is_initially_executable
-    suite = _json(MLP)
-    suite["numeric_contracts"] = [_advanced_contract()]
-    arms = suite["arms"]
-    cases = suite["cases"]
-    assert (
-        type(arms) is list
-        and all(type(arm) is dict for arm in arms)
-        and type(cases) is list
-        and type(cases[0]) is dict
-    )
-    for arm in arms:
-        arm["numeric_contract_ids"] = ["fp8-contract"]
-    cases[0]["numeric_contract_id"] = "fp8-contract"
-    _reject(Suite, suite)
+    for path in (MLP, TRITON_RMS):
+        suite = _json(path)
+        suite["numeric_contracts"] = [_advanced_contract()]
+        arms = suite["arms"]
+        cases = suite["cases"]
+        assert (
+            type(arms) is list
+            and all(type(arm) is dict for arm in arms)
+            and type(cases) is list
+            and type(cases[0]) is dict
+        )
+        for arm in arms:
+            arm["numeric_contract_ids"] = ["fp8-contract"]
+        cases[0]["numeric_contract_id"] = "fp8-contract"
+        _reject(Suite, suite)
     quantization = _advanced_contract()["quantization"]
     fp8_tensor_suite = _json(MLP)
     fp8_tensors = fp8_tensor_suite["tensors"]
