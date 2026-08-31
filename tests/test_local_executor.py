@@ -158,10 +158,7 @@ def suite_dict(path: Path) -> dict[str, Any]:
 def test_frozen_hash_registry_matches_current_committed_suite_bytes() -> None:
     assert hashlib.sha256(MLP.read_bytes()).hexdigest() == local.GATED_MLP_SUITE_SHA256
     assert hashlib.sha256(RMS.read_bytes()).hexdigest() == local.RMSNORM_SUITE_SHA256
-    assert (
-        hashlib.sha256(TRITON_RMS.read_bytes()).hexdigest()
-        == local.NATIVE_RMSNORM_SUITE_SHA256
-    )
+    assert hashlib.sha256(TRITON_RMS.read_bytes()).hexdigest() == local.NATIVE_RMSNORM_SUITE_SHA256
 
 
 def test_execute_local_suite_dispatches_legacy_without_native_import(
@@ -278,6 +275,7 @@ def test_exact_copied_suite_bytes_are_accepted(
     result = local.run_local_suite(copied)
     assert result.outcome == "aborted"
     assert result.verified_suite_sha256 == local.GATED_MLP_SUITE_SHA256
+
 
 def test_exact_frozen_acceptance_rejects_valid_requirement_policy_and_semantic_drift(
     tmp_path: Path,

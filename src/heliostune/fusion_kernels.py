@@ -61,12 +61,12 @@ RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT: Mapping[str, RMSNormTritonConfig] = Mappi
     {config.entrypoint: config for config in RESIDUAL_RMSNORM_CONFIGS}
 )
 
+
 def _residual_rmsnorm_config(entrypoint: str) -> RMSNormTritonConfig:
     try:
         return RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT[entrypoint]
     except KeyError as exc:
         raise ValueError(f"unknown residual RMSNorm entrypoint: {entrypoint!r}") from exc
-
 
 
 def load_residual_rmsnorm(entrypoint: str) -> Callable[..., object]:
@@ -82,9 +82,7 @@ def load_residual_rmsnorm(entrypoint: str) -> Callable[..., object]:
     return load_gpu_residual_rmsnorm(config.entrypoint)
 
 
-def compile_residual_rmsnorm(
-    entrypoint: str, x: Any, residual: Any, gamma: Any
-) -> object:
+def compile_residual_rmsnorm(entrypoint: str, x: Any, residual: Any, gamma: Any) -> object:
     """Compile one known native candidate without launching it."""
     config = _residual_rmsnorm_config(entrypoint)
 
@@ -106,8 +104,7 @@ def _evidence_value(value: object, *, path: str) -> Any:
         if not all(isinstance(key, str) and key for key in value):
             raise ValueError(f"{path} must have non-empty string keys")
         return {
-            key: _evidence_value(item, path=f"{path}.{key}")
-            for key, item in sorted(value.items())
+            key: _evidence_value(item, path=f"{path}.{key}") for key, item in sorted(value.items())
         }
     if is_dataclass(value) and not isinstance(value, type):
         return {
@@ -145,9 +142,7 @@ def _non_negative_int_attribute(compiled: object, name: str, *, positive: bool =
     return value
 
 
-def compiled_kernel_evidence(
-    compiled: object, config: RMSNormTritonConfig
-) -> dict[str, Any]:
+def compiled_kernel_evidence(compiled: object, config: RMSNormTritonConfig) -> dict[str, Any]:
     """Return strict, deterministic evidence from a compiled Triton kernel."""
     registered = RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT.get(config.entrypoint)
     if registered != config:
@@ -162,7 +157,9 @@ def compiled_kernel_evidence(
         raise ValueError("compiled kernel target backend must be a non-empty string")
     arch = target.get("arch")
     if (type(arch) is not int or arch <= 0) and (not isinstance(arch, str) or not arch):
-        raise ValueError("compiled kernel target arch must be a positive integer or non-empty string")
+        raise ValueError(
+            "compiled kernel target arch must be a positive integer or non-empty string"
+        )
     if type(target.get("warp_size")) is not int or target["warp_size"] <= 0:
         raise ValueError("compiled kernel target warp_size must be a positive integer")
     for name, minimum in (
@@ -173,13 +170,8 @@ def compiled_kernel_evidence(
     ):
         value = metadata.get(name)
         if type(value) is not int or value < minimum:
-            raise ValueError(
-                f"compiled kernel metadata {name!r} must be an integer >= {minimum}"
-            )
-    if (
-        metadata["num_warps"] != config.num_warps
-        or metadata["num_stages"] != config.num_stages
-    ):
+            raise ValueError(f"compiled kernel metadata {name!r} must be an integer >= {minimum}")
+    if metadata["num_warps"] != config.num_warps or metadata["num_stages"] != config.num_stages:
         raise ValueError("compiled kernel metadata does not match the requested config")
 
     asm = _required_attribute(compiled, "asm")

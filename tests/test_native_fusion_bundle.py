@@ -95,7 +95,9 @@ def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     assert verified.bundle.coverage.failures == 12
     assert verified.bundle.provenance.attestation == "none"
     assert verified.protocol.protocol.evidence_class == "exploratory"
-    assert verified.protocol.protocol.execution.executor_api == "heliostune.native_fusion_executor/2"
+    assert (
+        verified.protocol.protocol.execution.executor_api == "heliostune.native_fusion_executor/2"
+    )
     assert verified.protocol.protocol.analysis.claims == ()
     assert not verified.publication_eligible
     assert verify_bundle_v1(verified.root_path).bundle == verified.bundle

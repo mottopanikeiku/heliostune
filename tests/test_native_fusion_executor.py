@@ -119,7 +119,6 @@ def test_safe_error_is_utf8_bounded_typed_and_binds_truncated_bytes() -> None:
     assert _safe_error(ValueError("short")) == "ValueError: short"
 
 
-
 def test_recording_inductor_backend_requires_successful_backend_return() -> None:
     state: dict[str, object] = {}
 
@@ -156,6 +155,7 @@ def test_recording_inductor_backend_requires_successful_backend_return() -> None
     assert state["completed"] is False
     assert state["callable_distinct"] is True
     assert "inductor backend failed" in cast(str, state["error"])
+
 
 def test_cpu_capability_abort_is_strict_and_makes_no_cuda_claims(
     aborted: NativeFusionExecutionResult,
@@ -299,15 +299,11 @@ def test_strict_round_trip_uses_exact_v1_custody_kwargs(
             "missing fields",
         ),
         (
-            lambda value: value["executor_sources"].__setitem__(
-                "package_source_sha256", "A" * 64
-            ),
+            lambda value: value["executor_sources"].__setitem__("package_source_sha256", "A" * 64),
             "lowercase SHA-256",
         ),
         (
-            lambda value: value["executor_sources"].__setitem__(
-                "package_source_count", True
-            ),
+            lambda value: value["executor_sources"].__setitem__("package_source_count", True),
             "must be an integer",
         ),
     ],

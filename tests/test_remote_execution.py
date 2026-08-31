@@ -1483,7 +1483,9 @@ def test_native_aborted_result_and_receipt_round_trip(
     wrong_schema["result"]["schema"] = "heliostune.local_executor/1"
     with pytest.raises(SchemaError, match="native fusion result schema"):
         validate_remote_result(
-            RemoteResultEnvelope.from_json(canonical_json_bytes(wrong_schema).decode()).to_transport_json(),
+            RemoteResultEnvelope.from_json(
+                canonical_json_bytes(wrong_schema).decode()
+            ).to_transport_json(),
             intent=intent,
             request_digest=request_digest,
             verified_suite_bytes=suite_bytes,

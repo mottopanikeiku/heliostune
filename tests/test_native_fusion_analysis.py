@@ -161,11 +161,7 @@ def _passing_result(
     for arm in _SUITE.arms:
         observations.extend((_correctness(arm.id), _timing(arm.id, medians[arm.id])))
         backend = (
-            "native_triton"
-            if arm.id in _NATIVE
-            else "eager"
-            if arm.id == _EAGER
-            else "inductor"
+            "native_triton" if arm.id in _NATIVE else "eager" if arm.id == _EAGER else "inductor"
         )
         stages[f"{arm.id}-correctness"] = {
             "backend_kind": backend,
@@ -216,9 +212,9 @@ def _fail_gate(result: SimpleNamespace, gate: str) -> None:
         observations[f"{arm_id}:correctness"].correctness.close = False
     elif gate in {"zeros", "cancellation", "overflow"}:
         probes = result.validation_evidence[cell_id]["probes"]
-        cast(list[dict[str, object]], probes)[
-            ("zeros", "cancellation", "overflow").index(gate)
-        ]["passed"] = False
+        cast(list[dict[str, object]], probes)[("zeros", "cancellation", "overflow").index(gate)][
+            "passed"
+        ] = False
     elif gate == "profile":
         result.profile_evidence[cell_id]["cuda_event_count"] = 2
     elif gate == "timing":
@@ -229,7 +225,16 @@ def _fail_gate(result: SimpleNamespace, gate: str) -> None:
 
 @pytest.mark.parametrize(
     "gate",
-    ["compile", "resource", "correctness", "zeros", "cancellation", "overflow", "profile", "timing"],
+    [
+        "compile",
+        "resource",
+        "correctness",
+        "zeros",
+        "cancellation",
+        "overflow",
+        "profile",
+        "timing",
+    ],
 )
 def test_each_native_gate_is_derived_and_fail_closed(
     monkeypatch: pytest.MonkeyPatch, gate: str
@@ -254,8 +259,13 @@ def test_output_is_stable_tie_broken_and_claimless(monkeypatch: pytest.MonkeyPat
     assert output == repeated
     assert "evaluated_at" not in output
     assert output["schema"] == "heliostune.native-fusion-stage-gate/1"
-    assert [item["arm_id"] for item in cast(list[dict[str, object]], output["candidates"])] == list(_NATIVE)
-    assert [item["arm_id"] for item in cast(list[dict[str, object]], output["baselines"])] == [_EAGER, _INDUCTOR]
+    assert [item["arm_id"] for item in cast(list[dict[str, object]], output["candidates"])] == list(
+        _NATIVE
+    )
+    assert [item["arm_id"] for item in cast(list[dict[str, object]], output["baselines"])] == [
+        _EAGER,
+        _INDUCTOR,
+    ]
     assert output["winner_id"] == _NATIVE[0]
     assert output["best_baseline_id"] == _EAGER
     assert output["decision"] == "expand_exploratory"

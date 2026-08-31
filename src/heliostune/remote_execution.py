@@ -1350,7 +1350,9 @@ def _validate_receipt_execution_artifacts(
     if (suite.suite_id, suite.revision) != (spec.suite_id, spec.suite_revision):
         raise SchemaError("remote receipt suite identity differs from frozen execution registry")
     if (suite.plugin_id, suite.plugin_version) != (spec.plugin_id, spec.plugin_version):
-        raise SchemaError("remote receipt suite plugin identity differs from frozen execution registry")
+        raise SchemaError(
+            "remote receipt suite plugin identity differs from frozen execution registry"
+        )
     if (plugin.plugin_id, plugin.version) != (spec.plugin_id, spec.plugin_version):
         raise SchemaError("remote receipt plugin identity differs from frozen execution registry")
     matching_refs = [
@@ -1530,9 +1532,7 @@ def verify_remote_receipt_payloads(
     if Path(intent.output_path).absolute() != logical_root_path.parent:
         raise SchemaError("remote receipt location differs from intent output_path")
     execution_spec = fusion_execution_spec(intent.suite_sha256)
-    _validate_receipt_execution_artifacts(
-        intent, suite_payload, plugin_payload, execution_spec
-    )
+    _validate_receipt_execution_artifacts(intent, suite_payload, plugin_payload, execution_spec)
     _, _, request_digest = decode_remote_request(encode_remote_request(intent, suite_payload))
     if receipt.receipt_id != request_digest or bindings["request_digest"] != request_digest:
         raise SchemaError("remote receipt ID/request digest binding differs")

@@ -72,14 +72,18 @@ def _capture_executor_sources() -> dict[str, object]:
         try:
             payload = path.read_bytes()
         except OSError as exc:
-            raise ArtifactError(f"cannot read installed native executor source {path}: {exc}") from exc
+            raise ArtifactError(
+                f"cannot read installed native executor source {path}: {exc}"
+            ) from exc
         sources.append(
             {"path": name, "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
         )
     try:
         package_sources = source_entries(package_dir)
     except (OSError, RuntimeError) as exc:
-        raise ArtifactError(f"cannot inventory installed heliostune package sources: {exc}") from exc
+        raise ArtifactError(
+            f"cannot inventory installed heliostune package sources: {exc}"
+        ) from exc
     return {
         "schema": "heliostune.executor-sources/1",
         "package_source_sha256": source_digest(package_sources),
@@ -138,7 +142,9 @@ def _parse_executor_sources(value: object) -> dict[str, object]:
             {
                 "path": expected_name,
                 "bytes": exact_int(
-                    item["bytes"], context=f"native executor source {expected_name} bytes", minimum=1
+                    item["bytes"],
+                    context=f"native executor source {expected_name} bytes",
+                    minimum=1,
                 ),
                 "sha256": _digest(
                     item["sha256"], f"native executor source {expected_name} SHA-256"
@@ -1239,7 +1245,6 @@ class NativeFusionExecutionResult:
         )
 
 
-
 def _derived_stage_failure(
     cell: str,
     arm: str,
@@ -1261,6 +1266,7 @@ def _derived_stage_failure(
     if arm in _NATIVE and profile[cell]["one_kernel_gate_passed"] is not True:
         return "profile_gate", cast(str, profile[cell]["error"])
     return None, None
+
 
 def _validate_cross_links(
     capability: Any,
@@ -1477,9 +1483,7 @@ def _validate_cross_links(
                     timing.samples_ms,
                     timing.median_ms,
                 ) != ("capability", capability_message, 0, 0, (), None):
-                    raise SchemaError(
-                        "capability-rejected blocked timing evidence/linkage differs"
-                    )
+                    raise SchemaError("capability-rejected blocked timing evidence/linkage differs")
         if any(
             item["failure_kind"] != "capability" or item["error"] != capability_message
             for item in stage.values()
@@ -2541,9 +2545,7 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                 compile_error = cast(str, compile_evidence[cell]["error"])
                 correctness = _failed_correctness(arm, "compile_failed", compile_error)
                 resource_pass = False
-                validation[cell] = _blocked_validation(
-                    arm, "validation blocked by compile failure"
-                )
+                validation[cell] = _blocked_validation(arm, "validation blocked by compile failure")
                 validation_pass = False
                 profile[cell] = _blocked_profile(
                     arm,

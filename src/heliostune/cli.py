@@ -1005,8 +1005,7 @@ def _run_local_suite(args: argparse.Namespace) -> int:
     except HeliostuneError:
         selected_suite = None
     native_selected = (
-        selected_suite is not None
-        and selected_suite.sha256 == NATIVE_RMSNORM_SUITE_SHA256
+        selected_suite is not None and selected_suite.sha256 == NATIVE_RMSNORM_SUITE_SHA256
     )
     if native_selected:
         if output_dir.exists():
@@ -1023,7 +1022,6 @@ def _run_local_suite(args: argparse.Namespace) -> int:
             plugin_path=plugin_path,
             output_dir=output_dir,
         )
-
 
     result = execute_local_suite(args.suite)
     if not native_selected and output_dir.exists():

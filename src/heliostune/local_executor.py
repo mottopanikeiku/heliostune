@@ -1864,7 +1864,10 @@ def _resolve_draw_schedule(suite: Suite, case: Case) -> tuple[_DrawInstruction, 
         offset = 0.0
         if suite.template_id == "gated_mlp_epilogue.v1" and tensor.role == "parameter":
             scale = 1.0 / math.sqrt(dimensions["hidden"])
-        if suite.template_id in {"residual_rmsnorm.v1", "residual_rmsnorm_triton.v1"} and tensor.id == "gamma":
+        if (
+            suite.template_id in {"residual_rmsnorm.v1", "residual_rmsnorm_triton.v1"}
+            and tensor.id == "gamma"
+        ):
             scale = 0.02
             offset = 1.0
         schedule.append(_DrawInstruction(tensor.id, tensor.role, shape, scale, offset))

@@ -28,7 +28,9 @@ _NONCLAIMS = [
 ]
 
 
-def _strict_result(result: NativeFusionExecutionResult) -> tuple[NativeFusionExecutionResult, Suite]:
+def _strict_result(
+    result: NativeFusionExecutionResult,
+) -> tuple[NativeFusionExecutionResult, Suite]:
     if not isinstance(result, NativeFusionExecutionResult):
         raise SchemaError("native fusion analysis requires a NativeFusionExecutionResult")
     parsed = NativeFusionExecutionResult.from_dict(
@@ -49,9 +51,7 @@ def _strict_result(result: NativeFusionExecutionResult) -> tuple[NativeFusionExe
     return parsed, suite
 
 
-def _observation_by_arm(
-    result: NativeFusionExecutionResult, stage: str
-) -> dict[str, Any]:
+def _observation_by_arm(result: NativeFusionExecutionResult, stage: str) -> dict[str, Any]:
     observations: dict[str, Any] = {}
     for item in result.observations:
         if item.stage == stage:
@@ -281,9 +281,7 @@ def analyze_native_fusion_result(result: NativeFusionExecutionResult) -> dict[st
             resource_passed = _passing_resource(resource)
             validation_passed = _passing_validation(validation)
             probes = cast(Sequence[Mapping[str, object]], validation["probes"])
-            probe_passed = {
-                cast(str, probe["id"]): _passing_probe(probe) for probe in probes
-            }
+            probe_passed = {cast(str, probe["id"]): _passing_probe(probe) for probe in probes}
             profile_passed = _passing_profile(profile)
             eligible = all(
                 (
@@ -334,9 +332,7 @@ def analyze_native_fusion_result(result: NativeFusionExecutionResult) -> dict[st
 
         if backend not in _BASELINE_BACKENDS:
             raise SchemaError(f"unsupported native analysis backend {backend!r}")
-        baseline_compile = (
-            parsed.compile_evidence[cell_id] if backend == "inductor" else None
-        )
+        baseline_compile = parsed.compile_evidence[cell_id] if backend == "inductor" else None
         baseline_passed = correctness_passed and timing_passed
         if baseline_compile is not None:
             baseline_passed = baseline_passed and (
@@ -373,9 +369,7 @@ def analyze_native_fusion_result(result: NativeFusionExecutionResult) -> dict[st
         else None
     )
     winner_median = None if winner_id is None else eligible_medians[winner_id]
-    best_baseline_median = (
-        None if best_baseline_id is None else baseline_medians[best_baseline_id]
-    )
+    best_baseline_median = None if best_baseline_id is None else baseline_medians[best_baseline_id]
     speedup: float | None = None
 
     if len(baseline_medians) != 2:

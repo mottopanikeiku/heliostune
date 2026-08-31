@@ -64,7 +64,9 @@ def _canonical_jsonl(rows: Sequence[object]) -> bytes:
     return "".join(strict_json_dumps(row, compact=True) + "\n" for row in rows).encode("utf-8")
 
 
-def _strict_result(result: NativeFusionExecutionResult) -> tuple[NativeFusionExecutionResult, VerifiedSuite]:
+def _strict_result(
+    result: NativeFusionExecutionResult,
+) -> tuple[NativeFusionExecutionResult, VerifiedSuite]:
     if not isinstance(result, NativeFusionExecutionResult):
         raise SchemaError("native bundle requires a NativeFusionExecutionResult")
     parsed = NativeFusionExecutionResult.from_dict(
@@ -175,9 +177,7 @@ def _preflight_destination(output_dir: str | Path) -> None:
         except FileNotFoundError:
             pass
         else:
-            raise ArtifactError(
-                f"native bundle output destination must be absent: {destination}"
-            )
+            raise ArtifactError(f"native bundle output destination must be absent: {destination}")
     except ArtifactError:
         raise
     except OSError as exc:
@@ -258,7 +258,14 @@ def _protocol_payload(
             },
             "semantic": {
                 f"{role}_sha256": _sha256(role_payloads[role])
-                for role in ("workloads", "candidates", "comparators", "splits", "numerics", "timing")
+                for role in (
+                    "workloads",
+                    "candidates",
+                    "comparators",
+                    "splits",
+                    "numerics",
+                    "timing",
+                )
             },
             "analysis": {
                 "analyzer_sha256": _sha256(role_payloads["analyzer"]),

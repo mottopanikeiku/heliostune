@@ -202,10 +202,10 @@ then records path, byte count, and SHA-256 for each execution-critical source:
 
 | Source | Path | SHA-256 |
 |---|---|---|
-| CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `d1d26114f67b54147337ecf483b75972d3cedbb42f68e2957ceab44ebb4eb7db` |
+| CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `4577047cc30310bd3be4fa165be7d256d8007dbfded1830203eaa4c8968ef40e` |
 | GPU-only implementation | [`src/heliostune/_fusion_gpu.py`](src/heliostune/_fusion_gpu.py) | `5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef` |
-| Native executor | [`src/heliostune/native_fusion_executor.py`](src/heliostune/native_fusion_executor.py) | `53464d63a07f2446fbc403dafd9eb31bd8bc085cae7b5d81ee617edcf51b0da5` |
-| Digest dispatcher | [`src/heliostune/local_executor.py`](src/heliostune/local_executor.py) | `258fe67af81a3f079be9c58451736c1f78ff1c145fe668f5a78e075d4027ac44` |
+| Native executor | [`src/heliostune/native_fusion_executor.py`](src/heliostune/native_fusion_executor.py) | `ba046ba4989cc7b618ff80ce54f3763a8d4b3fdb27548675a47c0461f602596c` |
+| Digest dispatcher | [`src/heliostune/local_executor.py`](src/heliostune/local_executor.py) | `0b11075af36909d5799467d4c31d1594d4dc25e4918ca91ca65600cc708db1ce` |
 
 The local bundle writer rechecks that inventory after execution and binds the
 exact plugin and suite bytes. The remote path additionally byte-compares the

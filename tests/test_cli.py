@@ -1126,9 +1126,7 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
     assert (
         "generic_local_runtime_gpu_validation: validated remotely on H100 for both frozen templates"
     ) in output
-    assert (
-        "native_local_runtime_backend: implemented for residual_rmsnorm_triton.v1" in output
-    )
+    assert "native_local_runtime_backend: implemented for residual_rmsnorm_triton.v1" in output
     assert "native_local_runtime_gpu_evidence: unobserved" in output
     assert (
         "generic_remote_runtime_backend: implemented for the two frozen reference templates "
