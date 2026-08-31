@@ -204,7 +204,7 @@ then records path, byte count, and SHA-256 for each execution-critical source:
 |---|---|---|
 | CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `4577047cc30310bd3be4fa165be7d256d8007dbfded1830203eaa4c8968ef40e` |
 | GPU-only implementation | [`src/heliostune/_fusion_gpu.py`](src/heliostune/_fusion_gpu.py) | `5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef` |
-| Native executor | [`src/heliostune/native_fusion_executor.py`](src/heliostune/native_fusion_executor.py) | `ba046ba4989cc7b618ff80ce54f3763a8d4b3fdb27548675a47c0461f602596c` |
+| Native executor | [`src/heliostune/native_fusion_executor.py`](src/heliostune/native_fusion_executor.py) | `84994f00b004d4f277386624866afd759f138625015d81b5c2733dee999f6b9c` |
 | Digest dispatcher | [`src/heliostune/local_executor.py`](src/heliostune/local_executor.py) | `0b11075af36909d5799467d4c31d1594d4dc25e4918ca91ca65600cc708db1ce` |
 
 The local bundle writer rechecks that inventory after execution and binds the
@@ -467,12 +467,13 @@ timing protocol and complete evidence lifecycle. A paid campaign additionally
 needs an independently approved, frozen paid plan; nothing in this roadmap
 promises or authorizes one.
 
-The implemented local and remote executors stop at the frozen gated MLP and
-residual RMSNorm reference templates. The native Triton RMSNorm declaration and
-source registry remain outside those executors. Attention/KV-cache,
-quantized-linear, MoE and FP8 work require their own suite revisions, backend
-implementations, and promotion reviews rather than being folded into an
-existing template.
+The generic local and remote reference branches stop at the frozen gated MLP
+and residual RMSNorm reference templates. The native Triton RMSNorm suite is
+nevertheless structurally executable: its frozen digest dispatches to dedicated
+local and Modal native executors. No retained GPU observation establishes its
+runtime result. Attention/KV-cache, quantized-linear, MoE and FP8 work require
+their own suite revisions, backend implementations, and promotion reviews
+rather than being folded into an existing template.
 
 ## Focused acceptance boundary
 
@@ -518,10 +519,10 @@ uv run heliostune list-scope
 path and digest. `verify-suite` checks one strict standalone suite. Their
 success output reports structure and counts and explicitly disclaims execution,
 correctness, and performance observation. `list-scope` prints the closed domain
-and dtype vocabularies, the two generic reference template IDs, and the
-separately reported native implementation/GPU-unobserved status. The native
-Triton RMSNorm suite remains outside `EXECUTABLE_TEMPLATE_IDS` because that
-declaration list is not a capability registry.
+and dtype vocabularies and all three structurally executable template IDs in
+`EXECUTABLE_TEMPLATE_IDS`, then reports the native implementation and
+GPU-unobserved status separately. Membership in that tuple records structural
+executability, not retained runtime capability.
 
 The declaration commands do not execute kernels or establish correctness or
 performance. The generic local and Modal executor branches continue to support

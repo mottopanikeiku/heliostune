@@ -24,6 +24,7 @@ from heliostune.native_fusion_executor import (
     _compile_comparator,
     _correctness_key,
     _names_digest,
+    _parse_compile,
     _parse_profile,
     _parse_resource,
     _parse_validation,
@@ -531,6 +532,45 @@ def test_profile_evidence_requires_one_total_exact_cuda_kernel() -> None:
         _parse_profile(too_many, cell)
 
 
+def test_failed_compile_parser_retains_only_consistent_native_progress(
+    aborted: NativeFusionExecutionResult,
+) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    failed = dict(aborted.compile_evidence[cell])
+    failed.update(
+        status="failed",
+        error="loader failed",
+        compile_ns=17,
+        backend_invoked=True,
+        callable_distinct=False,
+        kernel_name="kernel_w4",
+        kernel_hash="a" * 64,
+    )
+    parsed = _parse_compile(failed, cell)
+    assert parsed["backend_invoked"] is True
+    assert parsed["callable_distinct"] is False
+    assert parsed["kernel_name"] == "kernel_w4"
+
+    for mutation in (
+        {"backend_invoked": False},
+        {"backend_invoked": False, "callable_distinct": False},
+        {"callable_distinct": True},
+    ):
+        tampered = {**failed, **mutation}
+        with pytest.raises(SchemaError, match="inconsistent"):
+            _parse_compile(tampered, cell)
+
+    blocked = dict(failed)
+    blocked.update(status="blocked", compile_ns=None)
+    with pytest.raises(SchemaError, match="blocked compile"):
+        _parse_compile(blocked, cell)
+
+    completed = dict(failed)
+    completed.update(status="compiled", error=None, callable_distinct=False)
+    with pytest.raises(SchemaError, match="passing evidence"):
+        _parse_compile(completed, cell)
+
+
 def test_profile_runtime_filters_non_cuda_events_with_strict_cpu_fakes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -592,6 +632,124 @@ def test_profile_runtime_filters_non_cuda_events_with_strict_cpu_fakes(
     assert evidence["cuda_event_count"] == 1
     assert evidence["exact_name_match_count"] == 1
     assert evidence["cuda_event_names_sha256"] == _names_digest(["residual_rmsnorm_kernel"])
+
+
+def test_profile_retains_launch_progress_when_profiler_events_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import heliostune.local_executor as legacy
+
+    cuda_type = object()
+
+    class FailingEventsProfile:
+        def __enter__(self) -> FailingEventsProfile:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def events(self) -> tuple[object, ...]:
+            raise RuntimeError("events failed")
+
+    fake_torch = SimpleNamespace(
+        autograd=SimpleNamespace(DeviceType=SimpleNamespace(CUDA=cuda_type)),
+        cuda=SimpleNamespace(synchronize=lambda _device: None),
+        profiler=SimpleNamespace(
+            ProfilerActivity=SimpleNamespace(CUDA=object()),
+            profile=lambda **_kwargs: FailingEventsProfile(),
+        ),
+    )
+    monkeypatch.setattr(legacy, "_tensor_hash", lambda _torch, _tensor: "d" * 64)
+    invocations = 0
+
+    def kernel(*_arguments: object) -> object:
+        nonlocal invocations
+        invocations += 1
+        return object()
+
+    evidence = _profile_once(
+        fake_torch,
+        "rmsnorm-triton-w4",
+        kernel,
+        (object(), object(), object()),
+        object(),
+        {"input": object()},
+        0,
+        "residual_rmsnorm_kernel",
+        "a" * 64,
+    )
+    assert invocations == 2
+    assert evidence["status"] == "failed"
+    assert evidence["warmed"] is True
+    assert evidence["invocation_count"] == 1
+    assert evidence["cuda_event_count"] == 0
+    assert evidence["cuda_event_names_sha256"] is None
+    assert "events failed" in cast(str, evidence["error"])
+    _parse_profile(evidence, "rmsnorm-triton-w4-correctness")
+
+
+def test_profile_retains_event_and_output_evidence_when_input_revalidation_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import heliostune.local_executor as legacy
+
+    cuda_type = object()
+    event_name = "residual_rmsnorm_kernel"
+
+    class FakeProfile:
+        def __enter__(self) -> FakeProfile:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def events(self) -> tuple[SimpleNamespace, ...]:
+            return (SimpleNamespace(name=event_name, device_type=cuda_type),)
+
+    fake_torch = SimpleNamespace(
+        autograd=SimpleNamespace(DeviceType=SimpleNamespace(CUDA=cuda_type)),
+        cuda=SimpleNamespace(synchronize=lambda _device: None),
+        profiler=SimpleNamespace(
+            ProfilerActivity=SimpleNamespace(CUDA=object()),
+            profile=lambda **_kwargs: FakeProfile(),
+        ),
+    )
+    hash_calls = 0
+
+    def tensor_hash(_torch: object, _tensor: object) -> str:
+        nonlocal hash_calls
+        hash_calls += 1
+        if hash_calls > 1:
+            raise RuntimeError("input revalidation failed")
+        return "d" * 64
+
+    monkeypatch.setattr(legacy, "_tensor_hash", tensor_hash)
+    monkeypatch.setattr(
+        legacy,
+        "_validate_correctness",
+        lambda *_args, **_kwargs: SimpleNamespace(status="passed"),
+    )
+    evidence = _profile_once(
+        fake_torch,
+        "rmsnorm-triton-w4",
+        lambda *_arguments: object(),
+        (object(), object(), object()),
+        object(),
+        {"input": object()},
+        0,
+        event_name,
+        "a" * 64,
+    )
+    assert evidence["status"] == "failed"
+    assert evidence["warmed"] is True
+    assert evidence["invocation_count"] == 1
+    assert evidence["cuda_event_names_sample"] == [event_name]
+    assert evidence["cuda_event_names_sha256"] == _names_digest([event_name])
+    assert evidence["exact_name_match_count"] == 1
+    assert evidence["output_revalidated"] is True
+    assert evidence["inputs_revalidated"] is False
+    assert "input revalidation failed" in cast(str, evidence["error"])
+    _parse_profile(evidence, "rmsnorm-triton-w4-correctness")
 
 
 def _validation() -> dict[str, object]:
@@ -763,6 +921,125 @@ def _fake_materialization(arm: str) -> TensorMaterialization:
         ("input", "residual", "gamma"),
         tuple(descriptors),
     )
+
+
+def _install_native_pipeline_fakes(monkeypatch: pytest.MonkeyPatch) -> Any:
+    import heliostune.fusion_kernels as fusion
+    import heliostune.local_executor as legacy
+    import heliostune.native_fusion_executor as executor
+
+    fake_torch = SimpleNamespace()
+    monkeypatch.setattr(executor, "_probe_capability", lambda: (_available(), fake_torch, "3.4.0"))
+    monkeypatch.setattr(legacy, "_precision_flags", lambda _torch: nullcontext())
+    monkeypatch.setattr(legacy, "_cuda_autocast_disabled", lambda _torch: nullcontext())
+
+    def materialize(
+        _torch: object,
+        _suite: object,
+        _case: object,
+        arm: str,
+        _digest: str,
+        _device: int,
+    ) -> tuple[dict[str, object], TensorMaterialization]:
+        return (
+            {"input": object(), "residual": object(), "gamma": object()},
+            _fake_materialization(arm),
+        )
+
+    def compile_kernel(entrypoint: str, *_args: object) -> SimpleNamespace:
+        name = f"kernel_{entrypoint.rsplit('_', maxsplit=1)[-1]}"
+        return SimpleNamespace(name=name, hash=hashlib.sha256(name.encode()).hexdigest())
+
+    monkeypatch.setattr(legacy, "_materialize_arm", materialize)
+    monkeypatch.setattr(fusion, "compile_residual_rmsnorm", compile_kernel)
+    monkeypatch.setattr(
+        legacy,
+        "_residual_rmsnorm",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("oracle failed")),
+    )
+    return fusion
+
+
+def _fake_compiled_resource(compiled: object, config: object) -> dict[str, object]:
+    warps = cast(Any, config).num_warps
+    target = {"backend": "cuda", "arch": 90, "warp_size": 32}
+    return {
+        "status": "compiled",
+        "error": None,
+        "kernel_name": cast(Any, compiled).name,
+        "kernel_hash": cast(Any, compiled).hash,
+        "target": target,
+        "metadata": {
+            "target": target,
+            "shared": 0,
+            "num_warps": warps,
+            "num_ctas": 1,
+            "num_stages": 1,
+        },
+        "n_regs": 32,
+        "n_spills": 0,
+        "n_max_threads": 128,
+        "asm_stages": [{"stage": "cubin", "bytes": 1, "sha256": "4" * 64}],
+        "resource_gate_passed": True,
+    }
+
+
+def test_resource_extractor_failure_retains_compile_return_and_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fusion = _install_native_pipeline_fakes(monkeypatch)
+    monkeypatch.setattr(
+        fusion,
+        "compiled_kernel_evidence",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("resource extraction failed")),
+    )
+    result = run_native_fusion_suite(_SUITE)
+    assert result.outcome == "failed"
+    assert result.environment["backend_invoked"] is True
+    for cell, compile_record in result.compile_evidence.items():
+        if compile_record["arm_id"] not in _RUNTIME_ARMS[:4]:
+            continue
+        resource_record = result.resource_evidence[cell]
+        stage = result.stage_outcomes[cell]
+        assert compile_record["status"] == "failed"
+        assert compile_record["backend_invoked"] is True
+        assert compile_record["callable_distinct"] is False
+        assert compile_record["kernel_name"] == resource_record["kernel_name"]
+        assert compile_record["kernel_hash"] == resource_record["kernel_hash"]
+        assert resource_record["status"] == "failed"
+        assert "resource extraction failed" in cast(str, compile_record["error"])
+        assert stage["failure_kind"] == "compile_failed"
+        assert stage["error"] == compile_record["error"]
+    assert _parse(result, result.to_dict()).outcome == "failed"
+
+
+def test_loader_failure_retains_passing_resource_and_drives_compile_stage_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fusion = _install_native_pipeline_fakes(monkeypatch)
+    monkeypatch.setattr(fusion, "compiled_kernel_evidence", _fake_compiled_resource)
+    monkeypatch.setattr(
+        fusion,
+        "load_residual_rmsnorm",
+        lambda *_args: (_ for _ in ()).throw(RuntimeError("loader failed")),
+    )
+    result = run_native_fusion_suite(_SUITE)
+    assert result.outcome == "failed"
+    for cell, resource_record in result.resource_evidence.items():
+        compile_record = result.compile_evidence[cell]
+        stage = result.stage_outcomes[cell]
+        assert resource_record["status"] == "compiled"
+        assert resource_record["resource_gate_passed"] is True
+        assert compile_record["status"] == "failed"
+        assert compile_record["backend_invoked"] is True
+        assert compile_record["callable_distinct"] is False
+        assert compile_record["kernel_name"] == resource_record["kernel_name"]
+        assert compile_record["kernel_hash"] == resource_record["kernel_hash"]
+        assert "loader failed" in cast(str, compile_record["error"])
+        assert stage["resource_passed"] is True
+        assert stage["failure_kind"] == "compile_failed"
+        assert stage["error"] == compile_record["error"]
+    assert _parse(result, result.to_dict()).outcome == "failed"
 
 
 def test_oracle_failure_retains_compile_resource_and_terminalizes(

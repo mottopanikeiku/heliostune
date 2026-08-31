@@ -509,12 +509,21 @@ def _parse_compile(value: object, cell_id: str) -> dict[str, object]:
         ):
             raise SchemaError("compiled evidence lacks exact passing evidence")
     elif result["status"] == "failed":
+        native_progress_inconsistent = native and (
+            result["callable_distinct"] is True
+            or (
+                (result["kernel_name"] is not None or result["kernel_hash"] is not None)
+                and result["backend_invoked"] is not True
+            )
+        )
         if (
             result["error"] is None
             or result["compile_ns"] is None
-            or result["kernel_name"] is not None
-            or result["kernel_hash"] is not None
-            or (native and (result["backend_invoked"] or result["callable_distinct"]))
+            or (
+                not native
+                and (result["kernel_name"] is not None or result["kernel_hash"] is not None)
+            )
+            or native_progress_inconsistent
         ):
             raise SchemaError("failed compile evidence is inconsistent")
     elif (
@@ -1562,6 +1571,28 @@ def _blocked_compile(arm: str, error: str) -> dict[str, object]:
     }
 
 
+def _compiled_identity(compiled: object) -> tuple[str | None, str | None]:
+    """Read independently available identity without masking later pipeline failure."""
+    candidate = cast(Any, compiled)
+    try:
+        raw_name = candidate.name
+    except Exception:
+        raw_name = None
+    name = raw_name if type(raw_name) is str and raw_name else None
+    try:
+        raw_hash = candidate.hash
+    except Exception:
+        raw_hash = None
+    kernel_hash = (
+        raw_hash
+        if type(raw_hash) is str
+        and len(raw_hash) == 64
+        and all(character in "0123456789abcdef" for character in raw_hash)
+        else None
+    )
+    return name, kernel_hash
+
+
 def _blocked_resource(arm: str, error: str) -> dict[str, object]:
     return {
         "case_id": _CASE,
@@ -2252,19 +2283,28 @@ def _profile_once(
     from .local_executor import _tensor_hash, _validate_correctness
 
     warmed = False
+    invocation_count = 0
+    names: list[str] = []
+    names_digest: str | None = None
+    matches = 0
+    output_ok = False
+    inputs_ok = False
     try:
         before = {key: _tensor_hash(torch, tensor) for key, tensor in inputs.items()}
         kernel(*arguments)
-        torch.cuda.synchronize(device_index)
         warmed = True
+        torch.cuda.synchronize(device_index)
         with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CUDA]) as profiler:
             actual = kernel(*arguments)
+            invocation_count = 1
             torch.cuda.synchronize(device_index)
         names = [
             str(event.name)
             for event in profiler.events()
             if getattr(event, "device_type", None) == torch.autograd.DeviceType.CUDA
         ]
+        names_digest = _names_digest(names)
+        matches = names.count(name)
         correctness = _validate_correctness(
             torch,
             actual=actual,
@@ -2276,38 +2316,39 @@ def _profile_once(
             rtol=0.0078125,
             correctness_key=_correctness_key(f"{arm}-correctness"),
         )
+        output_ok = correctness.status == "passed"
         inputs_ok = all(
             _tensor_hash(torch, tensor) == before[key] for key, tensor in inputs.items()
         )
-        output_ok = correctness.status == "passed"
-        matches = names.count(name)
         gate = output_ok and inputs_ok and names == [name]
-        return {
-            "case_id": _CASE,
-            "arm_id": arm,
-            "entrypoint": _ENTRYPOINT[arm],
-            "status": "profiled" if gate else "failed",
-            "error": None
+        error = (
+            None
             if gate
-            else "profile lacks exactly one expected CUDA kernel event or revalidation failed",
-            "method": "torch.profiler.cuda_events",
-            "warmed": warmed,
-            "expected_kernel_name": name,
-            "expected_kernel_hash": kernel_hash,
-            "config": dict(_CONFIG[arm]),
-            "invocation_count": 1,
-            "cuda_event_count": len(names),
-            "cuda_event_names_sample": names[:32],
-            "cuda_event_names_sha256": _names_digest(names),
-            "exact_name_match_count": matches,
-            "output_revalidated": output_ok,
-            "inputs_revalidated": inputs_ok,
-            "one_kernel_gate_passed": gate,
-        }
+            else "profile lacks exactly one expected CUDA kernel event or revalidation failed"
+        )
     except Exception as exc:
-        result = _blocked_profile(arm, _safe_error(exc), name, kernel_hash)
-        result.update(status="failed", warmed=warmed)
-        return result
+        gate = False
+        error = _safe_error(exc)
+    return {
+        "case_id": _CASE,
+        "arm_id": arm,
+        "entrypoint": _ENTRYPOINT[arm],
+        "status": "profiled" if gate else "failed",
+        "error": error,
+        "method": "torch.profiler.cuda_events",
+        "warmed": warmed,
+        "expected_kernel_name": name,
+        "expected_kernel_hash": kernel_hash,
+        "config": dict(_CONFIG[arm]),
+        "invocation_count": invocation_count,
+        "cuda_event_count": len(names),
+        "cuda_event_names_sample": names[:32],
+        "cuda_event_names_sha256": names_digest,
+        "exact_name_match_count": matches,
+        "output_revalidated": output_ok,
+        "inputs_revalidated": inputs_ok,
+        "one_kernel_gate_passed": gate,
+    }
 
 
 def _timing(
@@ -2425,6 +2466,18 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                     native_tensors["residual"],
                     native_tensors["gamma"],
                 )
+            except Exception as exc:
+                compile_error = _safe_error(exc)
+                resource[cell] = {**_blocked_resource(arm, compile_error), "status": "failed"}
+                compile_evidence[cell] = {
+                    **_blocked_compile(arm, compile_error),
+                    "status": "failed",
+                    "compile_ns": time.perf_counter_ns() - started,
+                }
+                continue
+
+            kernel_name, kernel_hash = _compiled_identity(compiled)
+            try:
                 raw = compiled_kernel_evidence(compiled, config_by_arm[arm])
                 target = cast(Mapping[str, object], raw["target"])
                 metadata = cast(Mapping[str, object], raw["metadata"])
@@ -2460,33 +2513,59 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                     None if resource_passed else "native resource gate requires n_spills=0"
                 )
                 resource[cell] = normalized
-                compile_evidence[cell] = {
-                    "case_id": _CASE,
-                    "arm_id": arm,
-                    "entrypoint": _ENTRYPOINT[arm],
-                    "backend_kind": "native_triton",
-                    "status": "compiled",
-                    "error": None,
-                    "compile_ns": time.perf_counter_ns() - started,
-                    "backend_invoked": True,
-                    "fullgraph": False,
-                    "dynamic": False,
-                    "mode": "native_triton",
-                    "callable_distinct": True,
-                    "eager_fallback": False,
-                    "kernel_name": raw["kernel_name"],
-                    "kernel_hash": raw["kernel_hash"],
-                    "config": dict(_CONFIG[arm]),
-                }
-                kernels[arm] = cast(Callable[..., Any], load_residual_rmsnorm(_ENTRYPOINT[arm]))
+                kernel_name = cast(str, raw["kernel_name"])
+                kernel_hash = cast(str, raw["kernel_hash"])
             except Exception as exc:
                 compile_error = _safe_error(exc)
-                resource[cell] = {**_blocked_resource(arm, compile_error), "status": "failed"}
+                resource[cell] = {
+                    **_blocked_resource(arm, compile_error),
+                    "status": "failed",
+                    "kernel_name": kernel_name,
+                    "kernel_hash": kernel_hash,
+                }
                 compile_evidence[cell] = {
                     **_blocked_compile(arm, compile_error),
                     "status": "failed",
                     "compile_ns": time.perf_counter_ns() - started,
+                    "backend_invoked": True,
+                    "kernel_name": kernel_name,
+                    "kernel_hash": kernel_hash,
                 }
+                continue
+
+            try:
+                loaded = load_residual_rmsnorm(_ENTRYPOINT[arm])
+            except Exception as exc:
+                compile_error = _safe_error(exc)
+                compile_evidence[cell] = {
+                    **_blocked_compile(arm, compile_error),
+                    "status": "failed",
+                    "compile_ns": time.perf_counter_ns() - started,
+                    "backend_invoked": True,
+                    "kernel_name": kernel_name,
+                    "kernel_hash": kernel_hash,
+                }
+                continue
+
+            kernels[arm] = cast(Callable[..., Any], loaded)
+            compile_evidence[cell] = {
+                "case_id": _CASE,
+                "arm_id": arm,
+                "entrypoint": _ENTRYPOINT[arm],
+                "backend_kind": "native_triton",
+                "status": "compiled",
+                "error": None,
+                "compile_ns": time.perf_counter_ns() - started,
+                "backend_invoked": True,
+                "fullgraph": False,
+                "dynamic": False,
+                "mode": "native_triton",
+                "callable_distinct": True,
+                "eager_fallback": False,
+                "kernel_name": kernel_name,
+                "kernel_hash": kernel_hash,
+                "config": dict(_CONFIG[arm]),
+            }
 
         comparator_state: dict[str, object] = {
             "invoked": False,
@@ -2544,7 +2623,7 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
             if arm in _NATIVE and compile_evidence[cell]["status"] != "compiled":
                 compile_error = cast(str, compile_evidence[cell]["error"])
                 correctness = _failed_correctness(arm, "compile_failed", compile_error)
-                resource_pass = False
+                resource_pass = resource[cell]["resource_gate_passed"] is True
                 validation[cell] = _blocked_validation(arm, "validation blocked by compile failure")
                 validation_pass = False
                 profile[cell] = _blocked_profile(
