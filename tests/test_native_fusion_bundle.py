@@ -16,6 +16,7 @@ from heliostune.native_fusion_bundle import (
     write_native_fusion_bundle,
 )
 from heliostune.native_fusion_executor import NativeFusionExecutionResult, run_native_fusion_suite
+from heliostune.wheel_verifier import source_digest, source_entries
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SUITE = _ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
@@ -155,6 +156,9 @@ def test_native_evidence_roles_are_lossless_and_sources_are_hashed(
     package_file = __import__("heliostune").__file__
     assert package_file is not None
     package_dir = Path(package_file).resolve().parent
+    package_entries = source_entries(package_dir)
+    assert inventory["package_source_sha256"] == source_digest(package_entries)
+    assert inventory["package_source_count"] == len(package_entries)
     for item in sources:
         payload = (package_dir / item["path"]).read_bytes()
         assert item["bytes"] == len(payload)
@@ -244,22 +248,32 @@ def test_writer_rejects_source_inventory_race(
 ) -> None:
     raw_sources = aborted.executor_sources["sources"]
     assert type(raw_sources) is list
-    sources = [dict(item) for item in raw_sources]
-    sources[0]["sha256"] = "0" * 64
-    raced = replace(
-        aborted,
-        executor_sources={
-            "schema": "heliostune.executor-sources/1",
-            "sources": sources,
-        },
+    changed_sources = [dict(item) for item in raw_sources]
+    changed_sources[0]["sha256"] = "0" * 64
+    package_source_count = aborted.executor_sources["package_source_count"]
+    assert type(package_source_count) is int
+    mutations: tuple[dict[str, object], ...] = (
+        {"sources": changed_sources},
+        {"package_source_sha256": "0" * 64},
+        {"package_source_count": package_source_count + 1},
     )
-    with pytest.raises(ArtifactError, match="changed since execution"):
-        write_native_fusion_bundle(
-            raced,
-            plugin_path=_PLUGIN,
-            output_dir=tmp_path / "race",
-        )
-    assert not (tmp_path / "race").exists()
+    for index, mutation in enumerate(mutations):
+        inventory: dict[str, object] = {
+            "schema": aborted.executor_sources["schema"],
+            "package_source_sha256": aborted.executor_sources["package_source_sha256"],
+            "package_source_count": aborted.executor_sources["package_source_count"],
+            "sources": [dict(item) for item in raw_sources],
+        }
+        inventory.update(mutation)
+        raced = replace(aborted, executor_sources=inventory)
+        output = tmp_path / f"race-{index}"
+        with pytest.raises(ArtifactError, match="changed since execution"):
+            write_native_fusion_bundle(
+                raced,
+                plugin_path=_PLUGIN,
+                output_dir=output,
+            )
+        assert not output.exists()
 
 
 @pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason="descriptor publication is unavailable")

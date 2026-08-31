@@ -20,6 +20,7 @@ from heliostune.native_fusion_executor import (
     NATIVE_RMSNORM_SUITE_SHA256,
     NativeFusionExecutionResult,
     _blocked_validation,
+    _capture_executor_sources,
     _compile_comparator,
     _correctness_key,
     _names_digest,
@@ -27,6 +28,7 @@ from heliostune.native_fusion_executor import (
     _parse_resource,
     _parse_validation,
     _profile_once,
+    _safe_error,
     run_native_fusion_suite,
 )
 from heliostune.scope import verify_suite
@@ -94,6 +96,27 @@ def test_frozen_digest_and_cpu_import_safety() -> None:
     module = importlib.import_module("heliostune.native_fusion_executor")
     assert "torch" not in module.__dict__
     assert "triton" not in module.__dict__
+    inventory = _capture_executor_sources()
+    assert set(inventory) == {
+        "schema",
+        "package_source_sha256",
+        "package_source_count",
+        "sources",
+    }
+    package_source_count = inventory["package_source_count"]
+    assert type(package_source_count) is int
+    assert package_source_count >= len(cast(list[object], inventory["sources"]))
+
+
+def test_safe_error_is_utf8_bounded_typed_and_binds_truncated_bytes() -> None:
+    message = "compiler exploded: " + "界" * 500
+    original = f"RuntimeError: {message}".encode()
+    error = _safe_error(RuntimeError(message))
+
+    assert error.startswith("RuntimeError: compiler exploded:")
+    assert len(error.encode("utf-8")) <= 384
+    assert error.endswith(f"...[truncated sha256={hashlib.sha256(original).hexdigest()}]")
+    assert _safe_error(ValueError("short")) == "ValueError: short"
 
 
 
@@ -266,6 +289,26 @@ def test_strict_round_trip_uses_exact_v1_custody_kwargs(
         (
             lambda value: value["executor_sources"]["sources"].pop(),
             "exact source inventory",
+        ),
+        (
+            lambda value: value["executor_sources"].__setitem__("extra", None),
+            "unknown fields",
+        ),
+        (
+            lambda value: value["executor_sources"].pop("package_source_sha256"),
+            "missing fields",
+        ),
+        (
+            lambda value: value["executor_sources"].__setitem__(
+                "package_source_sha256", "A" * 64
+            ),
+            "lowercase SHA-256",
+        ),
+        (
+            lambda value: value["executor_sources"].__setitem__(
+                "package_source_count", True
+            ),
+            "must be an integer",
         ),
     ],
 )

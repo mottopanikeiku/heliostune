@@ -15,7 +15,6 @@ from .methodology import EvidenceBundleV1, ProtocolV1, VerifiedBundle
 from .native_fusion_executor import (
     NativeFusionExecutionResult,
     _bound_executor_sources,
-    _capture_executor_sources,
     _validate_frozen_suite,
 )
 from .scope import Suite, VerifiedSuite, verify_plugin, verify_suite
@@ -300,8 +299,7 @@ def write_native_fusion_bundle(
     """Strictly validate and atomically publish one native execution result."""
 
     parsed, selected = _strict_result(result)
-    current_sources = _capture_executor_sources()
-    if current_sources != parsed.executor_sources:
+    if _bound_executor_sources() != parsed.executor_sources:
         raise ArtifactError("native executor source inventory changed since execution")
     plugin_bytes, plugin_id, plugin_version = _bind_plugin(plugin_path, selected)
     suite = selected.suite

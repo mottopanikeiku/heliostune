@@ -25,6 +25,7 @@ from .validation import (
     optional_finite_float,
     optional_nonblank_string,
 )
+from .wheel_verifier import source_digest, source_entries
 
 NATIVE_RMSNORM_SUITE_SHA256 = "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"
 _SCHEMA: Literal["heliostune.local_executor/2"] = "heliostune.local_executor/2"
@@ -75,7 +76,16 @@ def _capture_executor_sources() -> dict[str, object]:
         sources.append(
             {"path": name, "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
         )
-    return {"schema": "heliostune.executor-sources/1", "sources": sources}
+    try:
+        package_sources = source_entries(package_dir)
+    except (OSError, RuntimeError) as exc:
+        raise ArtifactError(f"cannot inventory installed heliostune package sources: {exc}") from exc
+    return {
+        "schema": "heliostune.executor-sources/1",
+        "package_source_sha256": source_digest(package_sources),
+        "package_source_count": len(package_sources),
+        "sources": sources,
+    }
 
 
 _IMPORTED_EXECUTOR_SOURCES = _capture_executor_sources()
@@ -87,6 +97,8 @@ def _bound_executor_sources() -> dict[str, object]:
         raise ArtifactError("native executor sources changed after module import")
     return {
         "schema": _IMPORTED_EXECUTOR_SOURCES["schema"],
+        "package_source_sha256": _IMPORTED_EXECUTOR_SOURCES["package_source_sha256"],
+        "package_source_count": _IMPORTED_EXECUTOR_SOURCES["package_source_count"],
         "sources": [
             dict(cast(Mapping[str, object], item))
             for item in cast(Sequence[object], _IMPORTED_EXECUTOR_SOURCES["sources"])
@@ -96,10 +108,20 @@ def _bound_executor_sources() -> dict[str, object]:
 
 def _parse_executor_sources(value: object) -> dict[str, object]:
     data = exact_fields(
-        value, required=("schema", "sources"), context="native executor_sources"
+        value,
+        required=("schema", "package_source_sha256", "package_source_count", "sources"),
+        context="native executor_sources",
     )
     if data["schema"] != "heliostune.executor-sources/1":
         raise SchemaError("native executor_sources schema differs")
+    package_source_sha256 = _digest(
+        data["package_source_sha256"], "native executor_sources package source SHA-256"
+    )
+    package_source_count = exact_int(
+        data["package_source_count"],
+        context="native executor_sources package source count",
+        minimum=len(_EXECUTOR_SOURCE_NAMES),
+    )
     raw_sources = _array(data["sources"], "native executor_sources.sources")
     if len(raw_sources) != len(_EXECUTOR_SOURCE_NAMES):
         raise SchemaError("native executor_sources does not contain the exact source inventory")
@@ -123,7 +145,12 @@ def _parse_executor_sources(value: object) -> dict[str, object]:
                 ),
             }
         )
-    return {"schema": "heliostune.executor-sources/1", "sources": sources}
+    return {
+        "schema": "heliostune.executor-sources/1",
+        "package_source_sha256": package_source_sha256,
+        "package_source_count": package_source_count,
+        "sources": sources,
+    }
 
 
 _POLICIES = {
@@ -168,11 +195,16 @@ def _optional_digest(value: object, context: str) -> str | None:
     return None if value is None else _digest(value, context)
 
 
+_SAFE_ERROR_MAX_BYTES = 256
+
+
 def _safe_error(exc: BaseException) -> str:
-    encoded = f"{type(exc).__name__}: {exc}".encode(errors="replace")
-    if len(encoded) > 4096:
-        encoded = encoded[:4080] + b"...[truncated]"
-    return encoded.decode(errors="replace")
+    encoded = f"{type(exc).__name__}: {exc}".encode("utf-8", errors="replace")
+    if len(encoded) <= _SAFE_ERROR_MAX_BYTES:
+        return encoded.decode("utf-8")
+    suffix = f"...[truncated sha256={hashlib.sha256(encoded).hexdigest()}]".encode("ascii")
+    excerpt = encoded[: _SAFE_ERROR_MAX_BYTES - len(suffix)].decode("utf-8", errors="ignore")
+    return excerpt + suffix.decode("ascii")
 
 
 def _force_eager_reason(torch: Any) -> str | None:
@@ -1070,6 +1102,8 @@ class NativeFusionExecutionResult:
             },
             "executor_sources": {
                 "schema": self.executor_sources["schema"],
+                "package_source_sha256": self.executor_sources["package_source_sha256"],
+                "package_source_count": self.executor_sources["package_source_count"],
                 "sources": [
                     dict(cast(Mapping[str, object], item))
                     for item in cast(Sequence[object], self.executor_sources["sources"])
