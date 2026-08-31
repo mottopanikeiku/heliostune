@@ -20,6 +20,7 @@ from heliostune.native_fusion_executor import (
     NATIVE_RMSNORM_SUITE_SHA256,
     NativeFusionExecutionResult,
     _blocked_validation,
+    _compile_comparator,
     _correctness_key,
     _names_digest,
     _parse_profile,
@@ -94,6 +95,44 @@ def test_frozen_digest_and_cpu_import_safety() -> None:
     assert "torch" not in module.__dict__
     assert "triton" not in module.__dict__
 
+
+
+def test_recording_inductor_backend_requires_successful_backend_return() -> None:
+    state: dict[str, object] = {}
+
+    def backend(_graph: object, _inputs: object) -> object:
+        raise RuntimeError("inductor backend failed")
+
+    def compile_callable(
+        _kernel: object,
+        *,
+        backend: Any,
+        fullgraph: bool,
+        dynamic: bool,
+        mode: str,
+    ) -> Any:
+        assert (fullgraph, dynamic, mode) == (True, False, "default")
+
+        def compiled() -> object:
+            return backend(object(), ())
+
+        return compiled
+
+    registry = SimpleNamespace(lookup_backend=lambda name: backend if name == "inductor" else None)
+    torch = SimpleNamespace(
+        _dynamo=SimpleNamespace(
+            config=SimpleNamespace(disable=False, suppress_errors=False),
+            backends=SimpleNamespace(registry=registry),
+        ),
+        compile=compile_callable,
+    )
+    compiled = _compile_comparator(torch, lambda: None, state)
+    with pytest.raises(RuntimeError, match="inductor backend failed"):
+        compiled()
+    assert state["invoked"] is True
+    assert state["completed"] is False
+    assert state["callable_distinct"] is True
+    assert "inductor backend failed" in cast(str, state["error"])
 
 def test_cpu_capability_abort_is_strict_and_makes_no_cuda_claims(
     aborted: NativeFusionExecutionResult,
@@ -223,6 +262,10 @@ def test_strict_round_trip_uses_exact_v1_custody_kwargs(
         (
             lambda value: value["validation_evidence"].pop("rmsnorm-triton-w16-correctness"),
             "exact frozen cell IDs",
+        ),
+        (
+            lambda value: value["executor_sources"]["sources"].pop(),
+            "exact source inventory",
         ),
     ],
 )
@@ -640,6 +683,13 @@ def test_materialization_failure_returns_terminal_failed_result(
     assert len(result.observations) == 12
     assert all(item.status == "blocked" for item in result.observations)
     assert _parse(result, result.to_dict()).outcome == "failed"
+
+    tampered = deepcopy(result.to_dict())
+    stage = cast(dict[str, dict[str, object]], tampered["stage_outcomes"])
+    stage["rmsnorm-triton-w4-correctness"]["failure_kind"] = "executor"
+    stage["rmsnorm-triton-w4-correctness"]["error"] = "materialization failed"
+    with pytest.raises(SchemaError, match="underlying evidence"):
+        _parse(result, tampered)
 
 
 def _fake_materialization(arm: str) -> TensorMaterialization:

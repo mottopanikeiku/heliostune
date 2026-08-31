@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import os
 import platform
 import sys
 import time
@@ -13,7 +14,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from .artifacts import strict_json_loads
-from .errors import SchemaError
+from .errors import ArtifactError, SchemaError
 from .scope import Suite, verify_suite
 from .validation import (
     exact_bool,
@@ -54,6 +55,77 @@ _COMPILE_IDS = tuple(f"{arm}-correctness" for arm in (*_NATIVE, _COMPARATOR))
 _NATIVE_IDS = tuple(f"{arm}-correctness" for arm in _NATIVE)
 _CELL_IDS = tuple(cell for arm in _RUNTIME_ARMS for cell in (f"{arm}-correctness", f"{arm}-timing"))
 _VALIDATION_PROBES = ("zeros", "cancellation", "overflow")
+_EXECUTOR_SOURCE_NAMES = (
+    "fusion_kernels.py",
+    "_fusion_gpu.py",
+    "native_fusion_executor.py",
+    "local_executor.py",
+)
+
+
+def _capture_executor_sources() -> dict[str, object]:
+    package_dir = Path(__file__).resolve().parent
+    sources: list[dict[str, object]] = []
+    for name in _EXECUTOR_SOURCE_NAMES:
+        path = package_dir / name
+        try:
+            payload = path.read_bytes()
+        except OSError as exc:
+            raise ArtifactError(f"cannot read installed native executor source {path}: {exc}") from exc
+        sources.append(
+            {"path": name, "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()}
+        )
+    return {"schema": "heliostune.executor-sources/1", "sources": sources}
+
+
+_IMPORTED_EXECUTOR_SOURCES = _capture_executor_sources()
+
+
+def _bound_executor_sources() -> dict[str, object]:
+    current = _capture_executor_sources()
+    if current != _IMPORTED_EXECUTOR_SOURCES:
+        raise ArtifactError("native executor sources changed after module import")
+    return {
+        "schema": _IMPORTED_EXECUTOR_SOURCES["schema"],
+        "sources": [
+            dict(cast(Mapping[str, object], item))
+            for item in cast(Sequence[object], _IMPORTED_EXECUTOR_SOURCES["sources"])
+        ],
+    }
+
+
+def _parse_executor_sources(value: object) -> dict[str, object]:
+    data = exact_fields(
+        value, required=("schema", "sources"), context="native executor_sources"
+    )
+    if data["schema"] != "heliostune.executor-sources/1":
+        raise SchemaError("native executor_sources schema differs")
+    raw_sources = _array(data["sources"], "native executor_sources.sources")
+    if len(raw_sources) != len(_EXECUTOR_SOURCE_NAMES):
+        raise SchemaError("native executor_sources does not contain the exact source inventory")
+    sources: list[dict[str, object]] = []
+    for expected_name, raw in zip(_EXECUTOR_SOURCE_NAMES, raw_sources, strict=True):
+        item = exact_fields(
+            raw,
+            required=("path", "bytes", "sha256"),
+            context=f"native executor source {expected_name}",
+        )
+        if item["path"] != expected_name:
+            raise SchemaError("native executor_sources order/path differs")
+        sources.append(
+            {
+                "path": expected_name,
+                "bytes": exact_int(
+                    item["bytes"], context=f"native executor source {expected_name} bytes", minimum=1
+                ),
+                "sha256": _digest(
+                    item["sha256"], f"native executor source {expected_name} SHA-256"
+                ),
+            }
+        )
+    return {"schema": "heliostune.executor-sources/1", "sources": sources}
+
+
 _POLICIES = {
     "float32_matmul_precision": "highest",
     "allow_tf32": False,
@@ -101,6 +173,62 @@ def _safe_error(exc: BaseException) -> str:
     if len(encoded) > 4096:
         encoded = encoded[:4080] + b"...[truncated]"
     return encoded.decode(errors="replace")
+
+
+def _force_eager_reason(torch: Any) -> str | None:
+    disabled = os.environ.get("TORCHDYNAMO_DISABLE")
+    if disabled is not None and disabled.strip().lower() not in {"", "0", "false", "no", "off"}:
+        return "TORCHDYNAMO_DISABLE requests eager execution"
+    config = getattr(getattr(torch, "_dynamo", None), "config", None)
+    if bool(getattr(config, "disable", False)):
+        return "torch._dynamo.config.disable requests eager execution"
+    if bool(getattr(config, "suppress_errors", False)):
+        return "torch._dynamo.config.suppress_errors permits eager fallback"
+    return None
+
+
+def _lookup_inductor_backend(torch: Any) -> Callable[..., Any]:
+    registry = getattr(getattr(getattr(torch, "_dynamo", None), "backends", None), "registry", None)
+    if registry is None:
+        registry = importlib.import_module("torch._dynamo.backends.registry")
+    backend = registry.lookup_backend("inductor")
+    if not callable(backend):
+        raise RuntimeError("the pinned Inductor backend is not callable")
+    return cast(Callable[..., Any], backend)
+
+
+def _compile_comparator(
+    torch: Any, kernel: Callable[..., Any], state: dict[str, object]
+) -> Callable[..., Any]:
+    reason = _force_eager_reason(torch)
+    if reason is not None:
+        raise RuntimeError(reason)
+    backend = _lookup_inductor_backend(torch)
+    state.update(invoked=False, completed=False, error=None, callable_distinct=False)
+
+    def recording_inductor_backend(graph_module: Any, example_inputs: Sequence[Any]) -> Any:
+        state["invoked"] = True
+        try:
+            compiled_graph = backend(graph_module, example_inputs)
+        except Exception as exc:
+            state["error"] = _safe_error(exc)
+            raise
+        state["completed"] = True
+        return compiled_graph
+
+    compiled = torch.compile(
+        kernel,
+        backend=recording_inductor_backend,
+        fullgraph=True,
+        dynamic=False,
+        mode="default",
+    )
+    if not callable(compiled):
+        raise RuntimeError("torch.compile did not return a callable")
+    if compiled is kernel:
+        raise RuntimeError("torch.compile returned the original eager callable")
+    state["callable_distinct"] = True
+    return cast(Callable[..., Any], compiled)
 
 
 def _names_digest(names: Sequence[str]) -> str:
@@ -342,10 +470,20 @@ def _parse_compile(value: object, cell_id: str) -> dict[str, object]:
             )
         ):
             raise SchemaError("compiled evidence lacks exact passing evidence")
-    elif result["error"] is None or result["backend_invoked"] or result["callable_distinct"]:
-        raise SchemaError("non-completed compile evidence is inconsistent")
-    if result["status"] == "blocked" and (
-        result["compile_ns"] is not None
+    elif result["status"] == "failed":
+        if (
+            result["error"] is None
+            or result["compile_ns"] is None
+            or result["kernel_name"] is not None
+            or result["kernel_hash"] is not None
+            or (native and (result["backend_invoked"] or result["callable_distinct"]))
+        ):
+            raise SchemaError("failed compile evidence is inconsistent")
+    elif (
+        result["error"] is None
+        or result["compile_ns"] is not None
+        or result["backend_invoked"]
+        or result["callable_distinct"]
         or result["kernel_name"] is not None
         or result["kernel_hash"] is not None
     ):
@@ -896,6 +1034,7 @@ class NativeFusionExecutionResult:
     resource_evidence: Mapping[str, Mapping[str, object]]
     profile_evidence: Mapping[str, Mapping[str, object]]
     validation_evidence: Mapping[str, Mapping[str, object]]
+    executor_sources: Mapping[str, object]
     summary: Mapping[str, object]
     outcome: Literal["completed", "failed", "aborted"]
 
@@ -928,6 +1067,13 @@ class NativeFusionExecutionResult:
             "profile_evidence": {key: dict(item) for key, item in self.profile_evidence.items()},
             "validation_evidence": {
                 key: dict(item) for key, item in self.validation_evidence.items()
+            },
+            "executor_sources": {
+                "schema": self.executor_sources["schema"],
+                "sources": [
+                    dict(cast(Mapping[str, object], item))
+                    for item in cast(Sequence[object], self.executor_sources["sources"])
+                ],
             },
             "summary": dict(self.summary),
             "outcome": self.outcome,
@@ -974,6 +1120,7 @@ class NativeFusionExecutionResult:
             "resource_evidence",
             "profile_evidence",
             "validation_evidence",
+            "executor_sources",
             "summary",
             "outcome",
         )
@@ -1003,6 +1150,7 @@ class NativeFusionExecutionResult:
         resource_raw = exact_object(data["resource_evidence"], context="resource_evidence")
         profile_raw = exact_object(data["profile_evidence"], context="profile_evidence")
         validation_raw = exact_object(data["validation_evidence"], context="validation_evidence")
+        executor_sources = _parse_executor_sources(data["executor_sources"])
         if (
             set(stage_raw) != set(_CORRECTNESS_IDS)
             or set(compile_raw) != set(_COMPILE_IDS)
@@ -1051,10 +1199,34 @@ class NativeFusionExecutionResult:
             resource,
             profile,
             validation,
+            executor_sources,
             summary,
             outcome,
         )
 
+
+
+def _derived_stage_failure(
+    cell: str,
+    arm: str,
+    correctness: Any,
+    compile_evidence: Mapping[str, Mapping[str, object]],
+    resource: Mapping[str, Mapping[str, object]],
+    validation: Mapping[str, Mapping[str, object]],
+    profile: Mapping[str, Mapping[str, object]],
+) -> tuple[str | None, str | None]:
+    if arm != _EAGER and compile_evidence[cell]["status"] != "compiled":
+        return "compile_failed", cast(str, compile_evidence[cell]["error"])
+    if arm in _NATIVE and resource[cell]["resource_gate_passed"] is not True:
+        return "resource_gate", cast(str, resource[cell]["error"])
+    if correctness.status != "passed":
+        nested = cast(Any, correctness.correctness)
+        return cast(str, nested.failure_kind), cast(str, nested.message)
+    if arm in _NATIVE and validation[cell]["validation_gate_passed"] is not True:
+        return "validation_gate", cast(str, validation[cell]["error"])
+    if arm in _NATIVE and profile[cell]["one_kernel_gate_passed"] is not True:
+        return "profile_gate", cast(str, profile[cell]["error"])
+    return None, None
 
 def _validate_cross_links(
     capability: Any,
@@ -1164,6 +1336,21 @@ def _validate_cross_links(
             )
             if len(set(names)) != 1 or len(set(hashes)) != 1:
                 raise SchemaError("compile/resource/profile kernel identity linkage differs")
+        if capability.available:
+            expected_failure = _derived_stage_failure(
+                cell,
+                arm,
+                by_id[cell],
+                compile_evidence,
+                resource,
+                validation,
+                profile,
+            )
+            if (
+                item["failure_kind"],
+                item["error"],
+            ) != expected_failure:
+                raise SchemaError("stage failure kind/error differs from underlying evidence")
         if (
             arm != _EAGER
             and item["timing_allowed"] is True
@@ -1604,7 +1791,10 @@ def _summary(
 
 
 def _aborted_result(
-    verified: Any, capability: Any, triton_version: str | None
+    verified: Any,
+    capability: Any,
+    triton_version: str | None,
+    executor_sources: Mapping[str, object],
 ) -> NativeFusionExecutionResult:
     message = str(capability.detail or capability.reason or "native capability unavailable")
     observations = tuple(
@@ -1661,6 +1851,7 @@ def _aborted_result(
         resource,
         profile,
         validation,
+        executor_sources,
         summary,
         "aborted",
     )
@@ -1672,6 +1863,7 @@ def _failed_result(
     triton_version: str | None,
     message: str,
     materialization: Sequence[Any],
+    executor_sources: Mapping[str, object],
     compile_evidence: Mapping[str, Mapping[str, object]] | None = None,
     resource_evidence: Mapping[str, Mapping[str, object]] | None = None,
 ) -> NativeFusionExecutionResult:
@@ -1739,6 +1931,22 @@ def _failed_result(
             "resource_passed": resource_record["resource_gate_passed"] is True,
         }
     validations = {f"{arm}-correctness": _blocked_validation(arm, message) for arm in _NATIVE}
+    for arm in _RUNTIME_ARMS:
+        cell = f"{arm}-correctness"
+        if arm != _EAGER and compile_records[cell]["status"] != "compiled":
+            failure_kind = "compile_failed"
+            failure_error = cast(str, compile_records[cell]["error"])
+        elif arm in _NATIVE and resource_records[cell]["resource_gate_passed"] is not True:
+            failure_kind = "resource_gate"
+            failure_error = cast(str, resource_records[cell]["error"])
+        else:
+            failure_kind = "executor"
+            failure_error = message
+        stage[cell] = {
+            **stage[cell],
+            "failure_kind": failure_kind,
+            "error": failure_error,
+        }
     summary = _summary(
         observations,
         stage,
@@ -1765,6 +1973,7 @@ def _failed_result(
         resource_records,
         profiles,
         validations,
+        executor_sources,
         summary,
         "failed",
     )
@@ -2113,9 +2322,10 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
     """Run one authenticated native suite; every resource/profile/timing gate is fail-closed."""
     verified = verify_suite(suite_path)
     _validate_frozen_suite(verified.suite, verified.sha256)
+    executor_sources = _bound_executor_sources()
     capability, torch, triton_version = _probe_capability()
     if not capability.available:
-        return _aborted_result(verified, capability, triton_version)
+        return _aborted_result(verified, capability, triton_version, executor_sources)
     assert torch is not None
 
     # Optional and v1-private imports occur only after frozen-suite authentication.
@@ -2126,7 +2336,6 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
         load_residual_rmsnorm,
     )
     from .local_executor import (
-        _compile_candidate,
         _cuda_autocast_disabled,
         _materialize_arm,
         _precision_flags,
@@ -2161,6 +2370,7 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                     triton_version,
                     _safe_error(exc),
                     materialization,
+                    executor_sources,
                 )
             inputs[arm] = materialized_tensors
             materialization.append(record)
@@ -2240,7 +2450,12 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                     "compile_ns": time.perf_counter_ns() - started,
                 }
 
-        comparator_state = {"invoked": False}
+        comparator_state: dict[str, object] = {
+            "invoked": False,
+            "completed": False,
+            "error": None,
+            "callable_distinct": False,
+        }
         comparator_started = 0
         comparator_error: str | None = None
 
@@ -2262,6 +2477,7 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                 triton_version,
                 _safe_error(exc),
                 materialization,
+                executor_sources,
                 compile_evidence,
                 resource,
             )
@@ -2277,19 +2493,34 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
             resource_pass: bool | None = None
             profile_pass: bool | None = None
             validation_pass: bool | None = None
-            failure: str | None = None
-            error: str | None = None
             if arm == _COMPARATOR:
                 comparator_started = time.perf_counter_ns()
                 try:
-                    kernels[_COMPARATOR] = _compile_candidate(torch, formula, comparator_state)
+                    kernels[_COMPARATOR] = _compile_comparator(torch, formula, comparator_state)
                 except Exception as exc:
-                    comparator_error = _safe_error(exc)
+                    comparator_error = cast(
+                        str,
+                        comparator_state["error"] or _safe_error(exc),
+                    )
 
-            if arm in _NATIVE and resource[cell]["resource_gate_passed"] is not True:
-                error = cast(str, resource[cell]["error"])
-                failure = "resource_gate"
-                correctness = _failed_correctness(arm, failure, error)
+            if arm in _NATIVE and compile_evidence[cell]["status"] != "compiled":
+                compile_error = cast(str, compile_evidence[cell]["error"])
+                correctness = _failed_correctness(arm, "compile_failed", compile_error)
+                resource_pass = False
+                validation[cell] = _blocked_validation(
+                    arm, "validation blocked by compile failure"
+                )
+                validation_pass = False
+                profile[cell] = _blocked_profile(
+                    arm,
+                    "profile blocked by compile failure",
+                    cast(str | None, resource[cell]["kernel_name"]),
+                    cast(str | None, resource[cell]["kernel_hash"]),
+                )
+                profile_pass = False
+            elif arm in _NATIVE and resource[cell]["resource_gate_passed"] is not True:
+                resource_error = cast(str, resource[cell]["error"])
+                correctness = _failed_correctness(arm, "resource_gate", resource_error)
                 resource_pass = False
                 validation[cell] = _blocked_validation(arm, "validation blocked by resource gate")
                 validation_pass = False
@@ -2301,13 +2532,13 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                 )
                 profile_pass = False
             elif arm == _COMPARATOR and comparator_error is not None:
-                error = comparator_error
-                failure = "compile_failed"
-                correctness = _failed_correctness(arm, failure, error)
+                correctness = _failed_correctness(arm, "compile_failed", comparator_error)
                 compile_evidence[cell] = {
-                    **_blocked_compile(arm, error),
+                    **_blocked_compile(arm, comparator_error),
                     "status": "failed",
                     "compile_ns": time.perf_counter_ns() - comparator_started,
+                    "backend_invoked": bool(comparator_state["invoked"]),
+                    "callable_distinct": bool(comparator_state["callable_distinct"]),
                 }
             else:
                 try:
@@ -2318,26 +2549,29 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                     correctness = _failed_correctness(arm, "execution", _safe_error(exc))
                 if arm == _COMPARATOR:
                     invoked = bool(comparator_state["invoked"])
-                    if correctness.status == "passed" and not invoked:
-                        correctness = _failed_correctness(
-                            arm, "compile_failed", "recording Inductor backend was not invoked"
+                    completed = bool(comparator_state["completed"])
+                    comparator_compile_error = cast(str | None, comparator_state["error"])
+                    if not completed:
+                        comparator_compile_error = (
+                            comparator_compile_error
+                            or "recording Inductor backend did not complete successfully"
                         )
-                    compiled_ok = invoked
+                        correctness = _failed_correctness(
+                            arm, "compile_failed", comparator_compile_error
+                        )
                     compile_evidence[cell] = {
                         "case_id": _CASE,
                         "arm_id": arm,
                         "entrypoint": _ENTRYPOINT[arm],
                         "backend_kind": "inductor",
-                        "status": "compiled" if compiled_ok else "failed",
-                        "error": None
-                        if compiled_ok
-                        else "recording Inductor backend was not invoked",
+                        "status": "compiled" if completed else "failed",
+                        "error": None if completed else comparator_compile_error,
                         "compile_ns": time.perf_counter_ns() - comparator_started,
                         "backend_invoked": invoked,
                         "fullgraph": True,
                         "dynamic": False,
                         "mode": "default",
-                        "callable_distinct": compiled_ok,
+                        "callable_distinct": bool(comparator_state["callable_distinct"]),
                         "eager_fallback": False,
                         "kernel_name": None,
                         "kernel_hash": None,
@@ -2389,21 +2623,22 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
                             cast(Any, resource[cell]["kernel_hash"]),
                         )
                     profile_pass = profile[cell]["one_kernel_gate_passed"] is True
-                    if correctness.status == "passed" and not validation_pass:
-                        failure, error = "validation_gate", cast(str, validation[cell]["error"])
-                    elif correctness.status == "passed" and not profile_pass:
-                        failure, error = "profile_gate", cast(str, profile[cell]["error"])
-                if correctness.status != "passed" and failure is None:
-                    failure = cast(Any, correctness.correctness).failure_kind
-                    error = cast(Any, correctness.correctness).message
+
+            failure, error = _derived_stage_failure(
+                cell,
+                arm,
+                correctness,
+                compile_evidence,
+                resource,
+                validation,
+                profile,
+            )
 
             correctness_passed = correctness.status == "passed"
             timing_allowed = correctness_passed and (
                 arm not in _NATIVE
                 or (resource_pass is True and validation_pass is True and profile_pass is True)
             )
-            if not timing_allowed and failure is None:
-                failure, error = "correctness_gate", "correctness or a required native gate failed"
             stage[cell] = {
                 "case_id": _CASE,
                 "arm_id": arm,
@@ -2484,6 +2719,7 @@ def run_native_fusion_suite(suite_path: str | Path) -> NativeFusionExecutionResu
         resource,
         profile,
         validation,
+        executor_sources,
         summary,
         outcome,
     )
