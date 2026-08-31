@@ -23,7 +23,7 @@ one "supported" label.
 |---|---|---|---|
 | Vocabulary | A domain, dtype, shape operator, or case option is a recognized closed enum value. | Strict plugin/suite parser and `heliostune list-scope`. | That any frozen suite uses it or any backend can execute it. |
 | Schema | A `heliostune.plugin/1` or `heliostune.suite/1` document has exact JSON types, no unknown or duplicate fields, and satisfies its cross-field rules. | `verify-plugin` and `verify-suite`. | That referenced code imports, a GPU is present, or a case is correct or fast. |
-| Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two runtime-integrated reference templates and the separate native Triton structural template, with their SHA-256 values below. | That a local or remote backend is implemented for that template. |
+| Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two generic reference templates and the separately integrated native Triton template, with their SHA-256 values below. | That a local or remote capability probe passed, or that the template is correct or fast. |
 | Backend capability | A particular arm was not probed, or a retained probe found it available or unavailable. Local and remote are separate. | Suite arm `local_capability` and `remote_capability`: `unprobed`, `available`, or `unavailable`. | Correctness, performance, portability to another target, or claim eligibility. |
 | Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A narrow local executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
 | Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A narrow local executor/bundle observation, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
@@ -130,15 +130,15 @@ initial suite by editing its bytes.
 
 ## Frozen reference-template fusion suites
 
-Only two suite template IDs are integrated with the existing local and remote
-executors:
+The generic local and remote executor branch remains integrated with exactly two
+reference template IDs:
 
 1. `gated_mlp_epilogue.v1`
 2. `residual_rmsnorm.v1`
 
-Their closed case semantics and execution plans remain unchanged. Runtime
-integration for these two declarations does not imply runtime integration for
-another structurally valid template.
+Their closed case semantics and execution plans remain unchanged. The separately
+digest-dispatched `residual_rmsnorm_triton.v1` native executor is documented
+below; it does not change these reference branches or their legacy evidence.
 
 The committed reference declarations are:
 
@@ -153,7 +153,7 @@ bytes and hashes are frozen reference declarations, not a capability probe,
 execution freeze, or permission to dispatch work. Changing any byte produces a
 different artifact identity and requires an explicit new revision.
 
-## Native Triton residual RMSNorm structural suite
+## Native Triton residual RMSNorm: integrated, GPU unobserved
 
 The first native Triton candidate is committed at new immutable paths without
 changing either reference plugin, either reference suite, or any existing
@@ -164,11 +164,12 @@ runtime evidence byte:
 | Plugin | `fusion-triton-rmsnorm-plugin` | [`benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json`](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json) | `ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815` |
 | Suite | `residual-rmsnorm-triton` | [`benchmarks/suites/residual-rmsnorm-triton-v1.json`](benchmarks/suites/residual-rmsnorm-triton-v1.json) | `23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f` |
 
-`residual_rmsnorm_triton.v1` is structurally available only. Its
-`reference_template_not_execution_freeze` status freezes declaration identity;
-it does not add the suite to the existing executors, establish local or remote
-capability, or authorize dispatch. All six arms have both capability states
-`unprobed` with null evidence digests.
+`residual_rmsnorm_triton.v1` retains
+`reference_template_not_execution_freeze`: that status freezes declaration
+identity and does not itself establish capability or authorize paid dispatch.
+The exact declaration digest is now integrated with a dedicated local executor
+and Modal executor API, but no SM90 run has been retained. All six arms still
+declare both capability states `unprobed` with null evidence digests.
 
 The suite freezes one case: contiguous BF16 `x` and `residual` tensors of shape
 `[128, 4096]`, a BF16 `gamma` tensor of shape `[4096]`, pre-normalization
@@ -187,54 +188,81 @@ The static plan contains exactly twelve cells: one correctness cell followed
 by one timing cell for each of the six arms. These are planned cells, not
 observations.
 
-The source-only registry in `heliostune.fusion_kernels` exports
+The CPU-safe registry in `heliostune.fusion_kernels` exports
 `RMSNormTritonConfig`, `RESIDUAL_RMSNORM_CONFIGS`,
 `RESIDUAL_RMSNORM_CONFIG_BY_ENTRYPOINT`, and
-`load_residual_rmsnorm(entrypoint)`. The loader reaches the GPU-only
+`load_residual_rmsnorm(entrypoint)`. The integrated executor reaches the GPU-only
 `heliostune._fusion_gpu` module lazily; ordinary development and declaration
-imports do not require PyTorch or Triton. The registered custom-op namespace is
-`heliostune_fusion_v2::residual_rmsnorm`. Source and structural registration
-are not executor integration: no GPU path in this change has compiled or
-launched the op.
+imports still do not require PyTorch or Triton. The registered custom-op
+namespace is `heliostune_fusion_v2::residual_rmsnorm`.
 
-The reviewed source byte identities for this revision are:
+The native result's `heliostune.executor-sources/1` inventory binds the complete
+installed `heliostune` package source set by aggregate SHA-256 and file count,
+then records path, byte count, and SHA-256 for each execution-critical source:
 
 | Source | Path | SHA-256 |
 |---|---|---|
-| CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `f7cc1c188ae5c602ef42237a8efdd71df5f0aba707a03db577127b91cb449e2a` |
-| GPU-only implementation | [`src/heliostune/_fusion_gpu.py`](src/heliostune/_fusion_gpu.py) | `e67cdd079209f96b9abb5bdac29cd2b33b388863a9064fef0fca525a0cbc8d92` |
+| CPU-safe registry | [`src/heliostune/fusion_kernels.py`](src/heliostune/fusion_kernels.py) | `d1d26114f67b54147337ecf483b75972d3cedbb42f68e2957ceab44ebb4eb7db` |
+| GPU-only implementation | [`src/heliostune/_fusion_gpu.py`](src/heliostune/_fusion_gpu.py) | `5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef` |
+| Native executor | [`src/heliostune/native_fusion_executor.py`](src/heliostune/native_fusion_executor.py) | `53464d63a07f2446fbc403dafd9eb31bd8bc085cae7b5d81ee617edcf51b0da5` |
+| Digest dispatcher | [`src/heliostune/local_executor.py`](src/heliostune/local_executor.py) | `258fe67af81a3f079be9c58451736c1f78ff1c145fe668f5a78e075d4027ac44` |
 
-These digests inventory source bytes; they are not capability or execution
-evidence.
+The local bundle writer rechecks that inventory after execution and binds the
+exact plugin and suite bytes. The remote path additionally byte-compares the
+complete wheel package against the clean source tree and binds its package
+source digest through intent, request, result, journal, receipt, wheel manifest,
+and committed `HEAD`. These custody records identify code; they are not
+capability or execution evidence.
 
-Any future execution must pass the gates in this order:
+For each native candidate the implemented gates are, in order:
 
-1. compile and resource inspection;
-2. correctness against the frozen eager reference;
-3. a profile showing one kernel for the candidate invocation; and
-4. timing under the frozen policy.
+1. compile and complete resource inspection, including `n_spills == 0` and exact
+   config/target/kernel identity;
+2. canonical frozen-case correctness followed by deterministic `zeros`,
+   `cancellation`, and structured `overflow` correctness probes;
+3. one warmed invocation with exactly one CUDA profiler event whose name and
+   hash match the compiled kernel, plus input/output revalidation; and
+4. timing with exactly 10 warmups and 50 retained repetitions.
 
-A failure stops the later gates. Until all applicable gates produce retained
-observations, the suite makes no runtime, correctness, one-kernel, fusion, or
-performance claim.
+A failure is retained without eager fallback or retry and blocks that arm's
+later gates. Capability rejection invokes no backend and terminalizes every cell
+as blocked. The deterministic `heliostune.native-fusion-stage-gate/1` analyzer
+requires complete passing eager and Inductor baselines, selects the fastest
+fully eligible native candidate, and returns `expand_exploratory` only when
+`best_baseline_median / candidate_median >= 1.10`. It always emits
+`confirmatory: false`, `fusion_claim: false`, `publication_eligible: false`, and
+an empty claims list. With no retained SM90 observation, there is no native
+runtime-capability, correctness, one-kernel/fusion, or performance claim.
 
-## Existing reference-template execution and semantics
+## Executor integration and reference semantics
 
 ### Local CUDA execution
 
-`heliostune run-local-suite SUITE --output DIR` remains unchanged and executes
-only the two frozen
-templates on a qualifying NVIDIA CUDA device; use `--plugin PLUGIN` when the
-suite is not the committed template path. It requires the `gpu` extra (including
-exactly PyTorch 2.8.0), native BF16 support, compute capability 8.0 or newer, and
-the Inductor backend. For gated MLP, candidate and reference arithmetic is
-identical: each projection is `torch.mm(x.float(), weight.float().T)`, followed
-by SiLU, multiplication, and BF16 conversion. The candidate differs only by
-full-graph Inductor compilation. The arms implement the frozen PyTorch
-reference-template formulas, not arbitrary plugin entrypoints, and neither
-compilation nor backend invocation is evidence that operations fused. The
-written exploratory bundle is structurally verified only: it does not establish
-a performance conclusion, claim eligibility, or publication eligibility.
+`heliostune run-local-suite SUITE --output DIR` authenticates the selected suite
+digest before dispatch. The generic branch for the two frozen reference
+templates remains unchanged; use `--plugin PLUGIN` when a suite is not at its
+committed template path. It requires the `gpu` extra (including exactly PyTorch
+2.8.0), native BF16 support, compute capability 8.0 or newer, and Inductor. For
+gated MLP, candidate and reference arithmetic is identical: each projection is
+`torch.mm(x.float(), weight.float().T)`, followed by SiLU, multiplication, and
+BF16 conversion. The candidate differs only by full-graph Inductor compilation.
+Those arms implement the frozen PyTorch formulas, not arbitrary plugin
+entrypoints, and neither compilation nor backend invocation proves fusion.
+
+The separately integrated native branch accepts only the exact plugin/suite
+pair above and requires an H100 with compute capability 9.0, PyTorch 2.8.0, and
+Triton 3.4.0:
+
+```text
+uv run --extra gpu heliostune run-local-suite benchmarks/suites/residual-rmsnorm-triton-v1.json --plugin benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json --output /tmp/heliostune-native-rmsnorm
+```
+
+This is an invocation contract, not a statement that the current host qualifies.
+The native serialized result is `heliostune.local_executor/2`; the written
+exploratory output is a strict `heliostune.bundle/1` whose protocol executor API
+is `heliostune.native_fusion_executor/2`. The bundle is structurally verified
+and preserves passing, failed, blocked, and aborted observations, but is not a
+correctness/performance conclusion or publication-eligible claim.
 
 ### Remote Modal H100 execution
 
@@ -253,6 +281,19 @@ Run the residual RMSNorm suite with:
 uv run python scripts/build_modal_wheel.py
 uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/residual-rmsnorm-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output "artifacts/fusion-remote/residual-rmsnorm-v1-$(date -u +%Y%m%dT%H%M%S%N)"
 ```
+
+The native Modal executor is also implemented, but this guarded command is not
+authorization to spend. Run it only for an explicitly approved paid attempt from
+a clean committed final `HEAD`:
+
+```text
+uv run python scripts/build_modal_wheel.py
+uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/residual-rmsnorm-triton-v1.json --plugin benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json --output "artifacts/fusion-remote/residual-rmsnorm-triton-v1-$(date -u +%Y%m%dT%H%M%S%N)"
+```
+
+The native suite digest selects `heliostune.modal_fusion_executor/2`; the
+reference suite digests continue to select `/1`. No paid native attempt or SM90
+observation is reported here.
 
 Each invocation must use its freshly built wheel and a fresh, unique output
 directory; never reuse an output directory from an earlier run.
@@ -290,8 +331,9 @@ tombstones before its only authorized spawn. It uses `retries=0`, the strict
 `H100!` selector, one single-use container, blocked network and Modal-resource
 access, and a 3600-second **per-execution** timeout. A returned result is
 accepted only after strict request, suite, plugin, wheel, manifest, source,
-commit, selector, H100 hardware, environment, and `LocalExecutionResult`
-bindings are checked.
+commit, selector, H100 hardware, environment, and digest-selected local-result
+type bindings (`LocalExecutionResult` for `/1`,
+`NativeFusionExecutionResult` for `/2`) are checked.
 
 Modal 1.5.4 defines `MAX_ASYNC_OBJECT_SIZE_BYTES = 8 * 1024` in
 `modal/_utils/blob_utils.py`; `.spawn()` results above that inline threshold
@@ -453,12 +495,13 @@ acceptance tests in `tests/test_scope.py`:
 Together they cover legacy-byte non-regression, strict closed roots and exact
 types, dtype/quantization cross-rules, capability evidence, all frozen
 case-semantic unions, inline shape applicability, static and runtime
-correctness gates, standalone plugin → suite custody, the native structural
-template's exact six-arm/twelve-cell closure, and the separation between
-vocabulary, structural source availability, and execution. Those declaration
-tests do not stand in for the separate executor, GPU compilation/resource,
-correctness, profile, observation, bundle-custody, analysis, or publication
-acceptance tests described in
+correctness gates, standalone plugin → suite custody, the integrated native
+template's exact structural six-arm/twelve-cell closure, and the separation
+between vocabulary, structural source availability, and execution. Those
+declaration tests do not substitute for the native executor, bundle, analyzer,
+and remote-receipt CPU tests, and none of those CPU tests substitutes for GPU
+compilation/resource, correctness, profile, timing, or publication acceptance
+described in
 [METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
 
 ## Inspect and verify
@@ -475,22 +518,23 @@ uv run heliostune list-scope
 path and digest. `verify-suite` checks one strict standalone suite. Their
 success output reports structure and counts and explicitly disclaims execution,
 correctness, and performance observation. `list-scope` prints the closed domain
-and dtype vocabularies, the two runtime-integrated reference template IDs, and
-their current backend status. The native Triton RMSNorm suite is accepted by
-the structural verifier but is deliberately not listed as a frozen executable
-template.
+and dtype vocabularies, the two generic reference template IDs, and the
+separately reported native implementation/GPU-unobserved status. The native
+Triton RMSNorm suite remains outside `EXECUTABLE_TEMPLATE_IDS` because that
+declaration list is not a capability registry.
 
 The declaration commands do not execute kernels or establish correctness or
-performance. Separate local and Modal executors continue to support exactly
+performance. The generic local and Modal executor branches continue to support
 the two frozen reference templates, whose existing
 [post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json)
 is unchanged: both suites completed correctness and timing, but plugin
 capability declarations remain unprobed, the candidate/reference arithmetic is
 identical apart from full-graph compilation, no fusion claim is made, and
-receipts are not publication-eligible methodology bundles. The new native
-Triton suite and source registry have no executor integration or GPU
-observations. No generic executor exists for them or for the staged attention,
-KV-cache, MoE, quantized-linear, or FP8 domains.
+receipts are not publication-eligible methodology bundles. The separately
+integrated native Triton local `/2` executor and Modal `/2` receipt path have no
+retained GPU observation, and all native capability declarations remain
+unprobed. No generic executor exists for the staged attention, KV-cache, MoE,
+quantized-linear, or FP8 domains.
 
 For the wider protocol, evidence, claim and legacy rules, see
 [METHODOLOGY.md](METHODOLOGY.md). For contributor requirements and promotion
