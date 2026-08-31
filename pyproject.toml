@@ -38,7 +38,7 @@ gpu = [
   "triton==3.4.0",
 ]
 modal = [
-  "modal==1.5.4",
+  "modal==1.5.5",
 ]
 dev = [
   "coverage>=7.10,<8",
