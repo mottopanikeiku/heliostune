@@ -23,13 +23,21 @@ from heliostune.native_fusion_executor import (
     _capture_executor_sources,
     _compile_comparator,
     _correctness_key,
+    _force_eager_reason,
     _names_digest,
     _parse_compile,
+    _parse_executor_sources,
     _parse_profile,
     _parse_resource,
+    _parse_stage,
     _parse_validation,
+    _probe_capability,
     _profile_once,
+    _run_correctness,
+    _run_validation_battery,
     _safe_error,
+    _timing,
+    _validate_frozen_suite,
     run_native_fusion_suite,
 )
 from heliostune.scope import verify_suite
@@ -109,6 +117,90 @@ def test_frozen_digest_and_cpu_import_safety() -> None:
     assert package_source_count >= len(cast(list[object], inventory["sources"]))
 
 
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    [
+        ("schema", "schema differs"),
+        ("package_source_count", "at least"),
+        ("source_path", "order/path"),
+        ("source_bytes", "at least"),
+    ],
+)
+def test_executor_source_inventory_rejects_substitution_and_loss(
+    mutation: str, match: str
+) -> None:
+    inventory = _capture_executor_sources()
+    if mutation == "source_path":
+        cast(list[dict[str, object]], inventory["sources"])[0]["path"] = "substitute.py"
+    elif mutation == "source_bytes":
+        cast(list[dict[str, object]], inventory["sources"])[0]["bytes"] = 0
+    elif mutation == "schema":
+        inventory["schema"] = "heliostune.executor-sources/2"
+    else:
+        inventory["package_source_count"] = 0
+
+    with pytest.raises(SchemaError, match=match):
+        _parse_executor_sources(inventory)
+
+
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    [
+        ("identity", "identity/template"),
+        ("case_count", "one case"),
+        ("case", "case differs"),
+        ("arm_order", "arm order"),
+        ("entrypoint", "entrypoint"),
+        ("roles", "arm roles"),
+        ("correctness", "correctness policy"),
+        ("timing", "timing policy"),
+        ("cells", "expected cells"),
+        ("cell_link", "cell policy/linkage"),
+        ("gate", "timing gate"),
+    ],
+)
+def test_frozen_suite_validator_rejects_every_execution_selector_drift(
+    mutation: str, match: str
+) -> None:
+    suite = verify_suite(_SUITE).suite
+
+    def replaced(value: Any, **changes: object) -> SimpleNamespace:
+        names = value.__dataclass_fields__
+        fields = {name: getattr(value, name) for name in names}
+        fields.update(changes)
+        return SimpleNamespace(**fields)
+
+    frozen = replaced(suite)
+    if mutation == "identity":
+        frozen.suite_id = "residual-rmsnorm-triton-substitute"
+    elif mutation == "case_count":
+        frozen.cases = ()
+    elif mutation == "case":
+        frozen.cases = (replaced(suite.cases[0], input_seed=18),)
+    elif mutation == "arm_order":
+        frozen.arms = tuple(reversed(suite.arms))
+    elif mutation == "entrypoint":
+        frozen.arms = (replaced(suite.arms[0], entrypoint="substitute.kernel"), *suite.arms[1:])
+    elif mutation == "roles":
+        frozen.arms = (replaced(suite.arms[0], role="reference"), *suite.arms[1:])
+    elif mutation == "correctness":
+        frozen.correctness_policies = ()
+    elif mutation == "timing":
+        frozen.timing_policies = ()
+    elif mutation == "cells":
+        frozen.expected_cells = tuple(reversed(suite.expected_cells))
+    elif mutation == "cell_link":
+        frozen.expected_cells = (
+            replaced(suite.expected_cells[0], input_seed=18),
+            *suite.expected_cells[1:],
+        )
+    else:
+        frozen.executor_rule = "timing_without_retained_correctness"
+
+    with pytest.raises(SchemaError, match=match):
+        _validate_frozen_suite(cast(Any, frozen), NATIVE_RMSNORM_SUITE_SHA256)
+
+
 def test_safe_error_is_utf8_bounded_typed_and_binds_truncated_bytes() -> None:
     message = "compiler exploded: " + "界" * 500
     original = f"RuntimeError: {message}".encode()
@@ -156,6 +248,94 @@ def test_recording_inductor_backend_requires_successful_backend_return() -> None
     assert state["completed"] is False
     assert state["callable_distinct"] is True
     assert "inductor backend failed" in cast(str, state["error"])
+
+
+@pytest.mark.parametrize(
+    ("guard", "expected"),
+    [
+        ("environment", "TORCHDYNAMO_DISABLE"),
+        ("disabled", "config.disable"),
+        ("suppressed", "suppress_errors"),
+    ],
+)
+def test_comparator_rejects_every_eager_fallback_guard(
+    monkeypatch: pytest.MonkeyPatch, guard: str, expected: str
+) -> None:
+    monkeypatch.delenv("TORCHDYNAMO_DISABLE", raising=False)
+    config = SimpleNamespace(disable=guard == "disabled", suppress_errors=guard == "suppressed")
+    if guard == "environment":
+        monkeypatch.setenv("TORCHDYNAMO_DISABLE", "yes")
+    assert expected in cast(str, _force_eager_reason(SimpleNamespace(_dynamo=SimpleNamespace(config=config))))
+
+
+@pytest.mark.parametrize("compile_return", ["noncallable", "original"])
+def test_comparator_rejects_compile_results_without_distinct_callable_custody(
+    compile_return: str,
+) -> None:
+    def kernel() -> None:
+        return None
+
+    registry = SimpleNamespace(lookup_backend=lambda _name: lambda _graph, _inputs: object())
+
+    def compile_callable(candidate: Any, **_kwargs: object) -> object:
+        return object() if compile_return == "noncallable" else candidate
+
+    torch = SimpleNamespace(
+        _dynamo=SimpleNamespace(
+            config=SimpleNamespace(disable=False, suppress_errors=False),
+            backends=SimpleNamespace(registry=registry),
+        ),
+        compile=compile_callable,
+    )
+    with pytest.raises(RuntimeError, match="callable|original eager"):
+        _compile_comparator(torch, kernel, {})
+
+
+@pytest.mark.parametrize(
+    ("scenario", "available", "triton_version"),
+    [
+        ("torch_missing", False, None),
+        ("torch_unavailable", False, None),
+        ("triton_missing", False, None),
+        ("wrong_triton", False, "3.3.0"),
+        ("available", True, "3.4.0"),
+    ],
+)
+def test_native_capability_probe_preserves_exact_failure_shape(
+    monkeypatch: pytest.MonkeyPatch,
+    scenario: str,
+    available: bool,
+    triton_version: str | None,
+) -> None:
+    import heliostune.local_executor as legacy
+
+    fake_torch = SimpleNamespace()
+
+    def import_module(name: str) -> object:
+        if name == "torch":
+            if scenario == "torch_missing":
+                raise RuntimeError("torch import failed")
+            return fake_torch
+        if name == "triton":
+            if scenario == "triton_missing":
+                raise RuntimeError("triton import failed")
+            return SimpleNamespace(__version__="3.3.0" if scenario == "wrong_triton" else "3.4.0")
+        raise AssertionError(f"unexpected import {name}")
+
+    monkeypatch.setattr(importlib, "import_module", import_module)
+    monkeypatch.setattr(
+        legacy,
+        "_probe_torch",
+        lambda _torch, _suite: _unavailable() if scenario == "torch_unavailable" else _available(),
+    )
+
+    capability, torch, version = _probe_capability()
+
+    assert capability.available is available
+    assert version == triton_version
+    assert torch is (None if scenario == "torch_missing" else fake_torch)
+    if not available:
+        assert capability.reasons
 
 
 def test_cpu_capability_abort_is_strict_and_makes_no_cuda_claims(
@@ -807,6 +987,286 @@ def test_validation_evidence_is_exact_and_overflow_error_is_nullable() -> None:
         _parse_validation(blocked, cell)
 
 
+@pytest.mark.parametrize(
+    ("mutation", "match"),
+    [
+        ("backend", "backend differs"),
+        ("native_null", "nullability"),
+        ("completed_failure", "passing evidence"),
+        ("completed_closed", "passing evidence"),
+        ("failed_open", "failure evidence"),
+        ("failed_missing", "failure evidence"),
+    ],
+)
+def test_stage_status_matrix_rejects_paid_gate_claim_tampering(
+    aborted: NativeFusionExecutionResult, mutation: str, match: str
+) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = dict(aborted.stage_outcomes[cell])
+    if mutation == "backend":
+        record["backend_kind"] = "eager"
+    elif mutation == "native_null":
+        record["resource_passed"] = None
+    elif mutation.startswith("completed"):
+        record.update(
+            status="completed",
+            failure_kind=None,
+            error=None,
+            correctness_passed=True,
+            resource_passed=True,
+            profile_passed=True,
+            validation_passed=True,
+            timing_allowed=True,
+        )
+        if mutation == "completed_failure":
+            record["error"] = "hidden failure"
+        else:
+            record["validation_passed"] = False
+            record["timing_allowed"] = False
+    elif mutation == "failed_open":
+        record.update(
+            status="failed",
+            correctness_passed=True,
+            resource_passed=True,
+            profile_passed=True,
+            validation_passed=True,
+            timing_allowed=True,
+        )
+    else:
+        record.update(status="failed", failure_kind=None)
+
+    with pytest.raises(SchemaError, match=match):
+        _parse_stage(record, cell)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "dynamic",
+        "eager_fallback",
+        "fullgraph",
+        "mode",
+        "config",
+        "blocked_error",
+        "blocked_duration",
+        "blocked_backend",
+        "blocked_callable",
+        "blocked_name",
+        "blocked_hash",
+    ],
+)
+def test_compile_policy_and_blocked_claim_matrix_is_fail_closed(
+    aborted: NativeFusionExecutionResult, mutation: str
+) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = dict(aborted.compile_evidence[cell])
+    if mutation == "dynamic":
+        record["dynamic"] = True
+    elif mutation == "eager_fallback":
+        record["eager_fallback"] = True
+    elif mutation == "fullgraph":
+        record["fullgraph"] = True
+    elif mutation == "mode":
+        record["mode"] = "default"
+    elif mutation == "config":
+        config = cast(dict[str, object], deepcopy(record["config"]))
+        config["num_warps"] = 8
+        record["config"] = config
+    elif mutation == "blocked_error":
+        record["error"] = None
+    elif mutation == "blocked_duration":
+        record["compile_ns"] = 1
+    elif mutation == "blocked_backend":
+        record["backend_invoked"] = True
+    elif mutation == "blocked_callable":
+        record["callable_distinct"] = True
+    elif mutation == "blocked_name":
+        record["kernel_name"] = "paid_kernel"
+    else:
+        record["kernel_hash"] = "a" * 64
+
+    with pytest.raises(SchemaError, match="policy/config|blocked compile"):
+        _parse_compile(record, cell)
+
+
+@pytest.mark.parametrize("mutation", ["error", "gate", "complete"])
+def test_failed_resource_status_cannot_hide_success_or_drop_its_error(mutation: str) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = _resource()
+    record.update(status="failed", error="resource extraction failed", n_spills=1)
+    record["resource_gate_passed"] = False
+    _parse_resource(record, cell)
+    if mutation == "error":
+        record["error"] = None
+    elif mutation == "gate":
+        record["resource_gate_passed"] = True
+    else:
+        record["n_spills"] = 0
+
+    with pytest.raises(SchemaError, match="non-completed"):
+        _parse_resource(record, cell)
+
+
+@pytest.mark.parametrize("claim", ["kernel_name", "target", "asm_stages"])
+def test_blocked_resource_status_rejects_partial_paid_evidence_claims(
+    aborted: NativeFusionExecutionResult, claim: str
+) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = dict(aborted.resource_evidence[cell])
+    if claim == "kernel_name":
+        record[claim] = "paid_kernel"
+    elif claim == "target":
+        record[claim] = {"backend": "cuda", "arch": "90", "warp_size": 32}
+    else:
+        record[claim] = [{"stage": "cubin", "bytes": 1, "sha256": "a" * 64}]
+
+    with pytest.raises(SchemaError, match="blocked resource"):
+        _parse_resource(record, cell)
+
+
+@pytest.mark.parametrize("mutation", ["error", "gate", "complete"])
+def test_failed_profile_status_cannot_hide_success_or_drop_its_error(mutation: str) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = _profile(["residual_rmsnorm_kernel"])
+    record.update(
+        status="failed",
+        error="profile post-check failed",
+        inputs_revalidated=False,
+        one_kernel_gate_passed=False,
+    )
+    _parse_profile(record, cell)
+    if mutation == "error":
+        record["error"] = None
+    elif mutation == "gate":
+        record["one_kernel_gate_passed"] = True
+    else:
+        record["inputs_revalidated"] = True
+
+    with pytest.raises(SchemaError, match="non-completed"):
+        _parse_profile(record, cell)
+
+
+@pytest.mark.parametrize(
+    ("claim", "value"),
+    [
+        ("warmed", True),
+        ("invocation_count", 1),
+        ("output_revalidated", True),
+        ("inputs_revalidated", True),
+    ],
+)
+def test_blocked_profile_status_rejects_partial_runtime_claims(
+    aborted: NativeFusionExecutionResult, claim: str, value: object
+) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = dict(aborted.profile_evidence[cell])
+    record[claim] = value
+    with pytest.raises(SchemaError, match="blocked profile"):
+        _parse_profile(record, cell)
+
+
+@pytest.mark.parametrize("mutation", ["error", "gate", "complete"])
+def test_failed_validation_status_cannot_hide_success_or_drop_its_error(mutation: str) -> None:
+    cell = "rmsnorm-triton-w4-correctness"
+    record = _validation()
+    probes = cast(list[dict[str, object]], record["probes"])
+    probes[0]["deterministic"] = False
+    probes[0]["passed"] = False
+    record.update(
+        status="failed",
+        error="structured probe failed",
+        validation_gate_passed=False,
+    )
+    _parse_validation(record, cell)
+    if mutation == "error":
+        record["error"] = None
+    elif mutation == "gate":
+        record["validation_gate_passed"] = True
+    else:
+        probes[0]["deterministic"] = True
+        probes[0]["passed"] = True
+
+    with pytest.raises(SchemaError, match="non-completed"):
+        _parse_validation(record, cell)
+
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("schema", "heliostune.local-environment/1"),
+        ("precision_policy", {}),
+        ("autocast_policy", {}),
+        ("torch_version", "2.8.0"),
+        ("device_index", 0),
+        ("fusion_claim", True),
+    ],
+)
+def test_environment_rejects_policy_and_capability_shape_substitution(
+    aborted: NativeFusionExecutionResult, field: str, value: object
+) -> None:
+    payload = deepcopy(aborted.to_dict())
+    cast(dict[str, object], payload["environment"])[field] = value
+    with pytest.raises(SchemaError, match="environment policy/capability"):
+        _parse(aborted, payload)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "expected_cells",
+        "terminal_cells",
+        "passed",
+        "failed",
+        "blocked",
+        "terminal_flag",
+        "counts",
+        "outcome",
+        "fusion_claim",
+    ],
+)
+def test_summary_rejects_cell_inventory_and_evidence_count_tampering(
+    aborted: NativeFusionExecutionResult, mutation: str
+) -> None:
+    payload = deepcopy(aborted.to_dict())
+    summary = cast(dict[str, Any], payload["summary"])
+    if mutation == "expected_cells":
+        cast(list[object], summary["expected_cell_ids"]).reverse()
+    elif mutation == "terminal_cells":
+        cast(list[object], summary["terminal_cell_ids"]).reverse()
+    elif mutation in {"passed", "failed", "blocked"}:
+        summary[mutation] += 1
+    elif mutation == "terminal_flag":
+        summary["all_cells_terminal"] = False
+    elif mutation == "counts":
+        cast(dict[str, int], summary["counts"])["stage_blocked"] -= 1
+    elif mutation == "outcome":
+        summary["outcome"] = "failed"
+    else:
+        summary["fusion_claim"] = True
+
+    with pytest.raises(SchemaError, match="summary does not match"):
+        _parse(aborted, payload)
+
+
+@pytest.mark.parametrize("mutation", ["observation_order", "attempt_id", "outcome"])
+def test_result_cross_links_reject_order_attempt_and_outcome_custody_tampering(
+    aborted: NativeFusionExecutionResult, mutation: str
+) -> None:
+    payload = deepcopy(aborted.to_dict())
+    if mutation == "observation_order":
+        cast(list[object], payload["observations"]).reverse()
+        cast(list[object], cast(dict[str, object], payload["summary"])["terminal_cell_ids"]).reverse()
+    elif mutation == "attempt_id":
+        cast(list[dict[str, object]], payload["attempts"])[0]["attempt_id"] = 2
+    else:
+        payload["outcome"] = "failed"
+        cast(dict[str, object], payload["summary"])["outcome"] = "failed"
+
+    with pytest.raises(SchemaError, match="runtime order|attempt IDs|failed outcome"):
+        _parse(aborted, payload)
+
+
 def test_gate_transition_requires_all_native_gates_but_not_baseline_gates(
     aborted: NativeFusionExecutionResult,
 ) -> None:
@@ -984,6 +1444,145 @@ def _fake_compiled_resource(compiled: object, config: object) -> dict[str, objec
     }
 
 
+@pytest.mark.parametrize(
+    ("failing_gate", "failure_kind"),
+    [("validation", "validation_gate"), ("profile", "profile_gate")],
+)
+def test_passing_correctness_cannot_bypass_paid_validation_or_profile_failure(
+    monkeypatch: pytest.MonkeyPatch, failing_gate: str, failure_kind: str
+) -> None:
+    import heliostune.local_executor as legacy
+    import heliostune.native_fusion_executor as executor
+
+    fusion = _install_native_pipeline_fakes(monkeypatch)
+    fake_torch = SimpleNamespace(cuda=SimpleNamespace(synchronize=lambda _device: None))
+    monkeypatch.setattr(
+        executor, "_probe_capability", lambda: (_available(), fake_torch, "3.4.0")
+    )
+    monkeypatch.setattr(fusion, "compiled_kernel_evidence", _fake_compiled_resource)
+    monkeypatch.setattr(fusion, "load_residual_rmsnorm", lambda _entrypoint: object())
+    monkeypatch.setattr(legacy, "_residual_rmsnorm", lambda *_args: object())
+
+    def passing_correctness(
+        _torch: object,
+        arm: str,
+        _kernel: object,
+        _arguments: object,
+        _expected: object,
+        _inputs: object,
+        _device_index: int,
+    ) -> tuple[object, object]:
+        nested = legacy.CorrectnessObservation(
+            "passed",
+            _correctness_key(f"{arm}-correctness"),
+            None,
+            None,
+            {
+                "shape": [128, 4096],
+                "device": "cuda:0",
+                "dtype": "torch.bfloat16",
+                "layout": "torch.strided",
+                "contiguous": True,
+            },
+            True,
+            True,
+            True,
+            True,
+            0.0,
+        )
+        return (
+            legacy.CellObservation(
+                f"{arm}-correctness",
+                "rmsnorm-case-001",
+                arm,
+                "correctness",
+                "passed",
+                nested,
+                None,
+            ),
+            object(),
+        )
+
+    def passing_validation(
+        _torch: object,
+        arm: str,
+        _kernel: object,
+        _reference: object,
+        _device_index: int,
+    ) -> dict[str, object]:
+        evidence = _validation()
+        evidence["arm_id"] = arm
+        evidence["entrypoint"] = _ENTRYPOINT[arm]
+        return evidence
+
+    monkeypatch.setattr(executor, "_run_correctness", passing_correctness)
+    if failing_gate == "validation":
+        monkeypatch.setattr(
+            executor,
+            "_run_validation_battery",
+            lambda *_args: (_ for _ in ()).throw(RuntimeError("validation runtime failed")),
+        )
+    else:
+        monkeypatch.setattr(executor, "_run_validation_battery", passing_validation)
+        monkeypatch.setattr(
+            executor,
+            "_profile_once",
+            lambda *_args: (_ for _ in ()).throw(RuntimeError("profile runtime failed")),
+        )
+
+    result = run_native_fusion_suite(_SUITE)
+
+    assert result.outcome == "failed"
+    for stage in result.stage_outcomes.values():
+        if stage["arm_id"] not in _RUNTIME_ARMS[:4]:
+            continue
+        assert stage["correctness_passed"] is True
+        assert stage["failure_kind"] == failure_kind
+        assert stage["timing_allowed"] is False
+        assert result.observations[_RUNTIME_ARMS.index(stage["arm_id"]) * 2].status == "passed"
+    assert _parse(result, result.to_dict()).outcome == "failed"
+    if failing_gate == "validation":
+        for mutation, match in (
+            ("materialization_order", "suite-order prefix"),
+            ("materialization_link", "materialization linkage"),
+            ("missing_materialization", "passing correctness lacks"),
+            ("stage_correctness", "stage/correctness linkage"),
+            ("stage_gate", "stage native gate linkage"),
+            ("observation_link", "observation cell linkage"),
+            ("output", "output descriptor"),
+            ("backend_flag", "environment backend flag"),
+        ):
+            payload = deepcopy(result.to_dict())
+            if mutation == "materialization_order":
+                records = cast(list[object], payload["materialization"])
+                records[0], records[1] = records[1], records[0]
+            elif mutation == "materialization_link":
+                cast(list[dict[str, object]], payload["materialization"])[0]["input_seed"] = 18
+            elif mutation == "missing_materialization":
+                cast(list[object], payload["materialization"]).clear()
+            elif mutation == "stage_correctness":
+                stages = cast(dict[str, dict[str, object]], payload["stage_outcomes"])
+                stages["rmsnorm-triton-w4-correctness"]["correctness_passed"] = False
+            elif mutation == "stage_gate":
+                stages = cast(dict[str, dict[str, object]], payload["stage_outcomes"])
+                stages["rmsnorm-triton-w4-correctness"]["profile_passed"] = True
+            elif mutation == "observation_link":
+                cast(list[dict[str, object]], payload["observations"])[0]["case_id"] = "other"
+            elif mutation == "output":
+                observation = cast(list[dict[str, Any]], payload["observations"])[0]
+                cast(dict[str, object], observation["correctness"])["output"] = {
+                    "shape": [128, 4096],
+                    "device": "cuda:1",
+                    "dtype": "torch.bfloat16",
+                    "layout": "torch.strided",
+                    "contiguous": True,
+                }
+            else:
+                cast(dict[str, object], payload["environment"])["backend_invoked"] = False
+            with pytest.raises(SchemaError, match=match):
+                _parse(result, payload)
+
+
 def test_resource_extractor_failure_retains_compile_return_and_identity(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1132,3 +1731,279 @@ def test_oracle_failure_retains_compile_resource_and_terminalizes(
     profiles["rmsnorm-triton-w4-correctness"]["expected_kernel_name"] = "other"
     with pytest.raises(SchemaError, match="kernel identity"):
         _parse(result, wrong_name)
+
+
+@pytest.mark.parametrize(
+    ("mode", "failure_kind"),
+    [
+        ("passing", None),
+        ("mutation", "mutation"),
+        ("value_class", "value_class"),
+        ("sign", "sign"),
+        ("determinism", "determinism"),
+    ],
+)
+def test_correctness_runtime_defends_repeatability_and_value_custody(
+    monkeypatch: pytest.MonkeyPatch, mode: str, failure_kind: str | None
+) -> None:
+    import heliostune.local_executor as legacy
+
+    class Tensor:
+        def __init__(
+            self,
+            token: str,
+            pointer: int,
+            classes: tuple[bool, bool, bool] = (False, False, False),
+            sign: bool = False,
+        ) -> None:
+            self.token = token
+            self.pointer = pointer
+            self.classes = classes
+            self.sign = sign
+            self.digest = hashlib.sha256(token.encode()).hexdigest()
+
+    actual = Tensor(
+        "actual",
+        10,
+        classes=(True, False, False) if mode == "value_class" else (False, False, False),
+        sign=mode == "sign",
+    )
+    expected = Tensor("expected", 20)
+    repeated = Tensor("different" if mode == "determinism" else "actual", 11)
+    input_tensor = Tensor("input", 11 if mode == "mutation" else 1)
+    outputs = iter((actual, repeated))
+
+    fake_torch = SimpleNamespace(
+        cuda=SimpleNamespace(synchronize=lambda _device: None),
+        equal=lambda left, right: (
+            left.token == right.token
+            if isinstance(left, Tensor) and isinstance(right, Tensor)
+            else left == right
+        ),
+        isnan=lambda tensor: tensor.classes[0],
+        isposinf=lambda tensor: tensor.classes[1],
+        isneginf=lambda tensor: tensor.classes[2],
+        signbit=lambda tensor: tensor.sign,
+    )
+    monkeypatch.setattr(legacy, "_storage_pointer", lambda tensor: tensor.pointer)
+    monkeypatch.setattr(legacy, "_tensor_hash", lambda _torch, tensor: tensor.digest)
+    monkeypatch.setattr(
+        legacy,
+        "_validate_correctness",
+        lambda *_args, **_kwargs: legacy.CorrectnessObservation(
+            "passed",
+            _correctness_key("rmsnorm-triton-w4-correctness"),
+            None,
+            None,
+            {
+                "shape": [128, 4096],
+                "device": "cuda:0",
+                "dtype": "torch.bfloat16",
+                "layout": "torch.strided",
+                "contiguous": True,
+            },
+            True,
+            True,
+            True,
+            True,
+            0.0,
+        ),
+    )
+
+    observation, returned = _run_correctness(
+        fake_torch,
+        "rmsnorm-triton-w4",
+        lambda *_args: next(outputs),
+        (),
+        expected,
+        {"input": input_tensor},
+        0,
+    )
+
+    assert observation.correctness.failure_kind == failure_kind
+    assert observation.status == ("passed" if failure_kind is None else "failed")
+    assert returned is actual
+
+
+def test_validation_runtime_exceptions_fail_closed_for_every_probe() -> None:
+    def fail_zeros(*_args: object, **_kwargs: object) -> object:
+        raise RuntimeError("CUDA allocation failed")
+
+    fake_torch = SimpleNamespace(bfloat16="bfloat16", zeros=fail_zeros)
+    evidence = _run_validation_battery(
+        fake_torch,
+        "rmsnorm-triton-w4",
+        lambda *_args: pytest.fail("kernel must not run after probe setup failure"),
+        lambda *_args: pytest.fail("reference must not run after probe setup failure"),
+        0,
+    )
+
+    assert evidence["status"] == "failed"
+    assert evidence["validation_gate_passed"] is False
+    probes = cast(list[dict[str, object]], evidence["probes"])
+    assert [probe["id"] for probe in probes] == ["zeros", "cancellation", "overflow"]
+    assert all(probe["passed"] is False for probe in probes)
+    _parse_validation(evidence, "rmsnorm-triton-w4-correctness")
+
+
+@pytest.mark.parametrize("close", [True, False])
+def test_validation_runtime_binds_all_structured_probe_checks(
+    monkeypatch: pytest.MonkeyPatch, close: bool
+) -> None:
+    import heliostune.local_executor as legacy
+
+    class Tensor:
+        next_pointer = 1
+
+        def __init__(
+            self,
+            token: str,
+            *,
+            shape: tuple[int, ...] = (128, 4096),
+            device: str = "cuda:0",
+            dtype: str = "bfloat16",
+        ) -> None:
+            self.token = token
+            self.shape = shape
+            self.device = device
+            self.dtype = dtype
+            self.layout = "strided"
+            self.pointer = Tensor.next_pointer
+            Tensor.next_pointer += 1
+            self.digest = hashlib.sha256(token.encode()).hexdigest()
+
+        def remainder(self, _divisor: int) -> Tensor:
+            return self
+
+        def sub(self, _offset: int) -> Tensor:
+            return self
+
+        def to(self, *, dtype: str) -> Tensor:
+            self.dtype = dtype
+            return self
+
+        def expand(self, *_shape: int) -> Tensor:
+            self.shape = (128, 4096)
+            return self
+
+        def contiguous(self) -> Tensor:
+            return self
+
+        def is_contiguous(self) -> bool:
+            return True
+
+        def float(self) -> Tensor:
+            return self
+
+        def numel(self) -> int:
+            return 1
+
+        def __neg__(self) -> Tensor:
+            return Tensor(f"negative-{self.token}")
+
+        def __getitem__(self, _key: object) -> Tensor:
+            return self
+
+        def __setitem__(self, _key: object, _value: object) -> None:
+            return None
+
+        def __sub__(self, _other: object) -> Tensor:
+            return Tensor("difference")
+
+    def output() -> Tensor:
+        return Tensor("output")
+
+    def assert_close(*_args: object, **_kwargs: object) -> None:
+        if not close:
+            raise AssertionError("finite values differ")
+
+    fake_torch = SimpleNamespace(
+        bfloat16="bfloat16",
+        float32="float32",
+        strided="strided",
+        cuda=SimpleNamespace(synchronize=lambda _device: None),
+        testing=SimpleNamespace(assert_close=assert_close),
+        zeros=lambda shape, *, device, dtype: Tensor(
+            "zeros", shape=cast(tuple[int, ...], shape), device=device, dtype=dtype
+        ),
+        zeros_like=lambda tensor: Tensor(
+            "zeros-like", shape=tensor.shape, device=tensor.device, dtype=tensor.dtype
+        ),
+        arange=lambda _size, *, device, dtype: Tensor(
+            "arange", shape=(4096,), device=device, dtype=dtype
+        ),
+        ones=lambda shape, *, device, dtype: Tensor(
+            "ones", shape=cast(tuple[int, ...], shape), device=device, dtype=dtype
+        ),
+        finfo=lambda _dtype: SimpleNamespace(max=3.0),
+        equal=lambda left, right: left == right,
+        isnan=lambda _tensor: False,
+        isposinf=lambda _tensor: False,
+        isneginf=lambda _tensor: False,
+        isfinite=lambda _tensor: True,
+        signbit=lambda _tensor: False,
+        abs=lambda tensor: tensor,
+        max=lambda _tensor: SimpleNamespace(item=lambda: 0.0),
+    )
+    monkeypatch.setattr(legacy, "_tensor_hash", lambda _torch, tensor: tensor.digest)
+    monkeypatch.setattr(legacy, "_storage_pointer", lambda tensor: tensor.pointer)
+
+    evidence = _run_validation_battery(
+        fake_torch,
+        "rmsnorm-triton-w4",
+        lambda *_args: output(),
+        lambda *_args: output(),
+        0,
+    )
+
+    assert evidence["status"] == ("validated" if close else "failed")
+    assert evidence["validation_gate_passed"] is close
+    probes = cast(list[dict[str, object]], evidence["probes"])
+    assert all(probe["passed"] is close for probe in probes)
+    _parse_validation(evidence, "rmsnorm-triton-w4-correctness")
+
+
+@pytest.mark.parametrize(
+    ("failure_mode", "failure_kind"),
+    [("mutation", "mutation"), ("execution", "execution")],
+)
+def test_timing_runtime_never_preserves_passed_status_after_failure(
+    monkeypatch: pytest.MonkeyPatch, failure_mode: str, failure_kind: str
+) -> None:
+    import heliostune.local_executor as legacy
+
+    hashes = iter(("before", "after" if failure_mode == "mutation" else "before"))
+    monkeypatch.setattr(legacy, "_tensor_hash", lambda _torch, _tensor: next(hashes))
+    if failure_mode == "execution":
+        monkeypatch.setattr(
+            legacy,
+            "_timing_observation",
+            lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("timer failed")),
+        )
+    else:
+        monkeypatch.setattr(
+            legacy,
+            "_timing_observation",
+            lambda *_args, **_kwargs: legacy.TimingObservation(
+                "passed",
+                _correctness_key("rmsnorm-triton-w4-correctness"),
+                None,
+                None,
+                10,
+                50,
+                (1.0,) * 50,
+                1.0,
+            ),
+        )
+
+    observation = _timing(
+        SimpleNamespace(),
+        "rmsnorm-triton-w4",
+        lambda: None,
+        (),
+        {"input": object()},
+        0,
+    )
+
+    assert observation.status == "failed"
+    assert observation.timing.failure_kind == failure_kind
