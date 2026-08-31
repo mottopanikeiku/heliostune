@@ -12,19 +12,22 @@ import stat
 import sys
 import types
 import zipfile
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
-from heliostune.errors import ArtifactError
+from heliostune.errors import ArtifactError, SchemaError
+from heliostune.fusion_execution_registry import fusion_execution_spec
 from heliostune.remote_execution import (
     CLIENT_TIMEOUT_SECONDS,
     JournalState,
     RemoteJournal,
     RemoteJournalRecord,
     canonical_json_bytes,
+    encode_remote_request,
     remote_artifact_paths,
     sha256_bytes,
 )
@@ -33,8 +36,13 @@ from heliostune.wheel_verifier import source_digest, source_entries
 
 ROOT = Path(__file__).resolve().parents[1]
 ENTRYPOINT = ROOT / "modal_fusion_executor.py"
-SUITE = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
-PLUGIN = ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+MLP_SUITE = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
+RMSNORM_SUITE = ROOT / "benchmarks/suites/residual-rmsnorm-v1.json"
+NATIVE_SUITE = ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
+REFERENCE_PLUGIN = ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+NATIVE_PLUGIN = ROOT / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
+SUITE = MLP_SUITE
+PLUGIN = REFERENCE_PLUGIN
 HEAD = "a" * 40
 
 
@@ -148,12 +156,13 @@ def _manifest(wheel: Path, *, source_sha256: str | None = None) -> Path:
 def entrypoint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     wheel = tmp_path / "heliostune-1.0.0-py3-none-any.whl"
     _wheel(wheel)
-    _manifest(wheel)
+    manifest = _manifest(wheel)
     modal_stub = types.ModuleType("modal")
     modal_stub.App = _App  # type: ignore[attr-defined]
     modal_stub.Image = _Image  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "modal", modal_stub)
     monkeypatch.setenv("HELIOSTUNE_MODAL_WHEEL", str(wheel))
+    monkeypatch.setenv("HELIOSTUNE_MODAL_WHEEL_MANIFEST", str(manifest))
 
     completed = SimpleNamespace(stdout="")
 
@@ -304,6 +313,156 @@ def test_preflight_retains_exact_plugin_suite_and_manifest_bytes(
     )
     plugin.write_bytes(b'{"forged":true}\n')
     assert sha256_bytes(plan.plugin_bytes) == plan.intent.plugin_sha256
+
+
+@pytest.mark.parametrize(
+    ("suite", "plugin"),
+    [
+        (MLP_SUITE, REFERENCE_PLUGIN),
+        (RMSNORM_SUITE, REFERENCE_PLUGIN),
+        (NATIVE_SUITE, NATIVE_PLUGIN),
+    ],
+)
+def test_preflight_accepts_exact_registry_suite_plugin_pairs(
+    entrypoint: Any,
+    tmp_path: Path,
+    suite: Path,
+    plugin: Path,
+) -> None:
+    plan = entrypoint._preflight(suite, plugin, tmp_path / suite.stem)
+    execution = fusion_execution_spec(verify_suite(suite).sha256)
+    assert plan.intent.suite_sha256 == execution.suite_sha256
+    assert plan.intent.plugin_sha256 == execution.plugin_sha256
+    assert sha256_bytes(plan.plugin_bytes) == execution.plugin_sha256
+
+
+@pytest.mark.parametrize(
+    ("suite", "plugin"),
+    [
+        (MLP_SUITE, NATIVE_PLUGIN),
+        (NATIVE_SUITE, REFERENCE_PLUGIN),
+    ],
+)
+def test_preflight_rejects_crossed_registry_pair_before_wheel_or_spawn(
+    entrypoint: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    suite: Path,
+    plugin: Path,
+) -> None:
+    monkeypatch.setattr(
+        entrypoint,
+        "validate_wheel_manifest",
+        lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede wheel validation"),
+    )
+    monkeypatch.setattr(
+        entrypoint,
+        "_execute_plan",
+        lambda *_args, **_kwargs: pytest.fail("registry mismatch must prevent the Modal spawn"),
+    )
+    with pytest.raises(ValueError, match="plugin does not match"):
+        entrypoint.main(str(suite), str(plugin), str(tmp_path / "rejected"))
+
+
+def test_native_remote_request_dispatches_through_common_local_executor(
+    entrypoint: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan = entrypoint._preflight(NATIVE_SUITE, NATIVE_PLUGIN, tmp_path / "native")
+    events: list[str] = []
+    hardware = object()
+    captured: dict[str, object] = {}
+    original_validate_wheel = entrypoint.validate_wheel_manifest
+
+    def validate_wheel(*args: object, **kwargs: object) -> object:
+        events.append("wheel")
+        return original_validate_wheel(*args, **kwargs)
+
+    def hardware_profile(gpu: str) -> object:
+        assert gpu == "H100"
+        events.append("hardware")
+        return hardware
+
+    def validate_observed_hardware(observed: object, expectation: object) -> None:
+        assert observed is hardware
+        assert expectation is not None
+        events.append("validate-hardware")
+
+    @dataclass(frozen=True)
+    class FakeResult:
+        verified_suite_path: str
+        verified_suite_sha256: str
+        verified_suite_bytes: bytes
+        environment: dict[str, object]
+
+        def to_dict(self) -> dict[str, object]:
+            return {"verified_suite_path": self.verified_suite_path}
+
+    def execute(suite_path: Path) -> FakeResult:
+        events.append("execute")
+        assert suite_path.read_bytes() == plan.suite_bytes
+        return FakeResult(
+            str(suite_path),
+            plan.intent.suite_sha256,
+            plan.suite_bytes,
+            {"executor": "native-fake"},
+        )
+
+    def envelope(**kwargs: object) -> object:
+        captured.update(kwargs)
+        return SimpleNamespace(to_transport_json=lambda: "native-transport")
+
+    monkeypatch.setattr(entrypoint, "validate_wheel_manifest", validate_wheel)
+    monkeypatch.setattr("heliostune.kernel.get_hardware_profile", hardware_profile)
+    monkeypatch.setattr("heliostune.hardware.validate_hardware", validate_observed_hardware)
+    monkeypatch.setattr("heliostune.local_executor.execute_local_suite", execute)
+    monkeypatch.setattr("heliostune.remote_execution.RemoteResultEnvelope", envelope)
+
+    assert entrypoint.execute_fusion_suite(plan.request_json) == "native-transport"
+    assert events == ["wheel", "wheel", "hardware", "validate-hardware", "execute"]
+    assert captured["environment"] == {"executor": "native-fake"}
+    assert captured["result"] == {"verified_suite_path": str(NATIVE_SUITE)}
+
+
+@pytest.mark.parametrize("mismatch", ["suite", "plugin"])
+def test_remote_registry_mismatch_precedes_wheel_hardware_and_execution(
+    entrypoint: Any,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mismatch: str,
+) -> None:
+    plan = entrypoint._preflight(NATIVE_SUITE, NATIVE_PLUGIN, tmp_path / mismatch)
+    suite_bytes = plan.suite_bytes
+    intent = plan.intent
+    expected_error: type[Exception]
+    if mismatch == "suite":
+        suite_bytes += b" "
+        intent = replace(intent, suite_sha256=sha256_bytes(suite_bytes))
+        expected_error = SchemaError
+        message = "unsupported suite SHA-256"
+    else:
+        intent = replace(intent, plugin_sha256="0" * 64)
+        expected_error = RuntimeError
+        message = "plugin is outside"
+    request_json = encode_remote_request(intent, suite_bytes)
+
+    monkeypatch.setattr(
+        entrypoint,
+        "validate_wheel_manifest",
+        lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede wheel validation"),
+    )
+    monkeypatch.setattr(
+        "heliostune.kernel.get_hardware_profile",
+        lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede hardware probing"),
+    )
+    monkeypatch.setattr(
+        "heliostune.local_executor.execute_local_suite",
+        lambda *_args, **_kwargs: pytest.fail("registry mismatch must precede execution"),
+    )
+
+    with pytest.raises(expected_error, match=message):
+        entrypoint.execute_fusion_suite(request_json)
 
 
 @pytest.mark.parametrize(
