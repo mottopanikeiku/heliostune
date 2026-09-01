@@ -2,12 +2,13 @@
 
 ## Status
 
-This document describes the currently implemented `heliostune.plugin/1` and
-`heliostune.suite/1` declaration surface and the intended order for expanding
-HeliosTune beyond its legacy FP16 GEMM studies. It is narrower than the
-normative evidence lifecycle in [METHODOLOGY.md](METHODOLOGY.md): validating a
-declaration is not executing a study, validating correctness, measuring
-performance, or making a claim.
+This final scope record describes the implemented `heliostune.plugin/1` and
+`heliostune.suite/1` declaration surface and preserves the unimplemented areas
+as design inventory. It is not an active roadmap, a completion plan, or
+authorization for another paid run. It is narrower than the normative evidence
+lifecycle in [METHODOLOGY.md](METHODOLOGY.md): validating a declaration is not
+executing a study, validating correctness, measuring performance, or making a
+claim.
 
 The new schemas are additive and non-retroactive. The published Parhelion and
 Hopper studies remain immutable legacy plugins and evidence. They have not been
@@ -287,27 +288,28 @@ is `heliostune.native_fusion_executor/2`. The bundle is structurally verified
 and preserves passing, failed, blocked, and aborted observations, but is not a
 correctness/performance conclusion or publication-eligible claim.
 
-### Remote Modal H100 execution
+### Historical remote Modal H100 execution
 
-Build and verify a fresh wheel and its adjacent supplemental manifest from a
-clean final Git `HEAD` immediately before each frozen-suite invocation. Run the
-gated MLP suite with:
+The commands below preserve the historical invocation contract; this archive
+authorizes no paid call. The procedure built and verified a fresh wheel and its
+adjacent supplemental manifest from a clean final Git `HEAD`. Retained gated
+MLP reference command:
 
 ```text
 uv run python scripts/build_modal_wheel.py
 uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/gated-mlp-epilogue-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output "artifacts/fusion-remote/gated-mlp-epilogue-v1-$(date -u +%Y%m%dT%H%M%S%N)"
 ```
 
-Run the residual RMSNorm suite with:
+Retained residual RMSNorm reference command:
 
 ```text
 uv run python scripts/build_modal_wheel.py
 uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks/suites/residual-rmsnorm-v1.json --plugin benchmarks/plugins/fusion-reference-plugin-v1.json --output "artifacts/fusion-remote/residual-rmsnorm-v1-$(date -u +%Y%m%dT%H%M%S%N)"
 ```
 
-The native Modal executor is also implemented, but this guarded command is not
-authorization to spend. Run it only for an explicitly approved paid attempt from
-a clean committed final `HEAD`:
+The native Modal executor is also implemented. Its guarded command is retained
+for provenance and must not be run from the archived project; derivative use
+requires separate authorization outside HeliosTune:
 
 ```text
 uv run python scripts/build_modal_wheel.py
@@ -319,8 +321,8 @@ reference suite digests continue to select `/1`. The native H100 publication
 above retains one unresolved transport-overflow attempt and one completed
 compact-result attempt without changing these dispatch identities.
 
-Each invocation must use its freshly built wheel and a fresh, unique output
-directory; never reuse an output directory from an earlier run.
+The preserved invocation contract requires a freshly built wheel and a fresh,
+unique output directory; an earlier output directory must never be reused.
 
 Preflight opens the wheel, verifies ZIP and `RECORD` integrity, and
 byte-compares every packaged `heliostune` source/resource file with the clean
@@ -450,28 +452,28 @@ amortization. An evaluation oracle remains evaluation-only. Missing a strong
 applicable baseline blocks promotion; it is not evidence that the baseline is
 slow.
 
-## Staged catalog candidates
+## Retained staged design inventory
 
-The following areas are scope candidates, not frozen executable suite IDs:
+The following areas are retained scope candidates, not planned work or frozen executable suite IDs:
 
-| Candidate | Required design work before a suite revision |
+| Candidate | Preserved design requirements for a derivative suite revision |
 |---|---|
 | Attention and KV cache | Freeze dense/paged semantics, causal and masking behavior, head/group mapping, sequence and ragged layouts, cache update/read boundaries, decode/prefill regimes, reference behavior, and applicable framework/vendor baselines. |
 | Quantized linear | Freeze exact integer/sub-byte packing, signedness, group/axis/block scales, zero points, dequantization and accumulation, rounding/saturation, calibration provenance, output contract, and vendor/domain baselines. |
 | MoE | Freeze routing and tie behavior, top-k/capacity/overflow policy, dispatch/combine boundaries, token/expert imbalance and ragged shapes, determinism, reference outputs, and distributed/communication scope if present. |
 | FP8 | Freeze `fp8_e4m3fn` versus `fp8_e5m2`, scale provenance/granularity, casting and saturation/nonfinite behavior, accumulator/output formats, hardware instruction/readback requirements, error policy, and matched FP16/BF16/vendor baselines. |
 
-Catalog inclusion may record vocabulary and design status. It is not template
-status, capability evidence, correctness, performance, or authorization for a
-paid run.
+Catalog inclusion records vocabulary and design status only. Retaining a row is
+not template status, capability evidence, correctness, performance, an
+implementation commitment, or authorization for a paid run.
 
-A native gated-MLP candidate is explicitly deferred after an unfavorable
-feasibility audit. No native gated-MLP plugin, suite, kernel, or execution plan
-is included in this revision.
+The native gated-MLP candidate was deferred after an unfavorable feasibility
+audit. No native gated-MLP plugin, suite, kernel, or execution plan exists in
+the archived project, and none is planned here.
 
-## Promotion rules and implementation order
+## Preserved promotion requirements for derivative work
 
-A catalog-only candidate becomes an executable suite only through a separate
+A derivative project may turn a catalog-only candidate into an executable suite only through a separate
 reviewed revision that:
 
 1. freezes semantic cases, fusion boundaries and tensor/output contracts;
@@ -484,22 +486,23 @@ reviewed revision that:
 6. adds focused structural and behavioral acceptance coverage; and
 7. continues to report backend, correctness and performance states separately.
 
-Execution of any promoted candidate still needs a matching backend
-implementation and retained probe evidence.
-Performance work needs retained passing correctness observations, a frozen
-timing protocol and complete evidence lifecycle. A paid campaign additionally
-needs an independently approved, frozen paid plan; nothing in this roadmap
-promises or authorizes one.
+HeliosTune will not promote or execute these inventory candidates. The
+requirements below are retained only as design guidance for derivative work.
+A derivative execution still needs a matching backend implementation and
+retained probe evidence. Performance work needs retained passing correctness
+observations, a frozen timing protocol, and a complete evidence lifecycle. Any
+paid campaign additionally needs its own independently approved, frozen paid
+plan; this archive authorizes none.
 
-The generic local and remote reference branches stop at the frozen gated MLP
+The archived local and remote reference branches stop at the frozen gated MLP
 and residual RMSNorm reference templates. The native Triton RMSNorm suite is
-nevertheless structurally executable: its frozen digest dispatches to dedicated
-local and Modal native executors, and the retained H100 observation establishes
-only the narrow stage-gate facts published above. It does not promote the suite's
+structurally executable: its frozen digest dispatches to dedicated local and
+Modal native executors, and the retained H100 observation establishes only the
+narrow stage-gate facts published above. It does not promote the suite's
 capability declarations or authorize a claim. Attention/KV-cache,
-quantized-linear, MoE and FP8 work require
-their own suite revisions, backend implementations, and promotion reviews
-rather than being folded into an existing template.
+quantized-linear, MoE, and FP8 remain inventory; any derivative implementation
+requires its own suite revision, backend, custody, and review outside this
+repository.
 
 ## Focused acceptance boundary
 
@@ -552,8 +555,8 @@ capability; the separately published H100 observation does not promote any
 declaration's `unprobed` capability state.
 
 The declaration commands do not execute kernels or establish correctness or
-performance. The generic local and Modal executor branches continue to support
-the two frozen reference templates, whose existing
+performance. The generic local and Modal executor branches remain implemented
+for the two frozen reference templates, whose existing
 [post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json)
 is unchanged: both suites completed correctness and timing, but plugin
 capability declarations remain unprobed, the candidate/reference arithmetic is
@@ -565,6 +568,6 @@ unprobed and its publication is not methodology-bundle or claim eligible. No
 generic executor exists for the staged attention, KV-cache, MoE,
 quantized-linear, or FP8 domains.
 
-For the wider protocol, evidence, claim and legacy rules, see
-[METHODOLOGY.md](METHODOLOGY.md). For contributor requirements and promotion
-review, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For the preserved protocol, evidence, claim, and legacy rules, see
+[METHODOLOGY.md](METHODOLOGY.md). For evidence-preservation requirements in
+derivative work, see [CONTRIBUTING.md](CONTRIBUTING.md).

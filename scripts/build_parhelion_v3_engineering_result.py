@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import argparse
+import hashlib
 import html
 import statistics
 from collections.abc import Mapping, Sequence
@@ -10,7 +12,12 @@ from typing import cast
 
 import numpy as np
 
-from heliostune.artifacts import read_json, read_measurements, write_json_atomic, write_text_atomic
+from heliostune.artifacts import (
+    read_json,
+    read_measurements,
+    strict_json_dumps,
+    write_bytes_atomic,
+)
 from heliostune.protocol import load_v3_protocol, require_v3_runtime, runtime_manifest
 from heliostune.uncertainty import paired_contrast
 from heliostune.v3_artifacts import sha256_file
@@ -41,6 +48,21 @@ _H200_MANIFEST = _REPO / "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.j
 _FINAL_MANIFEST = _REPO / "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json"
 _OUTPUT = _REPO / "benchmarks/results/parhelion-v3-h200-engineering.json"
 _REPORT = _REPO / "site/parhelion-v3-engineering.html"
+_DERIVATION_MANIFEST = _REPO / "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json"
+_SOURCE_ROOT = _REPO / "src/heliostune"
+_DEPENDENCY_CONTRACT = (
+    _REPO / "pyproject.toml",
+    _REPO / "uv.lock",
+)
+_INPUTS = {
+    "freeze": _FREEZE,
+    "config": _CONFIG,
+    "selection": _SELECTION,
+    "final_archive": _FINAL,
+    "validation_publication_manifest": _VALIDATION_MANIFEST,
+    "h200_publication_manifest": _H200_MANIFEST,
+    "final_publication_manifest": _FINAL_MANIFEST,
+}
 _CONDITIONAL_ON = (
     "fixed mixed-A100 engineering archive, fixed H200 matrix, retained action set, "
     "policy seeds, and operator-authorized protocol deviation"
@@ -300,11 +322,143 @@ code{{color:#b9f6ef}}a{{color:var(--accent)}}li{{margin:.45em 0}}.muted{{color:v
 </main></body></html>"""
 
 
-def main() -> int:
+def _file_binding(path: Path) -> dict[str, object]:
+    return {
+        "path": str(path.relative_to(_REPO)),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def _bytes_binding(relative: str, payload: bytes) -> dict[str, object]:
+    return {
+        "path": relative,
+        "bytes": len(payload),
+        "sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def build_derivation_manifest(result_bytes: bytes, report_bytes: bytes) -> dict[str, object]:
+    """Bind the final post-run reproducer and all evidence it consumes and emits."""
+    return {
+        "schema_version": 1,
+        "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
+        "study_id": "parhelion-v3-operator-authorized-engineering",
+        "analysis_status": "operator_authorized_engineering_protocol_deviation",
+        "claim": None,
+        "confirmatory_claim": False,
+        "derivation": {
+            "role": "final_post_run_scientific_result_reproducer",
+            "predeclared_campaign_code": False,
+            "original_campaign_code": False,
+            "note": (
+                "These final repository sources reproduce every scientific/result field and "
+                "the report, but not the environment-specific runtime provenance embedded in "
+                "the committed result. They were not predeclared and are not evidence of the "
+                "code used during collection."
+            ),
+        },
+        "campaign_status": {
+            "original_failed_campaign": "terminal",
+            "engineering_deviation": "not_retroactively_upgraded",
+        },
+        "reproduction_scope": {
+            "scientific_and_result_fields": "recomputed",
+            "report": "recomputed",
+            "runtime_provenance": (
+                "the committed runtime object is reused only during --check byte comparison"
+            ),
+            "runtime_provenance_source": {
+                "path": "benchmarks/results/parhelion-v3-h200-engineering.json",
+                "field": "runtime",
+                "artifact_binding": "outputs.result",
+            },
+            "environment_independent_full_result_regeneration": False,
+        },
+        "commands": {
+            "generate": (
+                "uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py"
+            ),
+            "check": (
+                "uv run --python 3.11 python "
+                "scripts/build_parhelion_v3_engineering_result.py --check"
+            ),
+        },
+        "inputs": {name: _file_binding(path) for name, path in _INPUTS.items()},
+        "implementation": {
+            "result_builder": _file_binding(Path(__file__).resolve()),
+            "source_inventory": [
+                _file_binding(path) for path in sorted(_SOURCE_ROOT.rglob("*.py"))
+            ],
+            "dependency_contract": [_file_binding(path) for path in _DEPENDENCY_CONTRACT],
+        },
+        "outputs": {
+            "result": _bytes_binding(
+                "benchmarks/results/parhelion-v3-h200-engineering.json",
+                result_bytes,
+            ),
+            "report": _bytes_binding("site/parhelion-v3-engineering.html", report_bytes),
+        },
+    }
+
+
+def _require_committed_bytes(path: Path, expected: bytes) -> None:
+    if not path.is_file():
+        raise RuntimeError(f"committed engineering derivation output is missing: {path}")
+    if path.read_bytes() != expected:
+        raise RuntimeError(f"engineering derivation output is stale: {path}")
+
+
+def _render_derivation(
+    *,
+    committed_runtime: Mapping[str, object] | None = None,
+) -> tuple[bytes, bytes, bytes]:
     result = build_result()
-    write_json_atomic(_OUTPUT, result)
-    write_text_atomic(_REPORT, render_html(result))
-    print(f"result={_OUTPUT.relative_to(_REPO)} report={_REPORT.relative_to(_REPO)}")
+    if committed_runtime is not None:
+        result["runtime"] = dict(committed_runtime)
+    result_bytes = strict_json_dumps(result).encode("utf-8")
+    report_bytes = render_html(result).encode("utf-8")
+    manifest_bytes = strict_json_dumps(
+        build_derivation_manifest(result_bytes, report_bytes)
+    ).encode("utf-8")
+    return result_bytes, report_bytes, manifest_bytes
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="rebuild and byte-check committed derivation artifacts without writing",
+    )
+    args = parser.parse_args(argv)
+    if args.check:
+        if not _OUTPUT.is_file():
+            raise RuntimeError(f"committed engineering derivation output is missing: {_OUTPUT}")
+        committed_result = exact_object(read_json(_OUTPUT), context="committed v3 result")
+        committed_runtime = exact_object(
+            committed_result.get("runtime"),
+            context="committed v3 runtime provenance",
+        )
+        result_bytes, report_bytes, manifest_bytes = _render_derivation(
+            committed_runtime=committed_runtime
+        )
+        _require_committed_bytes(_OUTPUT, result_bytes)
+        _require_committed_bytes(_REPORT, report_bytes)
+        _require_committed_bytes(_DERIVATION_MANIFEST, manifest_bytes)
+        print(
+            "Parhelion v3 H200 scientific derivation is byte-exact under the "
+            "committed runtime provenance"
+        )
+    else:
+        result_bytes, report_bytes, manifest_bytes = _render_derivation()
+        write_bytes_atomic(_OUTPUT, result_bytes)
+        write_bytes_atomic(_REPORT, report_bytes)
+        write_bytes_atomic(_DERIVATION_MANIFEST, manifest_bytes)
+        print(
+            f"result={_OUTPUT.relative_to(_REPO)} report={_REPORT.relative_to(_REPO)} "
+            f"manifest={_DERIVATION_MANIFEST.relative_to(_REPO)}"
+        )
     return 0
 
 
