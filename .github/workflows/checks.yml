@@ -64,7 +64,7 @@ jobs:
           retention-days: 1
 
   coverage-evidence:
-    name: Coverage Evidence
+    name: Coverage Evidence Core
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -75,11 +75,10 @@ jobs:
           python-version: "3.11"
           enable-cache: true
       - run: uv sync --locked --extra dev
-      - name: Cover slow evidence and frozen-selection tests
+      - name: Cover slow frozen-selection tests
         run: |
           uv run coverage run --branch --data-file=.coverage.evidence -m pytest \
             tests/test_selection.py \
-            tests/test_research_artifacts.py \
             tests/test_v2_addendum.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
@@ -89,9 +88,33 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  coverage-catalog:
+    name: Coverage Evidence Catalog
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          version: "0.12.5"
+          python-version: "3.11"
+          enable-cache: true
+      - run: uv sync --locked --extra dev
+      - name: Cover slow research-artifact tests
+        run: |
+          uv run coverage run --branch --data-file=.coverage.catalog -m pytest \
+            tests/test_research_artifacts.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: coverage-catalog
+          path: .coverage.catalog
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
   coverage:
     name: Coverage
-    needs: [coverage-fast, coverage-evidence]
+    needs: [coverage-fast, coverage-evidence, coverage-catalog]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

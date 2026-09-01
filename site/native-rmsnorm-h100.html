@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Native RMSNorm H100 stage gate</title>
+<style>
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+body { margin: 0 auto; max-width: 78rem; padding: 2rem; line-height: 1.45; }
+h1, h2 { line-height: 1.15; }
+.decision { border: .2rem solid currentColor; font-size: 2rem; font-weight: 800; padding: 1rem; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid #888; padding: .45rem; text-align: left; vertical-align: top; }
+code { overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+<h1>Native RMSNorm on H100: authenticated stage gate</h1>
+<p class="decision">STOP_BELOW_THRESHOLD</p>
+<p>Winner <code>rmsnorm-triton-w8</code> measured 0.050592001527547836 ms; best baseline <code>rmsnorm-inductor-comparator</code> measured 0.045951999723911285 ms. Fair speedup 0.9082858621217027 versus the predeclared 1.1 threshold.</p>
+<h2>All native configurations</h2>
+<table><thead><tr><th>Arm</th><th>Warps</th><th>Block</th><th>Median ms</th><th>Registers</th><th>Spills</th><th>CUDA kernels</th><th>One-kernel gate</th><th>Validation</th><th>Failures</th></tr></thead><tbody><tr><td><code>rmsnorm-triton-w4</code></td><td>4</td><td>4096</td><td>0.05236800014972687</td><td>54</td><td>0</td><td>1</td><td>True</td><td>True</td><td>none</td></tr><tr><td><code>rmsnorm-triton-w8</code></td><td>8</td><td>4096</td><td>0.050592001527547836</td><td>32</td><td>0</td><td>1</td><td>True</td><td>True</td><td>none</td></tr><tr><td><code>rmsnorm-triton-w16</code></td><td>16</td><td>4096</td><td>0.051663998514413834</td><td>25</td><td>0</td><td>1</td><td>True</td><td>True</td><td>none</td></tr><tr><td><code>rmsnorm-triton-w32</code></td><td>32</td><td>4096</td><td>0.051343999803066254</td><td>20</td><td>0</td><td>1</td><td>True</td><td>True</td><td>none</td></tr></tbody></table>
+<h2>Both baselines</h2>
+<table><thead><tr><th>Arm</th><th>Median ms</th><th>Stages</th><th>Failures</th></tr></thead><tbody><tr><td><code>rmsnorm-eager-reference</code></td><td>0.08507199957966805</td><td>{&#x27;correctness&#x27;: True, &#x27;timing&#x27;: True}</td><td>none</td></tr><tr><td><code>rmsnorm-inductor-comparator</code></td><td>0.045951999723911285</td><td>{&#x27;correctness&#x27;: True, &#x27;timing&#x27;: True}</td><td>none</td></tr></tbody></table>
+<h2>Attempts and transport</h2>
+<table><thead><tr><th>Attempt</th><th>Status</th><th>FunctionCall ID</th><th>Wheel SHA-256</th><th>Transport error</th></tr></thead><tbody><tr><td>transport-overflow-unresolved</td><td>unresolved</td><td><code>fc-01M1B8V37FJP8J9NE0MQYDFEMA</code></td><td><code>bea47623bd1baf18437386f997f3ed1276d62f6fac885c6e2943a3391dc5c2c0</code></td><td>RemoteError: SchemaError(&#x27;remote result transport exceeds 6144-byte inline limit&#x27;)</td></tr><tr><td>completed-inline-result</td><td>completed</td><td><code>fc-01M1D6SXDQJHYQY1HEKYB36PBW</code></td><td><code>745b521d6a61ed7aae5f1b6b3311a931a4c9159f81d80f31476075348f0f19c5</code></td><td>none</td></tr></tbody></table>
+<h2>Failures</h2><ul><li><strong>transport-overflow-unresolved:</strong> RemoteError: SchemaError(&#x27;remote result transport exceeds 6144-byte inline limit&#x27;)</li></ul>
+<h2>Nonclaims</h2><ul><li>No performance claim is made.</li><li>No fusion claim is made.</li><li>No publication claim is made.</li><li>No expansion is authorized.</li></ul>
+<h2>Limitations</h2><ul><li>This is one authenticated exploratory H100 workload, not confirmatory evidence.</li><li>The first attempt ended unresolved after inline result transport overflow; it establishes no execution result.</li><li>Modal provider physical starts, restarts, total GPU time, time bounds, and actual cost are unknown.</li><li>The completed attempt does not meet the predeclared 1.1x expansion threshold.</li></ul>
+<p>Actual cost: unknown (<code>null</code>). Publication eligible: false. Fusion claim: false.</p>
+</main>
+</body>
+</html>

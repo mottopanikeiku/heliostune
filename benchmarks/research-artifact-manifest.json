@@ -2448,6 +2448,57 @@
       ],
       "split_design": "four retained remote attempts analyzed after execution",
       "study_id": "fusion-remote-h100-exploratory"
+    },
+    {
+      "analysis_status": "predeclared_exploratory_stage_gate",
+      "manifests": [
+        {
+          "bytes": 7169,
+          "kind": "json_artifact",
+          "path": "benchmarks/native-rmsnorm-h100-manifest.json",
+          "schema": "heliostune.native-rmsnorm-h100.manifest/1",
+          "sha256": "dd7bf0a361a2bd1f7173d4b47f85ecb739016c806d817b4b9ef7c6be24f3f251",
+          "status": "published_stop_below_threshold"
+        }
+      ],
+      "measurement_schema": "heliostune.native-rmsnorm-h100.raw/1",
+      "outcome_status": "STOP_BELOW_THRESHOLD",
+      "publication_eligible": false,
+      "raw_artifacts": [
+        {
+          "compressed_bytes": 21852,
+          "compressed_sha256": "55aa8d2bbbb22194824409920ceb6a44d3ba32d79599f36d3529ea66e9e4e8d0",
+          "compression": "zstd",
+          "kind": "compressed_json_artifact",
+          "path": "benchmarks/data/native-rmsnorm-h100.json.zst",
+          "schema": "heliostune.native-rmsnorm-h100.raw/1",
+          "status": "published_stop_below_threshold",
+          "uncompressed_bytes": 145876,
+          "uncompressed_sha256": "eb66468f627d41740afc6551f66320c0ea4e1ddd3b76d9e4e37066fcd8daa958"
+        }
+      ],
+      "reports": [
+        {
+          "bytes": 4027,
+          "kind": "self_contained_html_report",
+          "path": "site/native-rmsnorm-h100.html",
+          "schema": "html5",
+          "sha256": "af77d7dd377bc3ad0d9f49c2e37cfbb884dfab8a66effac1ee06aafe271a0770",
+          "status": "published_stop_below_threshold"
+        }
+      ],
+      "results": [
+        {
+          "bytes": 66144,
+          "kind": "json_artifact",
+          "path": "benchmarks/results/native-rmsnorm-h100-summary.json",
+          "schema": "heliostune.native-rmsnorm-h100.summary/1",
+          "sha256": "2b16947f4899029f3e7187060b2ce1f428cfb71678d8b1463f03e3271582ec89",
+          "status": "published_stop_below_threshold"
+        }
+      ],
+      "split_design": "single frozen case; two retained remote attempts",
+      "study_id": "native-rmsnorm-h100-stage-gate"
     }
   ]
 }

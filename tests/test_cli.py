@@ -1108,42 +1108,44 @@ def test_list_scope_reports_narrow_templates_and_scoped_runtime_status(
 ) -> None:
     assert cli.main(["list-scope"]) == 0
 
-    output = capsys.readouterr().out
-    assert (
+    assert capsys.readouterr().out == (
+        "Scope vocabulary and execution status\n"
+        "dtype_schema_vocabulary: "
+        "fp32,tf32,fp16,bf16,fp8_e4m3fn,fp8_e5m2,int8,int4,uint4\n"
+        "domain_schema_vocabulary: "
+        "dense_gemm,fused_mlp,rmsnorm_residual,attention,kv_cache,moe,quantized_linear\n"
         "frozen_executable_suite_templates: "
-        "gated_mlp_epilogue.v1,residual_rmsnorm.v1,residual_rmsnorm_triton.v1"
-    ) in output
-    assert "template_input_storage_dtypes: fp16,bf16" in output
-    assert "template_domains: fused_mlp,rmsnorm_residual" in output
-    assert (
+        "gated_mlp_epilogue.v1,residual_rmsnorm.v1,residual_rmsnorm_triton.v1\n"
+        "template_input_storage_dtypes: fp16,bf16\n"
+        "template_domains: fused_mlp,rmsnorm_residual\n"
         "suite_template_status: available only for fp16/bf16 input/storage in "
-        "fused_mlp,rmsnorm_residual"
-    ) in output
-    assert (
-        "generic_local_runtime_backend: implemented for the two frozen reference templates"
-        in output
-    )
-    assert (
-        "generic_local_runtime_gpu_validation: validated remotely on H100 for both frozen templates"
-    ) in output
-    assert "native_local_runtime_backend: implemented for residual_rmsnorm_triton.v1" in output
-    assert "native_local_runtime_gpu_evidence: unobserved" in output
-    assert (
+        "fused_mlp,rmsnorm_residual\n"
+        "generic_local_runtime_backend: implemented for the two frozen reference templates\n"
+        "generic_local_runtime_requirements: "
+        "torch==2.8.0,cuda,compute_capability>=8.0,native_bf16,inductor\n"
+        "generic_local_runtime_gpu_validation: "
+        "validated remotely on H100 for both frozen templates\n"
+        "native_local_runtime_backend: implemented for residual_rmsnorm_triton.v1\n"
+        "native_local_runtime_gpu_evidence: one retained remote H100 stage-gate observation\n"
+        "native_local_runtime_stage_gate_status: STOP_BELOW_THRESHOLD; execution gates passed; "
+        "1.1x expansion threshold not met; one completed receipt and one unresolved "
+        "transport-overflow receipt\n"
+        "native_local_runtime_evidence: "
+        "benchmarks/results/native-rmsnorm-h100-summary.json\n"
         "generic_remote_runtime_backend: implemented for the two frozen reference templates "
-        "via Modal receipt"
-    ) in output
-    assert (
-        "generic_remote_runtime_gpu_validation: two completed exploratory H100 receipts" in output
+        "via Modal receipt\n"
+        "generic_remote_runtime_gpu_validation: two completed exploratory H100 receipts\n"
+        "generic_remote_runtime_evidence: "
+        "benchmarks/results/fusion-remote-exploratory-summary.json\n"
+        "generic_remote_receipt_schema: heliostune.remote-receipt/1\n"
+        "generic_remote_provider_physical_attempts: not_observable\n"
+        "limitation: Schema verification alone does not claim execution, correctness, or "
+        "performance. The two generic frozen templates have exploratory H100 receipts only. "
+        "Native evidence is one exploratory remote H100 stage-gate observation; capability "
+        "declarations remain unprobed; correctness gates passed only for the exact frozen "
+        "observation; no performance, fusion, or publication claim is made; Modal provider "
+        "restarts remain unknown.\n"
     )
-    assert (
-        "generic_remote_runtime_evidence: benchmarks/results/fusion-remote-exploratory-summary.json"
-    ) in output
-    assert "generic_remote_receipt_schema: heliostune.remote-receipt/1" in output
-    assert "generic_remote_provider_physical_attempts: not_observable" in output
-    assert (
-        "Schema verification alone does not claim execution, correctness, or performance" in output
-    )
-    assert "runtime_backend: available" not in output
 
 
 @pytest.mark.parametrize(
