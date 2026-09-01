@@ -1,0 +1,1995 @@
+{
+  "actual_cost_usd": null,
+  "analysis": {
+    "baselines": [
+      {
+        "arm_id": "rmsnorm-eager-reference",
+        "entrypoint": "reference_template.residual_rmsnorm_reference",
+        "errors": [],
+        "median_ms": 0.08507199957966805,
+        "stages": {
+          "correctness": true,
+          "timing": true
+        }
+      },
+      {
+        "arm_id": "rmsnorm-inductor-comparator",
+        "entrypoint": "reference_template.residual_rmsnorm_candidate",
+        "errors": [],
+        "median_ms": 0.045951999723911285,
+        "stages": {
+          "correctness": true,
+          "timing": true
+        }
+      }
+    ],
+    "best_baseline_id": "rmsnorm-inductor-comparator",
+    "best_baseline_median_ms": 0.045951999723911285,
+    "candidates": [
+      {
+        "arm_id": "rmsnorm-triton-w4",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 4
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+        "errors": [],
+        "median_ms": 0.05236800014972687,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w4",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 4
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w4",
+          "asm_stages": [
+            {
+              "bytes": 27160,
+              "sha256": "9d89da632c4b3cad7d97e1fab8a52c7f1e0dfb7a83b620568ddfa682e703ccf8",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 31324,
+              "sha256": "b12f9421691dc546a201ce162f6cc5c6a9c7eedc891aa6fcb184d7239f9d5693",
+              "stage": "llir"
+            },
+            {
+              "bytes": 29494,
+              "sha256": "9623aa90bc9d354b09c03443ff5644964cd271ca950cfa22c59be84ad45c749f",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6622,
+              "sha256": "38584fbdaf96fae09472336d21fb42324e2fb5e74ee8223a5ad2330ebcbed668",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+          "error": null,
+          "kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 4,
+            "shared": 16
+          },
+          "n_max_threads": 1024,
+          "n_regs": 54,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      {
+        "arm_id": "rmsnorm-triton-w8",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 8
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+        "errors": [],
+        "median_ms": 0.050592001527547836,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w8",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 8
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w8",
+          "asm_stages": [
+            {
+              "bytes": 18072,
+              "sha256": "b6eab0777c1f1da33bf2107a5be6b0f83ed1c40162b2ab04cfb6070f7de7a48b",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 19923,
+              "sha256": "7ca998a9813ebbd5bf30e28a34e13544807cb6983fa0402fba209d4eb64073f5",
+              "stage": "llir"
+            },
+            {
+              "bytes": 20438,
+              "sha256": "af018bf1a29b485dd3470dc9292a9ea39e2910764253206e5bfae4b1e5c7f161",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6622,
+              "sha256": "591789491ec6045badd7207e85ce55267b424f07735a5dcab619fa20e2dc0b8d",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+          "error": null,
+          "kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 8,
+            "shared": 32
+          },
+          "n_max_threads": 1024,
+          "n_regs": 32,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      {
+        "arm_id": "rmsnorm-triton-w16",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 16
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+        "errors": [],
+        "median_ms": 0.051663998514413834,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w16",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 16
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w16",
+          "asm_stages": [
+            {
+              "bytes": 13336,
+              "sha256": "fff27e1c5842e1bb98d1950b60aceded866427dfaf4d22e696780f3cbbfefb1b",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 14367,
+              "sha256": "104e59c4d02143ac4c6e0c131218a4cb2bc9024125581015e7179b2707d42726",
+              "stage": "llir"
+            },
+            {
+              "bytes": 15831,
+              "sha256": "9516a7b26eda23d2543c6cf24938558ca314985b1f292c1218a110b703c83221",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6624,
+              "sha256": "4efd2193dd4865ba9e5ac7fa65054d9b96db26058952caac7a3a8f8628afef05",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+          "error": null,
+          "kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 16,
+            "shared": 64
+          },
+          "n_max_threads": 1024,
+          "n_regs": 25,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      {
+        "arm_id": "rmsnorm-triton-w32",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 32
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+        "errors": [],
+        "median_ms": 0.051343999803066254,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w32",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 32
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w32",
+          "asm_stages": [
+            {
+              "bytes": 11160,
+              "sha256": "7a0b75f22f0654cd82898fd7bb5ca2783cdb4a5013c26611fd4d75b03a5b1bb0",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 12051,
+              "sha256": "17e0037e7c4da2d23f006608f19a4c880811b83a3d489445ba414c4ed31d14fb",
+              "stage": "llir"
+            },
+            {
+              "bytes": 13983,
+              "sha256": "12cdc0ca1440772ac379df479cc167d37534bcf7b5ff15666722d6cb1a0e03e6",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6624,
+              "sha256": "a96e0ed56eedf60257b3d268b93ca7d4faa9bef9a72625f9b2414388e370dd65",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+          "error": null,
+          "kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 32,
+            "shared": 128
+          },
+          "n_max_threads": 1024,
+          "n_regs": 20,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      }
+    ],
+    "case_id": "rmsnorm-case-001",
+    "claims": [],
+    "confirmatory": false,
+    "decision": "stop_below_threshold",
+    "eligible_candidate_ids": [
+      "rmsnorm-triton-w4",
+      "rmsnorm-triton-w8",
+      "rmsnorm-triton-w16",
+      "rmsnorm-triton-w32"
+    ],
+    "fusion_claim": false,
+    "limitations": [
+      "A single authenticated one-bank workload is exploratory and not confirmatory.",
+      "Expansion authorizes only additional exploratory workloads."
+    ],
+    "nonclaims": [
+      "No performance claim is made.",
+      "No fusion claim is made.",
+      "The result is not publication eligible."
+    ],
+    "publication_eligible": false,
+    "schema": "heliostune.native-fusion-stage-gate/1",
+    "speedup": 0.9082858621217027,
+    "suite_id": "residual-rmsnorm-triton",
+    "suite_sha256": "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f",
+    "threshold": 1.1,
+    "winner_config": {
+      "block_size": 4096,
+      "num_stages": 1,
+      "num_warps": 8
+    },
+    "winner_id": "rmsnorm-triton-w8",
+    "winner_median_ms": 0.050592001527547836
+  },
+  "analysis_binding": {
+    "bytes": 14788,
+    "sha256": "a95f0f1781ab7883cde0b96141d950b7e7217e4074c3a92e80523a5d76315a7b"
+  },
+  "attempts": [
+    {
+      "actual_cost_usd": null,
+      "attempt_id": "transport-overflow-unresolved",
+      "call_id": "fc-01M1B8V37FJP8J9NE0MQYDFEMA",
+      "client_spawn_count": 1,
+      "head_commit": "48ef2ea481bdf1ce35498a016f57cdf8602a89a7",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "cancellation_requested",
+        "unresolved"
+      ],
+      "manifest_sha256": "117a7a0c52b77e552777dbc5ec0bae62c66bbaa9a7e07a76b3b853082a9e1f4f",
+      "per_execution_timeout_s": 3600,
+      "provider_attempts_observable": false,
+      "provider_physical_attempts": null,
+      "source_sha256": "02b74382dce99559b93026c19a94ae1f3336ec3dd20244b33f75b208403b949a",
+      "status": "unresolved",
+      "terminal_detail": "RemoteError: SchemaError('remote result transport exceeds 6144-byte inline limit')",
+      "total_gpu_seconds_upper_bound": null,
+      "transport_error": "RemoteError: SchemaError('remote result transport exceeds 6144-byte inline limit')",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_manifest_sha256": "117a7a0c52b77e552777dbc5ec0bae62c66bbaa9a7e07a76b3b853082a9e1f4f",
+      "wheel_sha256": "bea47623bd1baf18437386f997f3ed1276d62f6fac885c6e2943a3391dc5c2c0"
+    },
+    {
+      "actual_cost_usd": null,
+      "attempt_id": "completed-inline-result",
+      "call_id": "fc-01M1D6SXDQJHYQY1HEKYB36PBW",
+      "client_spawn_count": 1,
+      "head_commit": "8c0429aed216e481def4d9fb1d3fcde30964517d",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "completed"
+      ],
+      "manifest_sha256": "6f09348b025848a5b9e819620de5e3968173eef872f21d218442f1152193fbcf",
+      "per_execution_timeout_s": 3600,
+      "provider_attempts_observable": false,
+      "provider_physical_attempts": null,
+      "source_sha256": "0f91c248def6e64fa4d41ca8a9e0fcc55cb5e99b29f06e4f091fafe3f0141b93",
+      "status": "completed",
+      "terminal_detail": null,
+      "total_gpu_seconds_upper_bound": null,
+      "transport_error": null,
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_manifest_sha256": "6f09348b025848a5b9e819620de5e3968173eef872f21d218442f1152193fbcf",
+      "wheel_sha256": "745b521d6a61ed7aae5f1b6b3311a931a4c9159f81d80f31476075348f0f19c5"
+    }
+  ],
+  "baselines": [
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-eager-reference",
+        "entrypoint": "reference_template.residual_rmsnorm_reference",
+        "errors": [],
+        "median_ms": 0.08507199957966805,
+        "stages": {
+          "correctness": true,
+          "timing": true
+        }
+      },
+      "arm_id": "rmsnorm-eager-reference",
+      "correctness_observation": {
+        "arm_id": "rmsnorm-eager-reference",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-eager-reference-correctness",
+        "correctness": {
+          "close": true,
+          "correctness_key": "0ad644b731a99c4c25be392d0c9388fa55462caa274c2c1f52d594b3d1e90655",
+          "failure_kind": null,
+          "finite": true,
+          "input_storage_unchanged": true,
+          "max_abs_error": 0.0,
+          "message": null,
+          "output": {
+            "contiguous": true,
+            "device": "cuda:0",
+            "dtype": "torch.bfloat16",
+            "layout": "torch.strided",
+            "shape": [
+              128,
+              4096
+            ]
+          },
+          "output_disjoint": true,
+          "status": "passed"
+        },
+        "stage": "correctness",
+        "status": "passed",
+        "timing": null
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-eager-reference",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-eager-reference-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "0ad644b731a99c4c25be392d0c9388fa55462caa274c2c1f52d594b3d1e90655",
+          "failure_kind": null,
+          "median_ms": 0.08507199957966805,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.09148799628019333,
+            0.08687999844551086,
+            0.08656000345945358,
+            0.0854400023818016,
+            0.08521600067615509,
+            0.08604799956083298,
+            0.08540800213813782,
+            0.08524800091981888,
+            0.09040000289678574,
+            0.08579199761152267,
+            0.08931200206279755,
+            0.0862400010228157,
+            0.0851840004324913,
+            0.08560000360012054,
+            0.08675199747085571,
+            0.08463999629020691,
+            0.0851840004324913,
+            0.08851200342178345,
+            0.0846719965338707,
+            0.08460800349712372,
+            0.08463999629020691,
+            0.08483199775218964,
+            0.08451200276613235,
+            0.0854720026254654,
+            0.08457600325345993,
+            0.08508799970149994,
+            0.08454400300979614,
+            0.08486399799585342,
+            0.0846719965338707,
+            0.08476799726486206,
+            0.08396799862384796,
+            0.08448000252246857,
+            0.08444800227880478,
+            0.08444800227880478,
+            0.08416000008583069,
+            0.08524800091981888,
+            0.08886399865150452,
+            0.08508799970149994,
+            0.08515200018882751,
+            0.08591999858617783,
+            0.08473599702119827,
+            0.08489599823951721,
+            0.08451200276613235,
+            0.08495999872684479,
+            0.08448000252246857,
+            0.08844800293445587,
+            0.08505599945783615,
+            0.084927998483181,
+            0.08486399799585342,
+            0.0843840017914772
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      }
+    },
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-inductor-comparator",
+        "entrypoint": "reference_template.residual_rmsnorm_candidate",
+        "errors": [],
+        "median_ms": 0.045951999723911285,
+        "stages": {
+          "correctness": true,
+          "timing": true
+        }
+      },
+      "arm_id": "rmsnorm-inductor-comparator",
+      "correctness_observation": {
+        "arm_id": "rmsnorm-inductor-comparator",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-inductor-comparator-correctness",
+        "correctness": {
+          "close": true,
+          "correctness_key": "29aec7ba528318309370f1285917b191a90ce2a13f9110a5fe92fcd3a7774193",
+          "failure_kind": null,
+          "finite": true,
+          "input_storage_unchanged": true,
+          "max_abs_error": 0.00390625,
+          "message": null,
+          "output": {
+            "contiguous": true,
+            "device": "cuda:0",
+            "dtype": "torch.bfloat16",
+            "layout": "torch.strided",
+            "shape": [
+              128,
+              4096
+            ]
+          },
+          "output_disjoint": true,
+          "status": "passed"
+        },
+        "stage": "correctness",
+        "status": "passed",
+        "timing": null
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-inductor-comparator",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-inductor-comparator-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "29aec7ba528318309370f1285917b191a90ce2a13f9110a5fe92fcd3a7774193",
+          "failure_kind": null,
+          "median_ms": 0.045951999723911285,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.06140799820423126,
+            0.05023999884724617,
+            0.04793599992990494,
+            0.04758400097489357,
+            0.046560000628232956,
+            0.04918399825692177,
+            0.04934399947524071,
+            0.04790399968624115,
+            0.04761600121855736,
+            0.048576001077890396,
+            0.04732799902558327,
+            0.04710400104522705,
+            0.04787199944257736,
+            0.050144001841545105,
+            0.04636799916625023,
+            0.04473600164055824,
+            0.04524800181388855,
+            0.04636799916625023,
+            0.04495999962091446,
+            0.04665600135922432,
+            0.045024000108242035,
+            0.04707200080156326,
+            0.044863998889923096,
+            0.045184001326560974,
+            0.04473600164055824,
+            0.04543999955058098,
+            0.04543999955058098,
+            0.046751998364925385,
+            0.043807998299598694,
+            0.046112000942230225,
+            0.04572800174355507,
+            0.04560000076889992,
+            0.04508800059556961,
+            0.04636799916625023,
+            0.04499199986457825,
+            0.045632001012563705,
+            0.04608000069856644,
+            0.04608000069856644,
+            0.04601600021123886,
+            0.045504000037908554,
+            0.04438399896025658,
+            0.044576000422239304,
+            0.045791998505592346,
+            0.045184001326560974,
+            0.04460800066590309,
+            0.04374400153756142,
+            0.04588799923658371,
+            0.04521600157022476,
+            0.04543999955058098,
+            0.04608000069856644
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-triton-w4",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 4
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+        "errors": [],
+        "median_ms": 0.05236800014972687,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w4",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 4
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w4",
+          "asm_stages": [
+            {
+              "bytes": 27160,
+              "sha256": "9d89da632c4b3cad7d97e1fab8a52c7f1e0dfb7a83b620568ddfa682e703ccf8",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 31324,
+              "sha256": "b12f9421691dc546a201ce162f6cc5c6a9c7eedc891aa6fcb184d7239f9d5693",
+              "stage": "llir"
+            },
+            {
+              "bytes": 29494,
+              "sha256": "9623aa90bc9d354b09c03443ff5644964cd271ca950cfa22c59be84ad45c749f",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6622,
+              "sha256": "38584fbdaf96fae09472336d21fb42324e2fb5e74ee8223a5ad2330ebcbed668",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+          "error": null,
+          "kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 4,
+            "shared": 16
+          },
+          "n_max_threads": 1024,
+          "n_regs": 54,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      "arm_id": "rmsnorm-triton-w4",
+      "one_kernel_evidence": {
+        "arm_id": "rmsnorm-triton-w4",
+        "case_id": "rmsnorm-case-001",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 4
+        },
+        "cuda_event_count": 1,
+        "cuda_event_names_sample": [
+          "_residual_rmsnorm_kernel"
+        ],
+        "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+        "error": null,
+        "exact_name_match_count": 1,
+        "expected_kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+        "expected_kernel_name": "_residual_rmsnorm_kernel",
+        "inputs_revalidated": true,
+        "invocation_count": 1,
+        "method": "torch.profiler.cuda_events",
+        "one_kernel_gate_passed": true,
+        "output_revalidated": true,
+        "status": "profiled",
+        "warmed": true
+      },
+      "resource_evidence": {
+        "arm_id": "rmsnorm-triton-w4",
+        "asm_stages": [
+          {
+            "bytes": 27160,
+            "sha256": "9d89da632c4b3cad7d97e1fab8a52c7f1e0dfb7a83b620568ddfa682e703ccf8",
+            "stage": "cubin"
+          },
+          {
+            "bytes": 31324,
+            "sha256": "b12f9421691dc546a201ce162f6cc5c6a9c7eedc891aa6fcb184d7239f9d5693",
+            "stage": "llir"
+          },
+          {
+            "bytes": 29494,
+            "sha256": "9623aa90bc9d354b09c03443ff5644964cd271ca950cfa22c59be84ad45c749f",
+            "stage": "ptx"
+          },
+          {
+            "bytes": 9546,
+            "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+            "stage": "source"
+          },
+          {
+            "bytes": 6622,
+            "sha256": "38584fbdaf96fae09472336d21fb42324e2fb5e74ee8223a5ad2330ebcbed668",
+            "stage": "ttgir"
+          },
+          {
+            "bytes": 6032,
+            "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+            "stage": "ttir"
+          }
+        ],
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+        "error": null,
+        "kernel_hash": "9bec49df036a5b3b3aa9fb2b4588d245026b78ece60e7c8d6f3334074942fcde",
+        "kernel_name": "_residual_rmsnorm_kernel",
+        "metadata": {
+          "num_ctas": 1,
+          "num_stages": 1,
+          "num_warps": 4,
+          "shared": 16
+        },
+        "n_max_threads": 1024,
+        "n_regs": 54,
+        "n_spills": 0,
+        "resource_gate_passed": true,
+        "status": "compiled",
+        "target": {
+          "arch": "90",
+          "backend": "cuda",
+          "warp_size": 32
+        }
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-triton-w4",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-triton-w4-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "b2813c4b3a315941810b7f227a540609d0d505a3acc42266336ffaad2b1a6cc3",
+          "failure_kind": null,
+          "median_ms": 0.05236800014972687,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.06310400366783142,
+            0.05881600081920624,
+            0.0597120001912117,
+            0.06143999844789505,
+            0.05993599817156792,
+            0.055743999779224396,
+            0.0525440014898777,
+            0.05305600166320801,
+            0.05206400156021118,
+            0.055135998874902725,
+            0.05206400156021118,
+            0.05728000029921532,
+            0.052319999784231186,
+            0.054048001766204834,
+            0.05273599922657013,
+            0.050944000482559204,
+            0.05276799947023392,
+            0.05305600166320801,
+            0.05289600044488907,
+            0.05286400020122528,
+            0.0544000007212162,
+            0.05302400141954422,
+            0.05209600180387497,
+            0.05209600180387497,
+            0.05536000058054924,
+            0.05152000114321709,
+            0.05129599943757057,
+            0.05040000006556511,
+            0.05087999999523163,
+            0.05167999863624573,
+            0.05164799839258194,
+            0.05257600173354149,
+            0.05299200117588043,
+            0.05225599929690361,
+            0.052000001072883606,
+            0.05369599908590317,
+            0.05241600051522255,
+            0.05555199831724167,
+            0.0506879985332489,
+            0.051872000098228455,
+            0.05196800082921982,
+            0.05164799839258194,
+            0.050592001527547836,
+            0.050944000482559204,
+            0.05206400156021118,
+            0.050464000552892685,
+            0.05244800075888634,
+            0.05097600072622299,
+            0.051392000168561935,
+            0.050335999578237534
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      },
+      "validation_evidence": {
+        "arm_id": "rmsnorm-triton-w4",
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w4",
+        "error": null,
+        "probes": [
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "zeros",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "cancellation",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "overflow",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          }
+        ],
+        "status": "validated",
+        "validation_gate_passed": true
+      }
+    },
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-triton-w8",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 8
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+        "errors": [],
+        "median_ms": 0.050592001527547836,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w8",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 8
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w8",
+          "asm_stages": [
+            {
+              "bytes": 18072,
+              "sha256": "b6eab0777c1f1da33bf2107a5be6b0f83ed1c40162b2ab04cfb6070f7de7a48b",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 19923,
+              "sha256": "7ca998a9813ebbd5bf30e28a34e13544807cb6983fa0402fba209d4eb64073f5",
+              "stage": "llir"
+            },
+            {
+              "bytes": 20438,
+              "sha256": "af018bf1a29b485dd3470dc9292a9ea39e2910764253206e5bfae4b1e5c7f161",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6622,
+              "sha256": "591789491ec6045badd7207e85ce55267b424f07735a5dcab619fa20e2dc0b8d",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+          "error": null,
+          "kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 8,
+            "shared": 32
+          },
+          "n_max_threads": 1024,
+          "n_regs": 32,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      "arm_id": "rmsnorm-triton-w8",
+      "one_kernel_evidence": {
+        "arm_id": "rmsnorm-triton-w8",
+        "case_id": "rmsnorm-case-001",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 8
+        },
+        "cuda_event_count": 1,
+        "cuda_event_names_sample": [
+          "_residual_rmsnorm_kernel"
+        ],
+        "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+        "error": null,
+        "exact_name_match_count": 1,
+        "expected_kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+        "expected_kernel_name": "_residual_rmsnorm_kernel",
+        "inputs_revalidated": true,
+        "invocation_count": 1,
+        "method": "torch.profiler.cuda_events",
+        "one_kernel_gate_passed": true,
+        "output_revalidated": true,
+        "status": "profiled",
+        "warmed": true
+      },
+      "resource_evidence": {
+        "arm_id": "rmsnorm-triton-w8",
+        "asm_stages": [
+          {
+            "bytes": 18072,
+            "sha256": "b6eab0777c1f1da33bf2107a5be6b0f83ed1c40162b2ab04cfb6070f7de7a48b",
+            "stage": "cubin"
+          },
+          {
+            "bytes": 19923,
+            "sha256": "7ca998a9813ebbd5bf30e28a34e13544807cb6983fa0402fba209d4eb64073f5",
+            "stage": "llir"
+          },
+          {
+            "bytes": 20438,
+            "sha256": "af018bf1a29b485dd3470dc9292a9ea39e2910764253206e5bfae4b1e5c7f161",
+            "stage": "ptx"
+          },
+          {
+            "bytes": 9546,
+            "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+            "stage": "source"
+          },
+          {
+            "bytes": 6622,
+            "sha256": "591789491ec6045badd7207e85ce55267b424f07735a5dcab619fa20e2dc0b8d",
+            "stage": "ttgir"
+          },
+          {
+            "bytes": 6032,
+            "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+            "stage": "ttir"
+          }
+        ],
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+        "error": null,
+        "kernel_hash": "3d762fa7fd228f635538c6c68132b11716ae6ba9c639a2f33616404faf35001d",
+        "kernel_name": "_residual_rmsnorm_kernel",
+        "metadata": {
+          "num_ctas": 1,
+          "num_stages": 1,
+          "num_warps": 8,
+          "shared": 32
+        },
+        "n_max_threads": 1024,
+        "n_regs": 32,
+        "n_spills": 0,
+        "resource_gate_passed": true,
+        "status": "compiled",
+        "target": {
+          "arch": "90",
+          "backend": "cuda",
+          "warp_size": 32
+        }
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-triton-w8",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-triton-w8-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "946fa31c152461e7978737cd165afaf4888f7e1339c8341941139575fb073f26",
+          "failure_kind": null,
+          "median_ms": 0.050592001527547836,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.05801599845290184,
+            0.0544000007212162,
+            0.052799999713897705,
+            0.05711999908089638,
+            0.050944000482559204,
+            0.05260799825191498,
+            0.050912000238895416,
+            0.052480001002550125,
+            0.050944000482559204,
+            0.052319999784231186,
+            0.05020799860358238,
+            0.05129599943757057,
+            0.05087999999523163,
+            0.05177599936723709,
+            0.04947200044989586,
+            0.050592001527547836,
+            0.05238400027155876,
+            0.050175998359918594,
+            0.049536000937223434,
+            0.05052800104022026,
+            0.050016000866889954,
+            0.05040000006556511,
+            0.050464000552892685,
+            0.05119999870657921,
+            0.04992000013589859,
+            0.04870399832725525,
+            0.04899200052022934,
+            0.0490880012512207,
+            0.04947200044989586,
+            0.05209600180387497,
+            0.04966399818658829,
+            0.049984000623226166,
+            0.04896000027656555,
+            0.05081599950790405,
+            0.04972799867391586,
+            0.049695998430252075,
+            0.050335999578237534,
+            0.05452800169587135,
+            0.05116799846291542,
+            0.0504320003092289,
+            0.05075199902057648,
+            0.0504320003092289,
+            0.050175998359918594,
+            0.051552001386880875,
+            0.05193600058555603,
+            0.05097600072622299,
+            0.05049600079655647,
+            0.050592001527547836,
+            0.048928000032901764,
+            0.05081599950790405
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      },
+      "validation_evidence": {
+        "arm_id": "rmsnorm-triton-w8",
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w8",
+        "error": null,
+        "probes": [
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "zeros",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "cancellation",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "overflow",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          }
+        ],
+        "status": "validated",
+        "validation_gate_passed": true
+      }
+    },
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-triton-w16",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 16
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+        "errors": [],
+        "median_ms": 0.051663998514413834,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w16",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 16
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w16",
+          "asm_stages": [
+            {
+              "bytes": 13336,
+              "sha256": "fff27e1c5842e1bb98d1950b60aceded866427dfaf4d22e696780f3cbbfefb1b",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 14367,
+              "sha256": "104e59c4d02143ac4c6e0c131218a4cb2bc9024125581015e7179b2707d42726",
+              "stage": "llir"
+            },
+            {
+              "bytes": 15831,
+              "sha256": "9516a7b26eda23d2543c6cf24938558ca314985b1f292c1218a110b703c83221",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6624,
+              "sha256": "4efd2193dd4865ba9e5ac7fa65054d9b96db26058952caac7a3a8f8628afef05",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+          "error": null,
+          "kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 16,
+            "shared": 64
+          },
+          "n_max_threads": 1024,
+          "n_regs": 25,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      "arm_id": "rmsnorm-triton-w16",
+      "one_kernel_evidence": {
+        "arm_id": "rmsnorm-triton-w16",
+        "case_id": "rmsnorm-case-001",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 16
+        },
+        "cuda_event_count": 1,
+        "cuda_event_names_sample": [
+          "_residual_rmsnorm_kernel"
+        ],
+        "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+        "error": null,
+        "exact_name_match_count": 1,
+        "expected_kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+        "expected_kernel_name": "_residual_rmsnorm_kernel",
+        "inputs_revalidated": true,
+        "invocation_count": 1,
+        "method": "torch.profiler.cuda_events",
+        "one_kernel_gate_passed": true,
+        "output_revalidated": true,
+        "status": "profiled",
+        "warmed": true
+      },
+      "resource_evidence": {
+        "arm_id": "rmsnorm-triton-w16",
+        "asm_stages": [
+          {
+            "bytes": 13336,
+            "sha256": "fff27e1c5842e1bb98d1950b60aceded866427dfaf4d22e696780f3cbbfefb1b",
+            "stage": "cubin"
+          },
+          {
+            "bytes": 14367,
+            "sha256": "104e59c4d02143ac4c6e0c131218a4cb2bc9024125581015e7179b2707d42726",
+            "stage": "llir"
+          },
+          {
+            "bytes": 15831,
+            "sha256": "9516a7b26eda23d2543c6cf24938558ca314985b1f292c1218a110b703c83221",
+            "stage": "ptx"
+          },
+          {
+            "bytes": 9546,
+            "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+            "stage": "source"
+          },
+          {
+            "bytes": 6624,
+            "sha256": "4efd2193dd4865ba9e5ac7fa65054d9b96db26058952caac7a3a8f8628afef05",
+            "stage": "ttgir"
+          },
+          {
+            "bytes": 6032,
+            "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+            "stage": "ttir"
+          }
+        ],
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+        "error": null,
+        "kernel_hash": "27cfdf0e88fcc4d34a855d373e2277d8e2551b8bda1cc766e59d84f0b8aed15b",
+        "kernel_name": "_residual_rmsnorm_kernel",
+        "metadata": {
+          "num_ctas": 1,
+          "num_stages": 1,
+          "num_warps": 16,
+          "shared": 64
+        },
+        "n_max_threads": 1024,
+        "n_regs": 25,
+        "n_spills": 0,
+        "resource_gate_passed": true,
+        "status": "compiled",
+        "target": {
+          "arch": "90",
+          "backend": "cuda",
+          "warp_size": 32
+        }
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-triton-w16",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-triton-w16-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "12075ee8747de91719ddc5259316ed644483a4f992203a1de61b3bb317655ddf",
+          "failure_kind": null,
+          "median_ms": 0.051663998514413834,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.06128000095486641,
+            0.058111999183893204,
+            0.061344001442193985,
+            0.05369599908590317,
+            0.05251200124621391,
+            0.05385600030422211,
+            0.05315199866890907,
+            0.05503999814391136,
+            0.0522879995405674,
+            0.05452800169587135,
+            0.052191998809576035,
+            0.052032001316547394,
+            0.052191998809576035,
+            0.04992000013589859,
+            0.05225599929690361,
+            0.056095998734235764,
+            0.05040000006556511,
+            0.05135999992489815,
+            0.05183999985456467,
+            0.051711998879909515,
+            0.05212799832224846,
+            0.05167999863624573,
+            0.05167999863624573,
+            0.05152000114321709,
+            0.051711998879909515,
+            0.05135999992489815,
+            0.05164799839258194,
+            0.05183999985456467,
+            0.058079998940229416,
+            0.05142400041222572,
+            0.05119999870657921,
+            0.0514880008995533,
+            0.05145600065588951,
+            0.050624001771211624,
+            0.049536000937223434,
+            0.050464000552892685,
+            0.051552001386880875,
+            0.05135999992489815,
+            0.050303999334573746,
+            0.05152000114321709,
+            0.05318399891257286,
+            0.0549440011382103,
+            0.05075199902057648,
+            0.050783999264240265,
+            0.0490880012512207,
+            0.050624001771211624,
+            0.05056000128388405,
+            0.05152000114321709,
+            0.051392000168561935,
+            0.04960000142455101
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      },
+      "validation_evidence": {
+        "arm_id": "rmsnorm-triton-w16",
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w16",
+        "error": null,
+        "probes": [
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "zeros",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "cancellation",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "overflow",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          }
+        ],
+        "status": "validated",
+        "validation_gate_passed": true
+      }
+    },
+    {
+      "analysis": {
+        "arm_id": "rmsnorm-triton-w32",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 32
+        },
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+        "errors": [],
+        "median_ms": 0.051343999803066254,
+        "profile": {
+          "arm_id": "rmsnorm-triton-w32",
+          "case_id": "rmsnorm-case-001",
+          "config": {
+            "block_size": 4096,
+            "num_stages": 1,
+            "num_warps": 32
+          },
+          "cuda_event_count": 1,
+          "cuda_event_names_sample": [
+            "_residual_rmsnorm_kernel"
+          ],
+          "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+          "error": null,
+          "exact_name_match_count": 1,
+          "expected_kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+          "expected_kernel_name": "_residual_rmsnorm_kernel",
+          "inputs_revalidated": true,
+          "invocation_count": 1,
+          "method": "torch.profiler.cuda_events",
+          "one_kernel_gate_passed": true,
+          "output_revalidated": true,
+          "status": "profiled",
+          "warmed": true
+        },
+        "resource": {
+          "arm_id": "rmsnorm-triton-w32",
+          "asm_stages": [
+            {
+              "bytes": 11160,
+              "sha256": "7a0b75f22f0654cd82898fd7bb5ca2783cdb4a5013c26611fd4d75b03a5b1bb0",
+              "stage": "cubin"
+            },
+            {
+              "bytes": 12051,
+              "sha256": "17e0037e7c4da2d23f006608f19a4c880811b83a3d489445ba414c4ed31d14fb",
+              "stage": "llir"
+            },
+            {
+              "bytes": 13983,
+              "sha256": "12cdc0ca1440772ac379df479cc167d37534bcf7b5ff15666722d6cb1a0e03e6",
+              "stage": "ptx"
+            },
+            {
+              "bytes": 9546,
+              "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+              "stage": "source"
+            },
+            {
+              "bytes": 6624,
+              "sha256": "a96e0ed56eedf60257b3d268b93ca7d4faa9bef9a72625f9b2414388e370dd65",
+              "stage": "ttgir"
+            },
+            {
+              "bytes": 6032,
+              "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+              "stage": "ttir"
+            }
+          ],
+          "case_id": "rmsnorm-case-001",
+          "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+          "error": null,
+          "kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+          "kernel_name": "_residual_rmsnorm_kernel",
+          "metadata": {
+            "num_ctas": 1,
+            "num_stages": 1,
+            "num_warps": 32,
+            "shared": 128
+          },
+          "n_max_threads": 1024,
+          "n_regs": 20,
+          "n_spills": 0,
+          "resource_gate_passed": true,
+          "status": "compiled",
+          "target": {
+            "arch": "90",
+            "backend": "cuda",
+            "warp_size": 32
+          }
+        },
+        "stages": {
+          "cancellation": true,
+          "compile": true,
+          "correctness": true,
+          "overflow": true,
+          "profile": true,
+          "resource": true,
+          "timing": true,
+          "zeros": true
+        }
+      },
+      "arm_id": "rmsnorm-triton-w32",
+      "one_kernel_evidence": {
+        "arm_id": "rmsnorm-triton-w32",
+        "case_id": "rmsnorm-case-001",
+        "config": {
+          "block_size": 4096,
+          "num_stages": 1,
+          "num_warps": 32
+        },
+        "cuda_event_count": 1,
+        "cuda_event_names_sample": [
+          "_residual_rmsnorm_kernel"
+        ],
+        "cuda_event_names_sha256": "bd7486ce7dc4f0906a44207673563ebe36d341c0186e30df6239b9820a68c298",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+        "error": null,
+        "exact_name_match_count": 1,
+        "expected_kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+        "expected_kernel_name": "_residual_rmsnorm_kernel",
+        "inputs_revalidated": true,
+        "invocation_count": 1,
+        "method": "torch.profiler.cuda_events",
+        "one_kernel_gate_passed": true,
+        "output_revalidated": true,
+        "status": "profiled",
+        "warmed": true
+      },
+      "resource_evidence": {
+        "arm_id": "rmsnorm-triton-w32",
+        "asm_stages": [
+          {
+            "bytes": 11160,
+            "sha256": "7a0b75f22f0654cd82898fd7bb5ca2783cdb4a5013c26611fd4d75b03a5b1bb0",
+            "stage": "cubin"
+          },
+          {
+            "bytes": 12051,
+            "sha256": "17e0037e7c4da2d23f006608f19a4c880811b83a3d489445ba414c4ed31d14fb",
+            "stage": "llir"
+          },
+          {
+            "bytes": 13983,
+            "sha256": "12cdc0ca1440772ac379df479cc167d37534bcf7b5ff15666722d6cb1a0e03e6",
+            "stage": "ptx"
+          },
+          {
+            "bytes": 9546,
+            "sha256": "34ff465b9e387a6981ab045ffefb796aca17189b842fdf8265e2f4ef632cd0eb",
+            "stage": "source"
+          },
+          {
+            "bytes": 6624,
+            "sha256": "a96e0ed56eedf60257b3d268b93ca7d4faa9bef9a72625f9b2414388e370dd65",
+            "stage": "ttgir"
+          },
+          {
+            "bytes": 6032,
+            "sha256": "9e517dbc27b39c6dc127916c3ba80b6250de8513554f037be1819ba5743e1cea",
+            "stage": "ttir"
+          }
+        ],
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+        "error": null,
+        "kernel_hash": "49b33fcbf0858ac97632bace947b5a1a6c76d11957c5c7bef8f6b0f1ed2f5db7",
+        "kernel_name": "_residual_rmsnorm_kernel",
+        "metadata": {
+          "num_ctas": 1,
+          "num_stages": 1,
+          "num_warps": 32,
+          "shared": 128
+        },
+        "n_max_threads": 1024,
+        "n_regs": 20,
+        "n_spills": 0,
+        "resource_gate_passed": true,
+        "status": "compiled",
+        "target": {
+          "arch": "90",
+          "backend": "cuda",
+          "warp_size": 32
+        }
+      },
+      "timing_observation": {
+        "arm_id": "rmsnorm-triton-w32",
+        "case_id": "rmsnorm-case-001",
+        "cell_id": "rmsnorm-triton-w32-timing",
+        "correctness": null,
+        "stage": "timing",
+        "status": "passed",
+        "timing": {
+          "correctness_key": "fac6c8ecf5b1fde6b213e82dc31f913594f35b74ac12c1141e01cd811d037c1a",
+          "failure_kind": null,
+          "median_ms": 0.051343999803066254,
+          "message": null,
+          "repetitions": 50,
+          "samples_ms": [
+            0.06128000095486641,
+            0.056095998734235764,
+            0.05471999943256378,
+            0.05423999950289726,
+            0.05276799947023392,
+            0.05241600051522255,
+            0.053119998425245285,
+            0.059039998799562454,
+            0.05446400120854378,
+            0.0560000017285347,
+            0.05260799825191498,
+            0.05302400141954422,
+            0.05158400163054466,
+            0.05135999992489815,
+            0.05116799846291542,
+            0.05132799968123436,
+            0.0517439991235733,
+            0.05164799839258194,
+            0.05129599943757057,
+            0.05036799982190132,
+            0.05603199824690819,
+            0.05158400163054466,
+            0.050303999334573746,
+            0.05097600072622299,
+            0.05315199866890907,
+            0.05132799968123436,
+            0.0506879985332489,
+            0.050016000866889954,
+            0.05104000121355057,
+            0.05212799832224846,
+            0.05081599950790405,
+            0.05052800104022026,
+            0.05110400170087814,
+            0.058559998869895935,
+            0.05097600072622299,
+            0.050016000866889954,
+            0.050175998359918594,
+            0.0504320003092289,
+            0.05132799968123436,
+            0.05132799968123436,
+            0.051711998879909515,
+            0.049375999718904495,
+            0.05110400170087814,
+            0.05209600180387497,
+            0.050464000552892685,
+            0.050655998289585114,
+            0.054336000233888626,
+            0.050783999264240265,
+            0.05193600058555603,
+            0.05027199909090996
+          ],
+          "status": "passed",
+          "warmups": 10
+        }
+      },
+      "validation_evidence": {
+        "arm_id": "rmsnorm-triton-w32",
+        "case_id": "rmsnorm-case-001",
+        "entrypoint": "heliostune_fusion_v2::residual_rmsnorm_w32",
+        "error": null,
+        "probes": [
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "zeros",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "cancellation",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          },
+          {
+            "deterministic": true,
+            "finite_close": true,
+            "id": "overflow",
+            "inputs_unchanged": true,
+            "max_abs_error": 0.0,
+            "output_disjoint": true,
+            "passed": true,
+            "sign_match": true,
+            "value_class_match": true
+          }
+        ],
+        "status": "validated",
+        "validation_gate_passed": true
+      }
+    }
+  ],
+  "claims": [],
+  "counts": {
+    "attempts": 2,
+    "baselines": 2,
+    "completed": 1,
+    "eligible_candidates": 4,
+    "failed": 0,
+    "unresolved": 1
+  },
+  "decision_display": "STOP_BELOW_THRESHOLD",
+  "expansion_authorized": false,
+  "fusion_claim": false,
+  "limitations": [
+    "This is one authenticated exploratory H100 workload, not confirmatory evidence.",
+    "The first attempt ended unresolved after inline result transport overflow; it establishes no execution result.",
+    "Modal provider physical starts, restarts, total GPU time, time bounds, and actual cost are unknown.",
+    "The completed attempt does not meet the predeclared 1.1x expansion threshold."
+  ],
+  "nonclaims": [
+    "No performance claim is made.",
+    "No fusion claim is made.",
+    "No publication claim is made.",
+    "No expansion is authorized."
+  ],
+  "performance_claim": false,
+  "provider_accounting": {
+    "actual_cost_usd": null,
+    "cost_status": "unknown",
+    "provider_attempts_observable": false,
+    "provider_physical_attempts": null,
+    "total_gpu_seconds_upper_bound": null,
+    "total_time_upper_bound_s": null
+  },
+  "publication_eligible": false,
+  "schema": "heliostune.native-rmsnorm-h100.summary/1",
+  "study_id": "native-rmsnorm-h100-stage-gate"
+}
