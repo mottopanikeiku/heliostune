@@ -1,8 +1,23 @@
 # HeliosTune
 
-A measured study of retrieval, Bayesian adaptation, and source-to-target launch selection for FP16 Triton matrix multiplication.
+An archived GPU autotuning, fusion, and evidence-control research corpus with reproducible negative, failed, non-confirmatory, and stopped results.
 
-**Live evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
+> [!IMPORTANT]
+> **Concluded 2026-08-31; archived 2026-09-01.** HeliosTune is unsupported. `v0.5.0`
+> is the final archival release; this repository will have no new research
+> campaigns, features, contributions, or releases. Frozen evidence remains
+> published for inspection and replay, and derivative work belongs in a fork or
+> a new project without rewriting that evidence.
+>
+> The program ended after its bounded studies did not establish the intended
+> transfer benefit: the frozen primary H100 comparison was negative, selected
+> transfer strengths were zero, the predeclared H200 campaign stopped before
+> any timing row, its separate operator-authorized engineering run was
+> non-confirmatory, and the engineering expansion gates stopped below their
+> thresholds. These outcomes remain negative, stopped, or non-confirmatory as
+> originally reported; archive status does not strengthen them.
+
+**Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
 **Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
 
@@ -10,7 +25,7 @@ A measured study of retrieval, Bayesian adaptation, and source-to-target launch 
 
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the final, partially implemented evidence-control design specification; it is a non-retroactive target, not a claim that legacy evidence conforms or a completion plan for this archive. [Experiment scope](EXPERIMENT_SCOPE.md) preserves the declaration state and staged design inventory for the additive plugin/suite v1 surface while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
 
 ## Result
 
@@ -39,7 +54,7 @@ The separate one-bank H100 engineering expansion screen is also negative. Its ra
 
 The predeclared H200 campaign, as closed and released in v0.4.0, terminated at its single L4 pilot FunctionCall before any timing row was returned. The remote container failed while importing `modal_bench.py` because it searched a container-relative local wheel directory. Under that campaign's pre-H200 failure rule, the FunctionCall was not retried and no downstream artifact belonged to the frozen study. This remains the complete original campaign outcome, not a hardware-performance result.
 
-The [validation-failure manifest](benchmarks/parhelion-v3-validation-failure.json) binds the frozen development protocol, failed commit and wheel, Modal app and FunctionCall IDs, two-record append-only journal, observed import error, zero-spawn recovery, and every absent downstream artifact. Release 0.4.0 publishes the software, existing causal addendum, protocol, and failure evidence. It also corrects remote wheel discovery for future independent campaigns without changing the failed protocol bytes or assigning a result retroactively.
+The [validation-failure manifest](benchmarks/parhelion-v3-validation-failure.json) binds the frozen development protocol, failed commit and wheel, Modal app and FunctionCall IDs, two-record append-only journal, observed import error, zero-spawn recovery, and every absent downstream artifact. Release 0.4.0 published the software, existing causal addendum, protocol, and failure evidence. Its remote wheel-discovery correction did not change the failed protocol bytes or authorize a retry; the later operator-authorized engineering work remained a separate campaign.
 
 ### Operator-authorized H200 engineering benchmark
 
@@ -112,13 +127,29 @@ The hashed [post-run manifest](benchmarks/parhelion-v2-post-run-manifest.json) b
 
 The v3 [development protocol](benchmarks/parhelion-v3-development-protocol.json), [terminal failure manifest](benchmarks/parhelion-v3-validation-failure.json), and [failed attempt journal](benchmarks/data/parhelion-v3-pilot-failure.attempts.jsonl) preserve the original stopped campaign. The separate engineering chain binds the [successful pilot](benchmarks/data/parhelion-v3-pilot-operator-retry.jsonl.zst), [mixed-A100 validation archive](benchmarks/data/parhelion-v3-validation.jsonl.zst), [H200 freeze](benchmarks/parhelion-v3-h200-freeze.json), [final archive](benchmarks/data/parhelion-v3-final.jsonl.zst), and [engineering result](benchmarks/results/parhelion-v3-h200-engineering.json) without rewriting the v0.4.0 failure evidence.
 
+The additive [H200 derivation manifest](benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json) binds the final post-run reproducer, every consumed input, and the committed result/report. Its check recomputes every scientific/result field and the report while reusing only the committed environment-specific `runtime` provenance; it does not claim environment-independent full-result regeneration or predeclared code custody.
+
+### Final archival release and preservation
+
+`v0.5.0` is the final release. A no-input manual action from protected `main`,
+gated by the `archival-release` environment, builds and smoke-checks the
+distribution before creating the tag itself. It publishes the wheel, sdist,
+`SHA256SUMS`, and a workflow-verified Git bundle containing canonical `main`
+plus the semantic version tags; every release asset is attested.
+
+Preserve the Git bundle together with `SHA256SUMS`. The checksum file verifies
+the downloaded assets, while the bundle preserves the canonical branch and tag
+history independently of mutable GitHub references. Repository-wide support
+ends with the 2026-09-01 archive.
+
 ## Run locally
 
-Python 3.11–3.13 and uv 0.12.5 are supported. From a clean clone:
+The archived `v0.5.0` release records Python 3.11–3.13 and uv 0.12.5. To inspect or replay it from a clean clone:
 
 ```bash
 git clone https://github.com/mottopanikeiku/heliostune.git
 cd heliostune
+git checkout --detach v0.5.0
 uv sync --locked --extra dev
 uv run heliostune --help
 uv run heliostune --version
@@ -183,8 +214,8 @@ predeclared **1.10** threshold, so the retained decision is
 **`STOP_BELOW_THRESHOLD`**: no expansion, correctness claim, performance claim,
 fusion claim, or publication-eligibility claim follows.
 
-The guarded paid Modal path uses executor API
-`heliostune.modal_fusion_executor/2`:
+The archived tree retains the guarded paid Modal path for provenance; it uses
+executor API `heliostune.modal_fusion_executor/2`:
 
 ```bash
 uv run python scripts/build_modal_wheel.py
@@ -194,9 +225,10 @@ uv run --extra modal modal run modal_fusion_executor.py::main \
   --output "artifacts/fusion-remote/residual-rmsnorm-triton-v1-$(date -u +%Y%m%dT%H%M%S%N)"
 ```
 
-Do not make that paid call without explicit authorization and approved bounds.
-It requires a clean committed `HEAD`, the freshly built and verified wheel plus
-adjacent manifest, and a fresh output path. The client permits one spawn and no
+Do not make that paid call from this archived project. The preserved procedure
+required a clean committed `HEAD`, the freshly built and verified wheel plus
+adjacent manifest, an approved bound, and a fresh output path. Any derivative
+use requires separate authorization outside HeliosTune. The client permits one spawn and no
 automatic retry, but Modal's physical starts and restarts are unobservable, so
 provider physical attempt count, total GPU time and its upper bound, total time
 upper bound, and actual cost remain unknown. A remote run publishes
@@ -213,9 +245,9 @@ execution result. A compact-result attempt then completed. The static
 publication preserves both receipts and the completed observations, but it is
 not a methodology bundle and `publication_eligible=false`.
 
-Native gated MLP is absent and deferred after an unfavorable feasibility audit.
-Attention, KV-cache, MoE, quantized-linear, and FP8 remain schema vocabulary and
-staged suite candidates rather than implemented backends.
+Native gated MLP remains absent after an unfavorable feasibility audit.
+Attention, KV-cache, MoE, quantized-linear, and FP8 are retained schema
+vocabulary and staged design inventory rather than implemented backends.
 
 Native zstandard inspection needs no external `zstd` executable:
 
@@ -244,14 +276,15 @@ uv run coverage run --branch -m pytest
 uv run coverage report
 ```
 
-Verify the catalog and byte-regenerate the exploratory addendum:
+Verify the catalog and deterministic post-run derivations:
 
 ```bash
 uv run heliostune verify-catalog benchmarks/research-artifact-manifest.json
 uv run python scripts/build_parhelion_v2_addendum.py --check
+uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check
 ```
 
-Reproduce the frozen H100 replay directly from the compressed archive:
+From the clean clone checked out at `v0.5.0` above, reproduce the frozen H100 replay directly from the compressed archive:
 
 ```bash
 uv run heliostune compare-multisource \
@@ -272,9 +305,9 @@ The replay writes under `artifacts/replay/` because the research artifact catalo
 
 The local `heliostune demo` is synthetic and supports no hardware claim.
 
-## Collect on Modal
+## Historical Modal collection procedure
 
-Build the exact committed wheel before any paid call, then invoke the durable bank protocol:
+The commands below document the preserved collection procedure; the archived project authorizes no paid call. Any derivative campaign must run from a separately governed fork or new project with its own authorization and must not rewrite frozen HeliosTune evidence:
 
 ```bash
 uv run python scripts/build_modal_wheel.py
@@ -289,7 +322,7 @@ binds the request, journal, wheel, source, hardware, and final data digests. Res
 an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 `FunctionCall` IDs and spawns no replacements.
 
-`modal_bench.py` gates `L4`, `A10`, `T4`, `H100`, `A100-80GB`, and `H200` identities before tensor allocation. H100 uses Modal's exact `H100!` selector. Do not rerun the published H100 protocol; this command is for an independent study.
+`modal_bench.py` gates `L4`, `A10`, `T4`, `H100`, `A100-80GB`, and `H200` identities before tensor allocation. H100 uses Modal's exact `H100!` selector. Do not rerun the published H100 protocol; any independent study belongs in a fork or new project.
 
 ## Repository map
 
@@ -309,6 +342,7 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 - `src/heliostune/report.py` — self-contained offline evidence report
 - `scripts/build_modal_wheel.py` — reproducible committed-wheel builder
 - `scripts/build_parhelion_v2_addendum.py` — byte-exact exploratory result/report builder
+- `scripts/build_parhelion_v3_engineering_result.py` — H200 scientific-result replay with explicit frozen runtime provenance
 - `scripts/verify_research_artifacts.py` — full catalog, alias, count, and frozen-point verifier
 - `scripts/assemble_parhelion_final.py` — historical v2 archive verifier
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
@@ -327,17 +361,16 @@ interference robustness. T4 is a validation domain, not independent final
 evidence. H100 is one untouched hardware domain, not proof of universal
 cross-architecture transfer.
 
-The new `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
+The `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
 *representable* scope without broadening those historical claims. Only
 `gated_mlp_epilogue.v1` and `residual_rmsnorm.v1` are frozen initial fusion
 templates, constrained to FP16/BF16 input/storage, FP32 accumulation,
-FP16/BF16/FP32 output, null quantization, and disabled TF32. The next actual
-implementation is fused gated MLP first and residual RMSNorm second. Attention
-and KV cache, quantized linear, MoE, and FP8 remain staged catalog/design
-candidates requiring separate suite revisions and promotion review. No paid
-campaign is promised or authorized by that roadmap. See
-[Experiment scope](EXPERIMENT_SCOPE.md) for the state matrix, exact contracts,
-baseline requirements, hashes, and promotion rules.
+FP16/BF16/FP32 output, null quantization, and disabled TF32. Attention and KV
+cache, quantized linear, MoE, and FP8 are retained catalog/design inventory,
+not an active implementation roadmap. No backend work, promotion, or paid
+campaign is planned or authorized here. See
+[Experiment scope](EXPERIMENT_SCOPE.md) for the final state matrix, exact
+contracts, hashes, and preserved requirements for derivative work.
 
 ## License
 

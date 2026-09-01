@@ -1980,6 +1980,9 @@
         "h200": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
         "pilot_candidate_validation": "3833181ae0b87c9b7bafb839f1ea4a608cd432f7"
       },
+      "commands": {
+        "check": "uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check"
+      },
       "data": [
         {
           "banks": [
@@ -2302,6 +2305,15 @@
         }
       ],
       "input_study_id": "parhelion-v3-h200-transfer",
+      "manifests": [
+        {
+          "bytes": 11331,
+          "kind": "json_artifact",
+          "path": "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json",
+          "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
+          "sha256": "ea5c60ce87bdfb463cc114a80bd04575f81f835bff8fcfd90adad628807820db"
+        }
+      ],
       "measurement_schema": "heliostune-measurement-v2",
       "protocol_chain": [
         {

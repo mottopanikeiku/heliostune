@@ -1,14 +1,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,39 +16,291 @@ jobs:
 
   release:
     name: Release
+    if: ${{ github.ref == 'refs/heads/main' }}
     needs: checks
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    environment: archival-release
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check out protected main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          ref: refs/heads/main
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
         with:
           version: "0.12.5"
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --locked --extra dev
-      - name: Validate tag before build
-        run: uv run python scripts/check_release_tag.py "${GITHUB_REF_NAME}"
-      - name: Build from outside the checkout
+      - run: uv sync --locked
+      - name: Derive and inspect release tag
+        id: release
+        shell: bash
         run: |
-          rm -rf "${RUNNER_TEMP}/heliostune-release"
-          mkdir -p "${RUNNER_TEMP}/heliostune-release/dist"
-          cd "${RUNNER_TEMP}/heliostune-release"
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+          release_version="$(uv run python -c 'import importlib.metadata as m; print(m.version("heliostune"))')"
+          if [[ ! "${release_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Project version is not semantic: ${release_version}" >&2
+            exit 1
+          fi
+          release_tag="v${release_version}"
+
+          if git show-ref --verify --quiet "refs/tags/${release_tag}"; then
+            if [[ "$(git cat-file -t "refs/tags/${release_tag}")" != "tag" ]]; then
+              echo "Existing release tag is not annotated: ${release_tag}" >&2
+              exit 1
+            fi
+            if [[ "$(git rev-parse "refs/tags/${release_tag}^{}")" != "${GITHUB_SHA}" ]]; then
+              echo "Existing release tag does not point to ${GITHUB_SHA}: ${release_tag}" >&2
+              exit 1
+            fi
+          fi
+
+          echo "version=${release_version}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+      - name: Build wheel and source distribution
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/heliostune-release"
+          rm -rf "${release_dir}"
+          mkdir -p "${release_dir}/dist"
+          cd "${release_dir}"
           uv build "${GITHUB_WORKSPACE}" --out-dir dist
-          test "$(find dist -maxdepth 1 -name '*.whl' -type f | wc -l)" -eq 1
-          test "$(find dist -maxdepth 1 -name '*.tar.gz' -type f | wc -l)" -eq 1
-          test "$(basename dist/*.whl)" = "heliostune-${GITHUB_REF_NAME#v}-py3-none-any.whl"
-          test "$(basename dist/*.tar.gz)" = "heliostune-${GITHUB_REF_NAME#v}.tar.gz"
-      - name: Isolated wheel smoke
+
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          sdists=(dist/*.tar.gz)
+          test "${#wheels[@]}" -eq 1
+          test "${#sdists[@]}" -eq 1
+          test "$(basename "${wheels[0]}")" = "heliostune-${RELEASE_VERSION}-py3-none-any.whl"
+          test "$(basename "${sdists[0]}")" = "heliostune-${RELEASE_VERSION}.tar.gz"
+      - name: Isolated smoke test every distribution
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
         run: |
-          uv venv --clear "${RUNNER_TEMP}/heliostune-release/venv" --python 3.11
-          uv pip install --python "${RUNNER_TEMP}/heliostune-release/venv/bin/python" "${RUNNER_TEMP}"/heliostune-release/dist/*.whl
-          "${RUNNER_TEMP}/heliostune-release/venv/bin/python" -c "import heliostune, importlib.metadata as m; assert 'v' + m.version('heliostune') == '${GITHUB_REF_NAME}'; assert heliostune.__version__ == m.version('heliostune')"
-          "${RUNNER_TEMP}/heliostune-release/venv/bin/heliostune" --help
-      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/heliostune-release"
+          artifacts=("${release_dir}"/dist/*.whl "${release_dir}"/dist/*.tar.gz)
+          for index in "${!artifacts[@]}"; do
+            venv="${release_dir}/smoke-${index}"
+            uv venv --clear "${venv}" --python 3.11
+            uv pip install --python "${venv}/bin/python" "${artifacts[index]}"
+            RELEASE_VERSION="${RELEASE_VERSION}" "${venv}/bin/python" -c \
+              "import heliostune, importlib.metadata as m, os; version = m.version('heliostune'); assert version == os.environ['RELEASE_VERSION']; assert heliostune.__version__ == version"
+            "${venv}/bin/heliostune" --help
+          done
+      - name: Converge annotated release tag
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          verify_release_tag() {
+            if [[ "$(git cat-file -t "refs/tags/${RELEASE_TAG}")" != "tag" ]]; then
+              echo "Release tag is not annotated: ${RELEASE_TAG}" >&2
+              exit 1
+            fi
+            if [[ "$(git rev-parse "refs/tags/${RELEASE_TAG}^{}")" != "${GITHUB_SHA}" ]]; then
+              echo "Release tag does not point to ${GITHUB_SHA}: ${RELEASE_TAG}" >&2
+              exit 1
+            fi
+          }
+
+          require_current_main() {
+            git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+            if [[ "$(git rev-parse refs/remotes/origin/main)" != "${GITHUB_SHA}" ]]; then
+              echo "origin/main advanced after this release was dispatched" >&2
+              exit 1
+            fi
+          }
+
+          require_current_main
+
+          set +e
+          git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null
+          remote_status=$?
+          set -e
+          if [[ ${remote_status} -eq 0 ]]; then
+            git fetch --force --no-tags origin \
+              "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+            verify_release_tag
+          elif [[ ${remote_status} -eq 2 ]]; then
+            if git show-ref --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+              verify_release_tag
+            else
+              require_current_main
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag --annotate "${RELEASE_TAG}" "${GITHUB_SHA}" \
+                --message "Release ${RELEASE_TAG}"
+              verify_release_tag
+            fi
+            require_current_main
+            if ! git push origin \
+              "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"; then
+              git fetch --force --no-tags origin \
+                "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+              verify_release_tag
+            fi
+          else
+            echo "Could not inspect ${RELEASE_TAG} on origin" >&2
+            exit "${remote_status}"
+          fi
+
+          git fetch --force --no-tags origin \
+            "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
+          verify_release_tag
+      - name: Create and verify archival bundle and checksums
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/heliostune-release"
+          bundle="${release_dir}/dist/heliostune-${RELEASE_VERSION}.git.bundle"
+
+          git update-ref refs/heads/main "${GITHUB_SHA}"
+          mapfile -t semantic_tags < <(
+            git for-each-ref --format='%(refname)' refs/tags |
+              while IFS= read -r ref; do
+                if [[ "${ref}" =~ ^refs/tags/v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+                  printf '%s\n' "${ref}"
+                fi
+              done
+          )
+          test "${#semantic_tags[@]}" -gt 0
+          git bundle create "${bundle}" refs/heads/main "${semantic_tags[@]}"
+          git bundle verify "${bundle}"
+
+          bundle_heads="${RUNNER_TEMP}/heliostune-release/bundle-heads"
+          git bundle list-heads "${bundle}" > "${bundle_heads}"
+          grep -Fqx "${GITHUB_SHA} refs/heads/main" "${bundle_heads}"
+          for ref in "${semantic_tags[@]}"; do
+            tag_object="$(git rev-parse "${ref}")"
+            grep -Fqx "${tag_object} ${ref}" "${bundle_heads}"
+          done
+
+          cd "${release_dir}/dist"
+          sha256sum -- *.whl *.tar.gz *.git.bundle > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - name: Attest every release asset
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
           subject-path: "${{ runner.temp }}/heliostune-release/dist/*"
-      - name: Create GitHub Release
+      - name: Converge and publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${GITHUB_REF_NAME}" "${RUNNER_TEMP}"/heliostune-release/dist/* --verify-tag --generate-notes
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_dir="${RUNNER_TEMP}/heliostune-release"
+          release_pages="${release_dir}/release-pages.json"
+          matching_releases="${release_dir}/matching-releases.json"
+          local_assets="${release_dir}/local-assets.tsv"
+          remote_assets="${release_dir}/remote-assets.tsv"
+          release_json="${release_dir}/release.json"
+
+          require_current_main() {
+            git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+            if [[ "$(git rev-parse refs/remotes/origin/main)" != "${GITHUB_SHA}" ]]; then
+              echo "origin/main advanced after this release was dispatched" >&2
+              exit 1
+            fi
+          }
+
+          find_matching_release() {
+            gh api --paginate --slurp \
+              "repos/${GITHUB_REPOSITORY}/releases?per_page=100" > "${release_pages}"
+            jq --arg tag "${RELEASE_TAG}" \
+              '[.[][] | select(.tag_name == $tag)]' \
+              "${release_pages}" > "${matching_releases}"
+          }
+
+          verify_remote_assets() {
+            gh api "repos/${GITHUB_REPOSITORY}/releases/${release_id}" > "${release_json}"
+            jq -r '.assets[] | [.name, .digest] | @tsv' "${release_json}" |
+              LC_ALL=C sort > "${remote_assets}"
+            if ! diff -u "${local_assets}" "${remote_assets}"; then
+              echo "Remote release assets do not exactly match local names and SHA256 digests" >&2
+              exit 1
+            fi
+          }
+
+          require_current_main
+
+          shopt -s nullglob
+          expected_assets=(
+            "${release_dir}"/dist/*.whl
+            "${release_dir}"/dist/*.tar.gz
+            "${release_dir}"/dist/*.git.bundle
+            "${release_dir}"/dist/SHA256SUMS
+          )
+          test "${#expected_assets[@]}" -eq 4
+          : > "${local_assets}"
+          for asset in "${expected_assets[@]}"; do
+            digest="$(sha256sum "${asset}" | cut -d ' ' -f 1)"
+            printf '%s\tsha256:%s\n' "$(basename "${asset}")" "${digest}" \
+              >> "${local_assets}"
+          done
+          LC_ALL=C sort -o "${local_assets}" "${local_assets}"
+
+          find_matching_release
+          release_count="$(jq 'length' "${matching_releases}")"
+          if [[ "${release_count}" -eq 0 ]]; then
+            require_current_main
+            gh release create "${RELEASE_TAG}" \
+              --draft \
+              --verify-tag \
+              --fail-on-no-commits \
+              --generate-notes \
+              --title "HeliosTune ${RELEASE_TAG} - final archive" \
+              --notes "Final archival release. HeliosTune is concluded and unsupported; this immutable release preserves negative, failed, non-confirmatory, and STOP evidence and authorizes no further campaign. Verify all assets with SHA256SUMS; the Git bundle contains canonical main and every semantic release tag."
+            find_matching_release
+            release_count="$(jq 'length' "${matching_releases}")"
+          fi
+          if [[ "${release_count}" -ne 1 ]]; then
+            echo "Expected exactly one release for ${RELEASE_TAG}, found ${release_count}" >&2
+            exit 1
+          fi
+
+          release_id="$(jq -r '.[0].id' "${matching_releases}")"
+          is_draft="$(jq -r '.[0].draft' "${matching_releases}")"
+          is_prerelease="$(jq -r '.[0].prerelease' "${matching_releases}")"
+          if [[ "${is_prerelease}" != "false" ]]; then
+            echo "Existing release is marked as a prerelease: ${RELEASE_TAG}" >&2
+            exit 1
+          fi
+
+          if [[ "${is_draft}" == "true" ]]; then
+            require_current_main
+            gh release upload "${RELEASE_TAG}" "${expected_assets[@]}" --clobber
+            verify_remote_assets
+            require_current_main
+            gh api --method PATCH \
+              "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              -F draft=false > "${release_json}"
+            if [[ "$(jq -r '.draft' "${release_json}")" != "false" ]]; then
+              echo "Release was not published: ${RELEASE_TAG}" >&2
+              exit 1
+            fi
+            verify_remote_assets
+          elif [[ "${is_draft}" == "false" ]]; then
+            require_current_main
+            verify_remote_assets
+          else
+            echo "Could not determine release state for ${RELEASE_TAG}" >&2
+            exit 1
+          fi

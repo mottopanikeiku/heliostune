@@ -1,0 +1,313 @@
+{
+  "analysis_status": "operator_authorized_engineering_protocol_deviation",
+  "campaign_status": {
+    "engineering_deviation": "not_retroactively_upgraded",
+    "original_failed_campaign": "terminal"
+  },
+  "claim": null,
+  "commands": {
+    "check": "uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check",
+    "generate": "uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py"
+  },
+  "confirmatory_claim": false,
+  "derivation": {
+    "note": "These final repository sources reproduce every scientific/result field and the report, but not the environment-specific runtime provenance embedded in the committed result. They were not predeclared and are not evidence of the code used during collection.",
+    "original_campaign_code": false,
+    "predeclared_campaign_code": false,
+    "role": "final_post_run_scientific_result_reproducer"
+  },
+  "implementation": {
+    "dependency_contract": [
+      {
+        "bytes": 2310,
+        "path": "pyproject.toml",
+        "sha256": "54eb001d5f713de0bdbb30eb17de9bb8a82f35e434ae5007ae8bca0c0d6ff903"
+      },
+      {
+        "bytes": 289908,
+        "path": "uv.lock",
+        "sha256": "3858b250e43cd484481f99888fd04483ccbe14e38282d2c6847b259fd0dd7523"
+      }
+    ],
+    "result_builder": {
+      "bytes": 21521,
+      "path": "scripts/build_parhelion_v3_engineering_result.py",
+      "sha256": "db6aade9dc64ee19658a20f90aa7c73060b056ff5fbf02ceccf73f8594ecf45f"
+    },
+    "source_inventory": [
+      {
+        "bytes": 657,
+        "path": "src/heliostune/__init__.py",
+        "sha256": "f88a922bd56d33d29deba796644d8ab07ffc843cadb9513512d75335ed0333c7"
+      },
+      {
+        "bytes": 6629,
+        "path": "src/heliostune/_fusion_gpu.py",
+        "sha256": "5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef"
+      },
+      {
+        "bytes": 6301,
+        "path": "src/heliostune/artifacts.py",
+        "sha256": "8f2bbfea0722abe8fd0e15c47bdf7658b09779edc895944f362459bea26739b4"
+      },
+      {
+        "bytes": 11307,
+        "path": "src/heliostune/bandit.py",
+        "sha256": "bf672659215f2115e78ee8c6d832f3458ef1e4015393ea26e4075b0b0b48425a"
+      },
+      {
+        "bytes": 41204,
+        "path": "src/heliostune/catalog.py",
+        "sha256": "921d0a0452b678421f42ee85241f76680e613a6a14e7d2b6ea0bba6f076a9759"
+      },
+      {
+        "bytes": 49613,
+        "path": "src/heliostune/cli.py",
+        "sha256": "aefc1488d4b0d182c1d05f52666095234ded5de342a208874ee884bc2a8f7e97"
+      },
+      {
+        "bytes": 35557,
+        "path": "src/heliostune/collection.py",
+        "sha256": "3e8c6473b353c5360a34790fd15513fac89d2d44095906b56c7b6af544d34605"
+      },
+      {
+        "bytes": 17665,
+        "path": "src/heliostune/configs.py",
+        "sha256": "46970a1132ca57ad140b50f299b17b603684d0c49dbbfd4858d0ee18dec219a4"
+      },
+      {
+        "bytes": 135236,
+        "path": "src/heliostune/engineering_report.py",
+        "sha256": "033a5d7e4abbcf4d5aa7822bbe8f23849b99c1c69ee12e802a2296efb4152124"
+      },
+      {
+        "bytes": 559,
+        "path": "src/heliostune/errors.py",
+        "sha256": "165cb0cd7b308d99d15e116224f265c11098204de364655856ae029b95d4d2a9"
+      },
+      {
+        "bytes": 3955,
+        "path": "src/heliostune/features.py",
+        "sha256": "d9226093fd9384842a1481ff4c16fa98ee98295b978ec80a5bb2ba80c67e2c80"
+      },
+      {
+        "bytes": 2932,
+        "path": "src/heliostune/fusion_execution_registry.py",
+        "sha256": "b4a442071485592f4f11e8f24477c76a8e47d6319713390b6865facc128d44ff"
+      },
+      {
+        "bytes": 8393,
+        "path": "src/heliostune/fusion_kernels.py",
+        "sha256": "4577047cc30310bd3be4fa165be7d256d8007dbfded1830203eaa4c8968ef40e"
+      },
+      {
+        "bytes": 4712,
+        "path": "src/heliostune/hardware.py",
+        "sha256": "197657b81ca27f90e6d0541c80f39bb6d3082ccc696eafc02ac2733d1b3f0b5e"
+      },
+      {
+        "bytes": 12447,
+        "path": "src/heliostune/hopper_benchmark.py",
+        "sha256": "fa78ef1d05c7479ec7f33f7070fa09bad3dac5cf28403f3e06a4564544f11b56"
+      },
+      {
+        "bytes": 23647,
+        "path": "src/heliostune/hopper_kernel.py",
+        "sha256": "44da75e92ff8443c1a4b0cb3fd6b3c1208f00cbf3366d78676f95bb13a14cf72"
+      },
+      {
+        "bytes": 2504,
+        "path": "src/heliostune/hopper_spec.py",
+        "sha256": "2100f8ae1de9187ce3e6db2aa74d3fbb796b65dcfcffa4a83b5b1ced64bfe890"
+      },
+      {
+        "bytes": 17536,
+        "path": "src/heliostune/kernel.py",
+        "sha256": "815aef748b343e1fe45419d4f7c982a639f4ef4e006400e68b4618f6a59e6cca"
+      },
+      {
+        "bytes": 49860,
+        "path": "src/heliostune/local_bundle.py",
+        "sha256": "b8137a13ac2c9007af0b6128cc3395b332eaf6fbcec09c100e2c0898f15bc95a"
+      },
+      {
+        "bytes": 105017,
+        "path": "src/heliostune/local_executor.py",
+        "sha256": "0b11075af36909d5799467d4c31d1594d4dc25e4918ca91ca65600cc708db1ce"
+      },
+      {
+        "bytes": 59237,
+        "path": "src/heliostune/methodology.py",
+        "sha256": "c5952f3e29498eb7093081ce79fc8706bfb899d9415a6cf532022685a67d1782"
+      },
+      {
+        "bytes": 1488,
+        "path": "src/heliostune/multisource.py",
+        "sha256": "128743d00f57ef017e75a9bac49eff06c98d1775c896fc86ec87abcb0ef3d429"
+      },
+      {
+        "bytes": 76895,
+        "path": "src/heliostune/multisource_engine.py",
+        "sha256": "cb703baa6d7fb0409d4cc704136751560ec12624e93efc54f7b15e8db7298de8"
+      },
+      {
+        "bytes": 14780,
+        "path": "src/heliostune/native_fusion_analysis.py",
+        "sha256": "95c2ee95ecf1888fdef8da239bb547ba10ae63e43fd826e4a719557549f2241f"
+      },
+      {
+        "bytes": 15366,
+        "path": "src/heliostune/native_fusion_bundle.py",
+        "sha256": "ba231443fba5d588550edf9d7a1eb6f2988360b1017631812f93a8196cc8fab5"
+      },
+      {
+        "bytes": 114027,
+        "path": "src/heliostune/native_fusion_executor.py",
+        "sha256": "84994f00b004d4f277386624866afd759f138625015d81b5c2733dee999f6b9c"
+      },
+      {
+        "bytes": 6620,
+        "path": "src/heliostune/protocol.py",
+        "sha256": "02f7ebfe672153adc342b525fbb522d40da88c3c5f9bc4585b5fb5d1a9f4cc16"
+      },
+      {
+        "bytes": 96895,
+        "path": "src/heliostune/remote_execution.py",
+        "sha256": "8a134cc5da055b98f697a6682178f76a9fb5320e0e85dde66bad92e5884cecc0"
+      },
+      {
+        "bytes": 29820,
+        "path": "src/heliostune/replay.py",
+        "sha256": "c5cf4423c2d1e949ae0ccdb314d86e1b7ed73da848c208edf159b92bb67d186f"
+      },
+      {
+        "bytes": 70879,
+        "path": "src/heliostune/report.py",
+        "sha256": "a8d2a10a0d9e0df058dbdeaba3d196b65f49dc7b31e735d9554d6a26804b4bda"
+      },
+      {
+        "bytes": 19435,
+        "path": "src/heliostune/report_model.py",
+        "sha256": "b02b3cc57df951c629bff052404663b0bafaf830b45d20447f068b69ea62be01"
+      },
+      {
+        "bytes": 13461,
+        "path": "src/heliostune/retrieval.py",
+        "sha256": "486c858f122c2d8378ab0ec6fde91bbf360380aae7c294a53bf74351c7da4b4a"
+      },
+      {
+        "bytes": 16381,
+        "path": "src/heliostune/schema.py",
+        "sha256": "eced722598c4c0e61f09b4dc902628e2113ca5148f054ed8baec8b25608a82e8"
+      },
+      {
+        "bytes": 60618,
+        "path": "src/heliostune/scope.py",
+        "sha256": "5b274dcd8762b45aeb942c10a4f4836ab167c3f2c552e0e341d1273b01a7e752"
+      },
+      {
+        "bytes": 19619,
+        "path": "src/heliostune/selection.py",
+        "sha256": "7ce1bc197efde9bad865a61dd65500df4de1c6ea2e819e0878b82d8e03d0193d"
+      },
+      {
+        "bytes": 3980,
+        "path": "src/heliostune/synthetic.py",
+        "sha256": "7a0187a2a8afea599eb887fbe78182befd8d2d6a10210a80b476d2bd1a736b79"
+      },
+      {
+        "bytes": 6053,
+        "path": "src/heliostune/uncertainty.py",
+        "sha256": "ba91dd631fe359d83daea46856e9723f991dfc9ce1f2ecd8f5a5921a7b919102"
+      },
+      {
+        "bytes": 17891,
+        "path": "src/heliostune/v2_addendum.py",
+        "sha256": "9ec5309db070ef65463a95362519499780ef2addb7d8798b72e4a9a381bb3d16"
+      },
+      {
+        "bytes": 7917,
+        "path": "src/heliostune/v3_artifacts.py",
+        "sha256": "2c2ec031bc334a421239f447ed88ee016e7e9ceb8840e1e7f1dbdfc7ad5b846e"
+      },
+      {
+        "bytes": 29917,
+        "path": "src/heliostune/v3_engine.py",
+        "sha256": "61ad0c2bbcd9f63466fc6069fa868b47557f5bf2f51daf26bc47acaf05201a6e"
+      },
+      {
+        "bytes": 3620,
+        "path": "src/heliostune/validation.py",
+        "sha256": "b759c4a479a57d29fdedd66ff814335b95491768a2fa11a1189c42edd30dbdd9"
+      },
+      {
+        "bytes": 8860,
+        "path": "src/heliostune/wheel_verifier.py",
+        "sha256": "7d045500c52690772d96f3f677c344a4492dc5395ed583996ba65f0f0b362cc9"
+      }
+    ]
+  },
+  "inputs": {
+    "config": {
+      "bytes": 467095,
+      "path": "benchmarks/parhelion-v3-config-manifest.json",
+      "sha256": "7e8e31c56fdadcf0f4be382c0717d9d9cc0155941bf7669aca4267586b2dfb50"
+    },
+    "final_archive": {
+      "bytes": 3249518,
+      "path": "benchmarks/data/parhelion-v3-final.jsonl.zst",
+      "sha256": "e6ccb1399fc64e841a2e9611832d67feea8b61252841075ebd83f93e94f54d6f"
+    },
+    "final_publication_manifest": {
+      "bytes": 1797,
+      "path": "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json",
+      "sha256": "1617daa5d99b758eec2b11542403c3b8a1cdae3eba936e51838622fbb6ca3d01"
+    },
+    "freeze": {
+      "bytes": 41882,
+      "path": "benchmarks/parhelion-v3-h200-freeze.json",
+      "sha256": "2fb12d53f6cdef72c22c25087241930bf7d8e0f06fbe8e338bd900f1edcfaf10"
+    },
+    "h200_publication_manifest": {
+      "bytes": 1416,
+      "path": "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.json",
+      "sha256": "fa033d570d773982508bdcb4fea1bbf0129da8e6b38ca60c7705d9c218fcff81"
+    },
+    "selection": {
+      "bytes": 9420,
+      "path": "benchmarks/results/parhelion-v3-a100-selection.json",
+      "sha256": "e4a9bbe1c75e17ed865b27531e6f6583367341c9c6fb063343f3aaa86c8ae71e"
+    },
+    "validation_publication_manifest": {
+      "bytes": 18151,
+      "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+      "sha256": "2e62cbbd7a6fe02e06792663f9b6bc11e9dc222316c88406b74e81114c473b2d"
+    }
+  },
+  "outputs": {
+    "report": {
+      "bytes": 7259,
+      "path": "site/parhelion-v3-engineering.html",
+      "sha256": "31c1b94ba2a7523328ed45f5d0146e5ca903c7456ee10e57d8e6b8f68b962911"
+    },
+    "result": {
+      "bytes": 688884,
+      "path": "benchmarks/results/parhelion-v3-h200-engineering.json",
+      "sha256": "e8cd9819d4f3bcad2808ffdbaefac2cc238d8e98456077ff4b0cad5ef537604b"
+    }
+  },
+  "reproduction_scope": {
+    "environment_independent_full_result_regeneration": false,
+    "report": "recomputed",
+    "runtime_provenance": "the committed runtime object is reused only during --check byte comparison",
+    "runtime_provenance_source": {
+      "artifact_binding": "outputs.result",
+      "field": "runtime",
+      "path": "benchmarks/results/parhelion-v3-h200-engineering.json"
+    },
+    "scientific_and_result_fields": "recomputed"
+  },
+  "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
+  "schema_version": 1,
+  "study_id": "parhelion-v3-operator-authorized-engineering"
+}

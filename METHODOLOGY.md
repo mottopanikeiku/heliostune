@@ -2,7 +2,7 @@
 
 ## Status and normative language
 
-This document specifies the evidence contract targeted by HeliosTune methodology v1. It is normative for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts, and it is not a statement that the current CLI or every current study implements the contract; see [Implementation status](#implementation-status). The additive plugin/suite declaration scope and its deliberately narrower implementation status are described in [Experiment scope](EXPERIMENT_SCOPE.md).
+This is HeliosTune's final, partially implemented design specification, preserved when the project was archived on 2026-09-01. It records the evidence-control target and the exact boundaries reached; this repository has no plan to complete the unimplemented surfaces. The document is normative only for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts or claim that the current CLI or every study implements the contract; see [Implementation status](#implementation-status). The additive plugin/suite declaration scope and its deliberately narrower final implementation status are described in [Experiment scope](EXPERIMENT_SCOPE.md).
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as described by RFC 2119. Each mandatory rule below states both the failure it prevents and the machine check that enforces it. A verifier has no warning-only path for a failed mandatory rule.
 
@@ -584,14 +584,14 @@ A conforming implementation demonstrates at least these observable tests:
 
 ## 11. Implementation status
 
-This table separates normative target from repository reality. “Partial” is not v1 eligibility.
+This final table separates the preserved design target from repository reality. “Partial” is not v1 eligibility, and no listed gap is a completion plan for this archived project.
 
 | Surface | Current repository status | Consequence |
 |---|---|---|
 | Strict JSON and exact-type validation primitives | Implemented for existing artifact families; coverage varies by historical schema. | Useful building block, not proof of protocol/bundle closure. |
 | `heliostune.protocol/1` and `heliostune.bundle/1` exact schemas | Strict frozen/slotted value objects and file loaders parse the field maps above with exact validators. They do not resolve referenced bytes or verify custody. | Parsing a v1 root is not bundle closure, and no historical artifact is automatically a v1 artifact. |
 | `heliostune.plugin/1` and `heliostune.suite/1` declarations | Strict structural loaders and standalone verification are implemented for the closed initial scope. Plugin verification resolves relative suite paths and hashes. | Declaration validation establishes vocabulary/schema/template identity only. Generic bundle transitive plugin → suite custody is not implemented. |
-| Generic study-plugin resolver and runtime contracts | Not implemented end to end. Existing studies use study-specific modules and manifests. | The full lifecycle plugin commands and interfaces above remain targets; no generic local or remote backend exists. |
+| Generic study-plugin resolver and runtime contracts | Not implemented end to end. Existing studies use study-specific modules and manifests. | The full lifecycle plugin commands and interfaces remain unimplemented design surfaces; no generic local or remote backend exists. |
 | Eight-state immutable lifecycle and revision registry | Not implemented end to end. | Existing manifests retain their own state models and legacy interpretation. |
 | Local/remote canonical semantic envelope | Partial in study-specific collectors; no generic v1 executor contract. | Executor parity is not yet generally established. |
 | GPU raw randomized paired blocks and full telemetry | Not implemented for published Parhelion/Hopper timing artifacts, which retain aggregate quantiles and limited state. | Those timings remain legacy, fixed-protocol evidence and do not support new timing-population inference. |
@@ -601,4 +601,4 @@ This table separates normative target from repository reality. “Partial” is 
 | EvidenceBundle closure, offline replay, complete registry/catalog, and atomic root publication | Partial building blocks exist; the full v1 verifier/publication transaction is not implemented end to end. | Publication under existing workflows is legacy rather than a v1 conformance claim. |
 | Existing Parhelion and Hopper evidence | Immutable legacy evidence. Hopper is a one-instance same-bank engineering STOP; Parhelion uncertainty is conditional policy-seed Monte Carlo evidence. | No retroactive promotion, stronger provenance, population scope, or inference is assigned. |
 
-Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility.
+Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility. HeliosTune will not complete the remaining surfaces here; derivative implementation belongs in a fork or new project and must not rewrite frozen evidence.
