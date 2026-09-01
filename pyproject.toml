@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "heliostune"
-version = "0.4.1"
-description = "Retrieval-anchored Bayesian autotuning across GPU targets"
+version = "0.5.0"
+description = "Archived GPU autotuning, fusion, and evidence-control research corpus"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "mottopanikeiku" }]
 classifiers = [
-  "Development Status :: 4 - Beta",
+  "Development Status :: 7 - Inactive",
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
@@ -29,7 +29,7 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/mottopanikeiku/heliostune"
-Issues = "https://github.com/mottopanikeiku/heliostune/issues"
+Archive = "https://github.com/mottopanikeiku/heliostune/releases/tag/v0.5.0"
 Results = "https://mottopanikeiku.github.io/heliostune/"
 
 [project.optional-dependencies]
