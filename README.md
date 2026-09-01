@@ -6,6 +6,8 @@ A measured study of retrieval, Bayesian adaptation, and source-to-target launch 
 
 **Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
 
+**Native RMSNorm H100 stage gate:** the authenticated [report](site/native-rmsnorm-h100.html), strict [summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed [raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and [publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) retain the exact exploratory outcome and both remote attempts.
+
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
 **Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) specifies the evidence-control contract for new studies; it is a non-retroactive target, not a claim that legacy evidence already conforms. [Experiment scope](EXPERIMENT_SCOPE.md) separates declaration vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations for the additive plugin/suite v1 surface.
@@ -144,11 +146,11 @@ The exact
 [`residual_rmsnorm_triton.v1` suite](benchmarks/suites/residual-rmsnorm-triton-v1.json)
 and
 [`fusion-triton-rmsnorm-plugin` plugin](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json)
-now have a digest-dispatched native executor. This is implementation status, not
-capability evidence: no retained SM90 execution exists, all six arms' local and
-remote capability declarations remain `unprobed`, and nothing here says that
-the current host can execute the suite. On an exact H100 SM90 environment with
-the pinned GPU dependencies, the local invocation is:
+have a digest-dispatched native executor and a retained authenticated H100 SM90
+observation. The observation does not change the declarations: all six arms'
+local and remote capability states remain `unprobed` with null evidence digests,
+and nothing here says that the current host can execute the suite. On an exact
+H100 SM90 environment with the pinned GPU dependencies, the local invocation is:
 
 ```bash
 uv run --extra gpu heliostune run-local-suite \
@@ -170,6 +172,17 @@ The deterministic stage-gate analyzer compares the fastest fully eligible
 candidate with the faster passing eager/Inductor baseline and authorizes only
 exploratory expansion at a speedup of at least `1.10x`; it emits no claim.
 
+In the retained H100 observation, all four native candidates passed the
+correctness, complete zero-spill resource, and profile gates and were eligible;
+each profiled one-invocation check observed exactly one matching CUDA kernel
+event. This observation still has `fusion_claim=false`. The fastest native arm,
+`rmsnorm-triton-w8`, had median **0.0505920015 ms**, versus **0.085072 ms** for
+eager and **0.045952 ms** for Inductor. The fair
+`best_baseline_median / candidate_median` ratio was **0.908286**, below the
+predeclared **1.10** threshold, so the retained decision is
+**`STOP_BELOW_THRESHOLD`**: no expansion, correctness claim, performance claim,
+fusion claim, or publication-eligibility claim follows.
+
 The guarded paid Modal path uses executor API
 `heliostune.modal_fusion_executor/2`:
 
@@ -184,15 +197,21 @@ uv run --extra modal modal run modal_fusion_executor.py::main \
 Do not make that paid call without explicit authorization and approved bounds.
 It requires a clean committed `HEAD`, the freshly built and verified wheel plus
 adjacent manifest, and a fresh output path. The client permits one spawn and no
-retry, but Modal's physical starts/restarts are unobservable, so total GPU time
-and cost have no stated upper bound. A remote run publishes
+automatic retry, but Modal's physical starts and restarts are unobservable, so
+provider physical attempt count, total GPU time and its upper bound, total time
+upper bound, and actual cost remain unknown. A remote run publishes
 `heliostune.remote-receipt/1`, not a methodology bundle. Local and remote
 artifacts bind the exact plugin/suite bytes, package-wide source identity, the
 four critical executor-source path/size/digests, and, remotely, the verified
 wheel, manifest, commit, request, journal, and returned result. Failures and
 blocked cells remain evidence; lost acknowledgement, timeout, interruption, or
-unproven cancellation remains `unresolved`. No native correctness,
-one-kernel/fusion, or performance result is reported.
+unproven cancellation remains `unresolved`.
+
+The publication retains the first attempt as unresolved after its result
+exceeded the 6144-byte inline transport limit; that receipt establishes no
+execution result. A compact-result attempt then completed. The static
+publication preserves both receipts and the completed observations, but it is
+not a methodology bundle and `publication_eligible=false`.
 
 Native gated MLP is absent and deferred after an unfavorable feasibility audit.
 Attention, KV-cache, MoE, quantized-linear, and FP8 remain schema vocabulary and

@@ -27,6 +27,7 @@ _EXPECTED_STUDY_IDS = {
     "hopper-h100-engineering-benchmark",
     "parhelion-v3-operator-authorized-engineering",
     "fusion-remote-h100-exploratory",
+    "native-rmsnorm-h100-stage-gate",
 }
 
 _EXPECTED_ARTIFACT_PATHS = {
@@ -105,6 +106,12 @@ _EXPECTED_ARTIFACT_PATHS = {
         "benchmarks/fusion-remote-exploratory-manifest.json",
         "benchmarks/results/fusion-remote-exploratory-summary.json",
         "site/fusion-remote-exploratory.html",
+    },
+    "native-rmsnorm-h100-stage-gate": {
+        "benchmarks/data/native-rmsnorm-h100.json.zst",
+        "benchmarks/native-rmsnorm-h100-manifest.json",
+        "benchmarks/results/native-rmsnorm-h100-summary.json",
+        "site/native-rmsnorm-h100.html",
     },
 }
 _ARTIFACT_SECTIONS = (
@@ -189,10 +196,10 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
 
     assert facts == {
         "measurement_rows": 278_406,
-        "json_artifacts": 31,
-        "html_reports": 5,
+        "json_artifacts": 33,
+        "html_reports": 6,
         "file_artifacts": 10,
-        "compressed_raw_artifacts": 3,
+        "compressed_raw_artifacts": 4,
         "aliases": 7,
     }
 
@@ -277,11 +284,59 @@ def test_fusion_remote_catalog_records_exact_publication_boundary() -> None:
     assert not any(path.startswith("/home/") for path in _artifact_paths(fusion))
 
 
+def test_native_rmsnorm_catalog_records_exact_stage_gate_boundary() -> None:
+    native = _study(build_research_catalog(_REPO), "native-rmsnorm-h100-stage-gate")
+
+    assert native["analysis_status"] == "predeclared_exploratory_stage_gate"
+    assert native["outcome_status"] == "STOP_BELOW_THRESHOLD"
+    assert native["publication_eligible"] is False
+    assert native["split_design"] == "single frozen case; two retained remote attempts"
+    assert native["measurement_schema"] == "heliostune.native-rmsnorm-h100.raw/1"
+    assert native["raw_artifacts"] == [
+        {
+            "kind": "compressed_json_artifact",
+            "path": "benchmarks/data/native-rmsnorm-h100.json.zst",
+            "schema": "heliostune.native-rmsnorm-h100.raw/1",
+            "status": "published_stop_below_threshold",
+            "compression": "zstd",
+            "compressed_bytes": 21852,
+            "compressed_sha256": (
+                "55aa8d2bbbb22194824409920ceb6a44d3ba32d79599f36d3529ea66e9e4e8d0"
+            ),
+            "uncompressed_bytes": 145876,
+            "uncompressed_sha256": (
+                "eb66468f627d41740afc6551f66320c0ea4e1ddd3b76d9e4e37066fcd8daa958"
+            ),
+        }
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in native["results"]] == [
+        (
+            "benchmarks/results/native-rmsnorm-h100-summary.json",
+            "heliostune.native-rmsnorm-h100.summary/1",
+        )
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in native["manifests"]] == [
+        (
+            "benchmarks/native-rmsnorm-h100-manifest.json",
+            "heliostune.native-rmsnorm-h100.manifest/1",
+        )
+    ]
+    assert [(entry["path"], entry["schema"]) for entry in native["reports"]] == [
+        ("site/native-rmsnorm-h100.html", "html5")
+    ]
+    assert all(
+        entry["status"] == "published_stop_below_threshold"
+        for section in ("results", "manifests", "reports")
+        for entry in native[section]
+    )
+    assert not any(path.startswith("/home/") for path in _artifact_paths(native))
+
+
 def test_catalog_command_reports_compressed_raw_artifacts_separately(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     assert cli._verify_catalog(argparse.Namespace(catalog=_CATALOG)) == 0
-    assert "3 compressed raw artifacts" in capsys.readouterr().out
+    assert "4 compressed raw artifacts" in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("study_id", sorted(_EXPECTED_STUDY_IDS))

@@ -1,0 +1,176 @@
+{
+  "actual_cost_usd": null,
+  "artifacts": {
+    "publisher": {
+      "bytes": 30376,
+      "path": "scripts/publish_native_rmsnorm_h100.py",
+      "sha256": "45e443291ffcae47e21a0fc8d7b8512a9ce3e209d0eb8ed9e496d0b33a65caae"
+    },
+    "raw": {
+      "compressed_bytes": 21852,
+      "compressed_sha256": "55aa8d2bbbb22194824409920ceb6a44d3ba32d79599f36d3529ea66e9e4e8d0",
+      "decompressed_bytes": 145876,
+      "decompressed_sha256": "eb66468f627d41740afc6551f66320c0ea4e1ddd3b76d9e4e37066fcd8daa958",
+      "format": "zstd level=19, threads=1, checksum=true, content_size=false",
+      "path": "benchmarks/data/native-rmsnorm-h100.json.zst"
+    },
+    "report": {
+      "bytes": 4027,
+      "path": "site/native-rmsnorm-h100.html",
+      "sha256": "af77d7dd377bc3ad0d9f49c2e37cfbb884dfab8a66effac1ee06aafe271a0770"
+    },
+    "summary": {
+      "bytes": 66144,
+      "path": "benchmarks/results/native-rmsnorm-h100-summary.json",
+      "sha256": "2b16947f4899029f3e7187060b2ce1f428cfb71678d8b1463f03e3271582ec89"
+    }
+  },
+  "attempts": [
+    {
+      "actual_cost_usd": null,
+      "attempt_id": "transport-overflow-unresolved",
+      "call_id": "fc-01M1B8V37FJP8J9NE0MQYDFEMA",
+      "client_spawn_count": 1,
+      "head_commit": "48ef2ea481bdf1ce35498a016f57cdf8602a89a7",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "cancellation_requested",
+        "unresolved"
+      ],
+      "manifest_sha256": "117a7a0c52b77e552777dbc5ec0bae62c66bbaa9a7e07a76b3b853082a9e1f4f",
+      "per_execution_timeout_s": 3600,
+      "provider_attempts_observable": false,
+      "provider_physical_attempts": null,
+      "source_sha256": "02b74382dce99559b93026c19a94ae1f3336ec3dd20244b33f75b208403b949a",
+      "status": "unresolved",
+      "terminal_detail": "RemoteError: SchemaError('remote result transport exceeds 6144-byte inline limit')",
+      "total_gpu_seconds_upper_bound": null,
+      "transport_error": "RemoteError: SchemaError('remote result transport exceeds 6144-byte inline limit')",
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_manifest_sha256": "117a7a0c52b77e552777dbc5ec0bae62c66bbaa9a7e07a76b3b853082a9e1f4f",
+      "wheel_sha256": "bea47623bd1baf18437386f997f3ed1276d62f6fac885c6e2943a3391dc5c2c0"
+    },
+    {
+      "actual_cost_usd": null,
+      "attempt_id": "completed-inline-result",
+      "call_id": "fc-01M1D6SXDQJHYQY1HEKYB36PBW",
+      "client_spawn_count": 1,
+      "head_commit": "8c0429aed216e481def4d9fb1d3fcde30964517d",
+      "journal_states": [
+        "intent",
+        "spawned",
+        "retrieval_started",
+        "completed"
+      ],
+      "manifest_sha256": "6f09348b025848a5b9e819620de5e3968173eef872f21d218442f1152193fbcf",
+      "per_execution_timeout_s": 3600,
+      "provider_attempts_observable": false,
+      "provider_physical_attempts": null,
+      "source_sha256": "0f91c248def6e64fa4d41ca8a9e0fcc55cb5e99b29f06e4f091fafe3f0141b93",
+      "status": "completed",
+      "terminal_detail": null,
+      "total_gpu_seconds_upper_bound": null,
+      "transport_error": null,
+      "wheel_filename": "heliostune-0.4.1-py3-none-any.whl",
+      "wheel_manifest_sha256": "6f09348b025848a5b9e819620de5e3968173eef872f21d218442f1152193fbcf",
+      "wheel_sha256": "745b521d6a61ed7aae5f1b6b3311a931a4c9159f81d80f31476075348f0f19c5"
+    }
+  ],
+  "commands": {
+    "build": "uv run python scripts/publish_native_rmsnorm_h100.py build --unresolved artifacts/fusion-remote/residual-rmsnorm-triton-v1-20260831T064037385754112 --completed artifacts/fusion-remote/residual-rmsnorm-triton-v1-20260901T004420761029839",
+    "check": "uv run python scripts/publish_native_rmsnorm_h100.py --check"
+  },
+  "decision": "stop_below_threshold",
+  "decision_display": "STOP_BELOW_THRESHOLD",
+  "expansion_authorized": false,
+  "fusion_claim": false,
+  "limitations": [
+    "This is one authenticated exploratory H100 workload, not confirmatory evidence.",
+    "The first attempt ended unresolved after inline result transport overflow; it establishes no execution result.",
+    "Modal provider physical starts, restarts, total GPU time, time bounds, and actual cost are unknown.",
+    "The completed attempt does not meet the predeclared 1.1x expansion threshold."
+  ],
+  "nonclaims": [
+    "No performance claim is made.",
+    "No fusion claim is made.",
+    "No publication claim is made.",
+    "No expansion is authorized."
+  ],
+  "performance_claim": false,
+  "publication_eligible": false,
+  "schema": "heliostune.native-rmsnorm-h100.manifest/1",
+  "sources": {
+    "current": {
+      "analysis": {
+        "bytes": 14780,
+        "path": "src/heliostune/native_fusion_analysis.py",
+        "sha256": "95c2ee95ecf1888fdef8da239bb547ba10ae63e43fd826e4a719557549f2241f"
+      },
+      "executor": {
+        "bytes": 114027,
+        "path": "src/heliostune/native_fusion_executor.py",
+        "sha256": "84994f00b004d4f277386624866afd759f138625015d81b5c2733dee999f6b9c"
+      },
+      "kernel_api": {
+        "bytes": 8393,
+        "path": "src/heliostune/fusion_kernels.py",
+        "sha256": "4577047cc30310bd3be4fa165be7d256d8007dbfded1830203eaa4c8968ef40e"
+      },
+      "kernel_runtime": {
+        "bytes": 6629,
+        "path": "src/heliostune/_fusion_gpu.py",
+        "sha256": "5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef"
+      },
+      "modal_transport": {
+        "bytes": 20956,
+        "path": "modal_fusion_executor.py",
+        "sha256": "a4f3ccb635cf0e35584868ec6cbedcc436588667b661632f896cb107feab1df2"
+      },
+      "plugin": {
+        "bytes": 638,
+        "path": "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json",
+        "sha256": "ce4a497113adf1ee82ed995fb4ba671a8a1664d756321499d91187056ca0d815"
+      },
+      "remote_transport": {
+        "bytes": 96895,
+        "path": "src/heliostune/remote_execution.py",
+        "sha256": "8a134cc5da055b98f697a6682178f76a9fb5320e0e85dde66bad92e5884cecc0"
+      },
+      "suite": {
+        "bytes": 11136,
+        "path": "benchmarks/suites/residual-rmsnorm-triton-v1.json",
+        "sha256": "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"
+      }
+    },
+    "executed_remote_package": {
+      "package_source_count": 44,
+      "package_source_sha256": "0f91c248def6e64fa4d41ca8a9e0fcc55cb5e99b29f06e4f091fafe3f0141b93",
+      "schema": "heliostune.executor-sources/1",
+      "sources": [
+        {
+          "bytes": 8393,
+          "path": "fusion_kernels.py",
+          "sha256": "4577047cc30310bd3be4fa165be7d256d8007dbfded1830203eaa4c8968ef40e"
+        },
+        {
+          "bytes": 6629,
+          "path": "_fusion_gpu.py",
+          "sha256": "5f39f6c76a2c542c984bc1be44ca4cd1ccb11c620843a4802f37054f8b0298ef"
+        },
+        {
+          "bytes": 114027,
+          "path": "native_fusion_executor.py",
+          "sha256": "84994f00b004d4f277386624866afd759f138625015d81b5c2733dee999f6b9c"
+        },
+        {
+          "bytes": 105017,
+          "path": "local_executor.py",
+          "sha256": "0b11075af36909d5799467d4c31d1594d4dc25e4918ca91ca65600cc708db1ce"
+        }
+      ]
+    }
+  },
+  "study_id": "native-rmsnorm-h100-stage-gate"
+}

@@ -153,7 +153,7 @@ bytes and hashes are frozen reference declarations, not a capability probe,
 execution freeze, or permission to dispatch work. Changing any byte produces a
 different artifact identity and requires an explicit new revision.
 
-## Native Triton residual RMSNorm: integrated, GPU unobserved
+## Native Triton residual RMSNorm: retained H100 stage-gate outcome
 
 The first native Triton candidate is committed at new immutable paths without
 changing either reference plugin, either reference suite, or any existing
@@ -167,9 +167,10 @@ runtime evidence byte:
 `residual_rmsnorm_triton.v1` retains
 `reference_template_not_execution_freeze`: that status freezes declaration
 identity and does not itself establish capability or authorize paid dispatch.
-The exact declaration digest is now integrated with a dedicated local executor
-and Modal executor API, but no SM90 run has been retained. All six arms still
-declare both capability states `unprobed` with null evidence digests.
+The exact declaration digest is integrated with a dedicated local executor and
+Modal executor API and now has one retained authenticated H100 SM90 observation.
+That observation does not promote declaration state: all six arms still declare
+both capability states `unprobed` with null evidence digests.
 
 The suite freezes one case: contiguous BF16 `x` and `residual` tensors of shape
 `[128, 4096]`, a BF16 `gamma` tensor of shape `[4096]`, pre-normalization
@@ -184,9 +185,9 @@ four native candidates:
 | `rmsnorm-triton-w16` | `heliostune_fusion_v2::residual_rmsnorm_w16` | 4096 | 16 | 1 |
 | `rmsnorm-triton-w32` | `heliostune_fusion_v2::residual_rmsnorm_w32` | 4096 | 32 | 1 |
 
-The static plan contains exactly twelve cells: one correctness cell followed
-by one timing cell for each of the six arms. These are planned cells, not
-observations.
+The static declaration plan contains exactly twelve cells: one correctness cell
+followed by one timing cell for each of the six arms. The cells remain declaration
+plan identity; the retained H100 observations are published separately below.
 
 The CPU-safe registry in `heliostune.fusion_kernels` exports
 `RMSNormTritonConfig`, `RESIDUAL_RMSNORM_CONFIGS`,
@@ -224,15 +225,37 @@ For each native candidate the implemented gates are, in order:
    hash match the compiled kernel, plus input/output revalidation; and
 4. timing with exactly 10 warmups and 50 retained repetitions.
 
-A failure is retained without eager fallback or retry and blocks that arm's
-later gates. Capability rejection invokes no backend and terminalizes every cell
-as blocked. The deterministic `heliostune.native-fusion-stage-gate/1` analyzer
-requires complete passing eager and Inductor baselines, selects the fastest
-fully eligible native candidate, and returns `expand_exploratory` only when
+A failure is retained without eager fallback or automatic retry and blocks that
+arm's later gates. Capability rejection invokes no backend and terminalizes
+every cell as blocked. The deterministic
+`heliostune.native-fusion-stage-gate/1` analyzer requires complete passing eager
+and Inductor baselines, selects the fastest fully eligible native candidate, and
+returns `expand_exploratory` only when
 `best_baseline_median / candidate_median >= 1.10`. It always emits
 `confirmatory: false`, `fusion_claim: false`, `publication_eligible: false`, and
-an empty claims list. With no retained SM90 observation, there is no native
-runtime-capability, correctness, one-kernel/fusion, or performance claim.
+an empty claims list.
+
+The authenticated H100 [report](site/native-rmsnorm-h100.html), strict
+[summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed
+[raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and
+[publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) retain the
+completed stage gate. All four native candidates passed the correctness,
+complete zero-spill resource, and profile gates and were eligible. Each profiled
+one-invocation check observed exactly one matching CUDA kernel event, while the
+analysis remains `fusion_claim=false`. The fastest native candidate was
+`rmsnorm-triton-w8` at median **0.0505920015 ms**; eager measured **0.085072
+ms** and Inductor measured **0.045952 ms**. The fair
+`best_baseline_median / candidate_median` ratio was **0.908286**, below the
+predeclared **1.10** threshold. The retained decision is
+**`STOP_BELOW_THRESHOLD`**, with no expansion and no correctness, performance,
+fusion, or publication-eligibility claim.
+
+The publication also retains the first attempt as unresolved after its result
+exceeded the 6144-byte inline transport limit; it establishes no execution
+result. A compact-result attempt completed afterward. Modal provider physical
+starts and restarts, total GPU time and its upper bound, total time upper bound,
+and actual cost are unknown. These are remote receipts and a static evidence
+publication, not a methodology bundle, and `publication_eligible=false`.
 
 ## Executor integration and reference semantics
 
@@ -292,8 +315,9 @@ uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks
 ```
 
 The native suite digest selects `heliostune.modal_fusion_executor/2`; the
-reference suite digests continue to select `/1`. No paid native attempt or SM90
-observation is reported here.
+reference suite digests continue to select `/1`. The native H100 publication
+above retains one unresolved transport-overflow attempt and one completed
+compact-result attempt without changing these dispatch identities.
 
 Each invocation must use its freshly built wheel and a fresh, unique output
 directory; never reuse an output directory from an earlier run.
@@ -470,8 +494,10 @@ promises or authorizes one.
 The generic local and remote reference branches stop at the frozen gated MLP
 and residual RMSNorm reference templates. The native Triton RMSNorm suite is
 nevertheless structurally executable: its frozen digest dispatches to dedicated
-local and Modal native executors. No retained GPU observation establishes its
-runtime result. Attention/KV-cache, quantized-linear, MoE and FP8 work require
+local and Modal native executors, and the retained H100 observation establishes
+only the narrow stage-gate facts published above. It does not promote the suite's
+capability declarations or authorize a claim. Attention/KV-cache,
+quantized-linear, MoE and FP8 work require
 their own suite revisions, backend implementations, and promotion reviews
 rather than being folded into an existing template.
 
@@ -520,9 +546,10 @@ path and digest. `verify-suite` checks one strict standalone suite. Their
 success output reports structure and counts and explicitly disclaims execution,
 correctness, and performance observation. `list-scope` prints the closed domain
 and dtype vocabularies and all three structurally executable template IDs in
-`EXECUTABLE_TEMPLATE_IDS`, then reports the native implementation and
-GPU-unobserved status separately. Membership in that tuple records structural
-executability, not retained runtime capability.
+`EXECUTABLE_TEMPLATE_IDS`, then reports native implementation status separately.
+Membership in that tuple records structural executability, not retained runtime
+capability; the separately published H100 observation does not promote any
+declaration's `unprobed` capability state.
 
 The declaration commands do not execute kernels or establish correctness or
 performance. The generic local and Modal executor branches continue to support
@@ -532,9 +559,10 @@ is unchanged: both suites completed correctness and timing, but plugin
 capability declarations remain unprobed, the candidate/reference arithmetic is
 identical apart from full-graph compilation, no fusion claim is made, and
 receipts are not publication-eligible methodology bundles. The separately
-integrated native Triton local `/2` executor and Modal `/2` receipt path have no
-retained GPU observation, and all native capability declarations remain
-unprobed. No generic executor exists for the staged attention, KV-cache, MoE,
+integrated native Triton local `/2` executor and Modal `/2` receipt path have the
+retained H100 stage-gate observation described above; its declarations remain
+unprobed and its publication is not methodology-bundle or claim eligible. No
+generic executor exists for the staged attention, KV-cache, MoE,
 quantized-linear, or FP8 domains.
 
 For the wider protocol, evidence, claim and legacy rules, see
