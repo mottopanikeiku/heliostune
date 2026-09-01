@@ -28,14 +28,21 @@ def _committed_fixture(
     result = tmp_path / "result.json"
     report = tmp_path / "report.html"
     manifest = tmp_path / "manifest.json"
-    result.write_text('{\n  "value": "committed"\n}\n', encoding="utf-8")
+    result.write_text(
+        '{\n  "runtime": {\n    "python": "committed"\n  },\n  "value": "committed"\n}\n',
+        encoding="utf-8",
+    )
     report.write_text("<p>committed</p>\n", encoding="utf-8")
     manifest.write_text('{\n  "role": "post-run reproducer"\n}\n', encoding="utf-8")
 
     monkeypatch.setattr(builder, "_OUTPUT", result)
     monkeypatch.setattr(builder, "_REPORT", report)
     monkeypatch.setattr(builder, "_DERIVATION_MANIFEST", manifest)
-    monkeypatch.setattr(builder, "build_result", lambda: {"value": "committed"})
+    monkeypatch.setattr(
+        builder,
+        "build_result",
+        lambda: {"runtime": {"python": "current"}, "value": "committed"},
+    )
     monkeypatch.setattr(builder, "render_html", lambda _result: "<p>committed</p>\n")
     monkeypatch.setattr(
         builder,
@@ -50,7 +57,7 @@ def _committed_fixture(
     return result, report, manifest
 
 
-def test_check_byte_matches_without_writing(
+def test_check_reuses_committed_runtime_without_writing(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -69,9 +76,51 @@ def test_check_rejects_mismatch_without_mutating_committed_outputs(
     builder = _load_builder()
     paths = _committed_fixture(builder, monkeypatch, tmp_path)
     before = [path.read_bytes() for path in paths]
-    monkeypatch.setattr(builder, "build_result", lambda: {"value": "different"})
+    monkeypatch.setattr(
+        builder,
+        "build_result",
+        lambda: {"runtime": {"python": "current"}, "value": "different"},
+    )
 
     with pytest.raises(RuntimeError, match="engineering derivation output is stale"):
         builder.main(["--check"])
 
     assert [path.read_bytes() for path in paths] == before
+
+
+def test_manifest_binds_complete_scientific_source_and_lock_closure() -> None:
+    builder = _load_builder()
+    manifest = builder.build_derivation_manifest(b"result", b"report")
+    implementation = manifest["implementation"]
+    inventory = implementation["source_inventory"]
+    inventory_paths = [entry["path"] for entry in inventory]
+    expected_paths = sorted(
+        path.relative_to(builder._REPO).as_posix()
+        for path in (builder._REPO / "src/heliostune").rglob("*.py")
+    )
+
+    assert inventory_paths == expected_paths
+    assert {
+        "src/heliostune/artifacts.py",
+        "src/heliostune/bandit.py",
+        "src/heliostune/protocol.py",
+        "src/heliostune/replay.py",
+        "src/heliostune/retrieval.py",
+        "src/heliostune/uncertainty.py",
+        "src/heliostune/v3_engine.py",
+        "src/heliostune/validation.py",
+    } <= set(inventory_paths)
+    assert [entry["path"] for entry in implementation["dependency_contract"]] == [
+        "pyproject.toml",
+        "uv.lock",
+    ]
+
+    bindings = [
+        implementation["result_builder"],
+        *inventory,
+        *implementation["dependency_contract"],
+    ]
+    for binding in bindings:
+        path = builder._REPO / binding["path"]
+        assert binding["bytes"] == path.stat().st_size
+        assert binding["sha256"] == builder.sha256_file(path)

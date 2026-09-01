@@ -725,7 +725,8 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                 },
                 "commands": {
                     "check": (
-                        "uv run python scripts/build_parhelion_v3_engineering_result.py --check"
+                        "uv run --python 3.11 python "
+                        "scripts/build_parhelion_v3_engineering_result.py --check"
                     ),
                 },
                 "validity_limits": [

@@ -1970,9 +1970,6 @@
     },
     {
       "analysis_status": "operator_authorized_engineering_protocol_deviation",
-      "commands": {
-        "check": "uv run python scripts/build_parhelion_v3_engineering_result.py --check"
-      },
       "collection_runs": {
         "candidate_bank0": "https://modal.com/apps/mottopanikeiku/main/ap-a2tRHcReiUYfLwZ4iCN5Pu",
         "h200": "https://modal.com/apps/mottopanikeiku/main/ap-dKaK5ML43S2EqbaW33OTtA",
@@ -1982,6 +1979,9 @@
       "collector_commits": {
         "h200": "317105016e3ccb4b3bec8780d7787cf6f797f8d3",
         "pilot_candidate_validation": "3833181ae0b87c9b7bafb839f1ea4a608cd432f7"
+      },
+      "commands": {
+        "check": "uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check"
       },
       "data": [
         {
@@ -2307,11 +2307,11 @@
       "input_study_id": "parhelion-v3-h200-transfer",
       "manifests": [
         {
-          "bytes": 3187,
+          "bytes": 11331,
           "kind": "json_artifact",
           "path": "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json",
           "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
-          "sha256": "9197966ff1f501a54ce296240f541e93b6eb057bb8b227feb4452da35aa37a91"
+          "sha256": "ea5c60ce87bdfb463cc114a80bd04575f81f835bff8fcfd90adad628807820db"
         }
       ],
       "measurement_schema": "heliostune-measurement-v2",
