@@ -8,9 +8,11 @@ import contextlib
 import ctypes
 import hashlib
 import json
+import math
 import os
 import secrets
 import stat
+import struct
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,6 +47,12 @@ RECEIPT_ROOT = "receipt.json"
 REMOTE_RESULT_ENVELOPE_MAX_BYTES = 512 * 1024
 REMOTE_RESULT_TRANSPORT_MAX_BYTES = 6 * 1024
 _TRANSPORT_ENCODING = "zstd-base64"
+_COMPACT_TRANSPORT_ENCODING = "zstd-base64-compact-v1"
+_COMPACT_SCHEMA = "heliostune.remote-compact/1"
+_COMPACT_MAGIC = b"HSTC1"
+_COMPACT_UINT64_MAX = (1 << 64) - 1
+_COMPACT_INT64_MIN = -(1 << 63)
+_COMPACT_INT64_MAX = (1 << 63) - 1
 _TRANSPORT_ZSTD_LEVEL = 19
 _TRANSPORT_FIELDS = {
     "schema",
@@ -53,6 +61,291 @@ _TRANSPORT_FIELDS = {
     "uncompressed_bytes",
     "uncompressed_sha256",
 }
+_COMPACT_FIELDS = {"schema", "envelope"}
+_COMPACT_SHA256_KEYS = frozenset(
+    {
+        "correctness_key",
+        "cuda_event_names_sha256",
+        "expected_kernel_hash",
+        "kernel_hash",
+        "manifest_sha256",
+        "package_source_sha256",
+        "plugin_sha256",
+        "request_digest",
+        "sha256",
+        "source_sha256",
+        "storage_sha256",
+        "suite_sha256",
+        "verified_suite_sha256",
+        "wheel_sha256",
+    }
+)
+_COMPACT_COMMIT_KEYS = frozenset({"head_commit"})
+_COMPACT_KEY_NAMES = (
+    "status",
+    "arm_id",
+    "case_id",
+    "stage",
+    "cell_id",
+    "attempt_id",
+    "from_state",
+    "reason",
+    "to_state",
+    "contiguous",
+    "device",
+    "shape",
+    "entrypoint",
+    "error",
+    "alignment_bytes",
+    "alignment_satisfied",
+    "cpu_dtype",
+    "draw",
+    "normal_offset",
+    "normal_scale",
+    "role",
+    "storage_dtype",
+    "storage_sha256",
+    "tensor_id",
+    "failure_kind",
+    "max_abs_error",
+    "output_disjoint",
+    "passed",
+    "num_stages",
+    "num_warps",
+    "correctness",
+    "timing",
+    "correctness_key",
+    "message",
+    "deterministic",
+    "finite_close",
+    "id",
+    "inputs_unchanged",
+    "sign_match",
+    "value_class_match",
+    "backend_kind",
+    "config",
+    "kernel_hash",
+    "kernel_name",
+    "dtype",
+    "block_size",
+    "bytes",
+    "sha256",
+    "suite_sha256",
+    "backend_invoked",
+    "profile_passed",
+    "resource_passed",
+    "validation_passed",
+    "schema",
+    "input_seed",
+    "tensor_order",
+    "tensors",
+    "close",
+    "finite",
+    "input_storage_unchanged",
+    "output",
+    "layout",
+    "median_ms",
+    "repetitions",
+    "samples_ms",
+    "warmups",
+    "correctness_passed",
+    "timing_allowed",
+    "callable_distinct",
+    "compile_ns",
+    "dynamic",
+    "eager_fallback",
+    "fullgraph",
+    "mode",
+    "compute_capability",
+    "cuda_version",
+    "device_name",
+    "torch_version",
+    "path",
+    "cuda_event_count",
+    "cuda_event_names_sample",
+    "cuda_event_names_sha256",
+    "exact_name_match_count",
+    "expected_kernel_hash",
+    "expected_kernel_name",
+    "inputs_revalidated",
+    "invocation_count",
+    "method",
+    "one_kernel_gate_passed",
+    "output_revalidated",
+    "warmed",
+    "asm_stages",
+    "metadata",
+    "n_max_threads",
+    "n_regs",
+    "n_spills",
+    "resource_gate_passed",
+    "target",
+    "num_ctas",
+    "shared",
+    "arch",
+    "backend",
+    "warp_size",
+    "probes",
+    "validation_gate_passed",
+    "device_index",
+    "fusion_claim",
+    "rocm_version",
+    "triton_version",
+    "environment",
+    "gpu",
+    "autocast_policy",
+    "implementation",
+    "platform",
+    "precision_policy",
+    "python",
+    "cache_enabled",
+    "device_type",
+    "enabled",
+    "allow_bf16_reduced_precision_reduction",
+    "allow_fp16_accumulation",
+    "allow_fp16_reduced_precision_reduction",
+    "allow_tf32",
+    "float32_matmul_precision",
+    "outcome",
+    "envelope",
+    "gpu_selector",
+    "hardware",
+    "head_commit",
+    "manifest_sha256",
+    "plugin_path",
+    "plugin_sha256",
+    "request_digest",
+    "result",
+    "source_sha256",
+    "suite_path",
+    "wheel_filename",
+    "wheel_sha256",
+    "multiprocessor_count",
+    "total_memory_gb",
+    "attempts",
+    "capability",
+    "compile_evidence",
+    "executor_sources",
+    "materialization",
+    "observations",
+    "profile_evidence",
+    "resource_evidence",
+    "stage_outcomes",
+    "suite_id",
+    "summary",
+    "validation_evidence",
+    "verified_suite_path",
+    "verified_suite_sha256",
+    "allocation_succeeded",
+    "available",
+    "rmsnorm-triton-w4-correctness",
+    "rmsnorm-triton-w8-correctness",
+    "rmsnorm-triton-w16-correctness",
+    "rmsnorm-triton-w32-correctness",
+    "rmsnorm-eager-reference-correctness",
+    "rmsnorm-inductor-comparator-correctness",
+    "detail",
+    "inductor_available",
+    "native_bf16",
+    "reasons",
+    "package_source_count",
+    "package_source_sha256",
+    "sources",
+    "all_cells_terminal",
+    "blocked",
+    "counts",
+    "expected_cell_ids",
+    "failed",
+    "terminal_cell_ids",
+    "compile_blocked",
+    "compile_compiled",
+    "compile_failed",
+    "profile_blocked",
+    "profile_failed",
+    "resource_blocked",
+    "resource_failed",
+    "stage_blocked",
+    "stage_completed",
+    "stage_failed",
+    "validation_blocked",
+    "validation_failed",
+)
+_COMPACT_KEY_CODES = {name: index + 1 for index, name in enumerate(_COMPACT_KEY_NAMES)}
+_COMPACT_STRING_NAMES = (
+    _COMPACT_SCHEMA,
+    "heliostune.remote-result-envelope/1",
+    "heliostune.local_executor/2",
+    "heliostune.local-environment/2",
+    "heliostune.executor-sources/1",
+    "rmsnorm-case-001",
+    "rmsnorm-triton-w4",
+    "rmsnorm-triton-w8",
+    "rmsnorm-triton-w16",
+    "rmsnorm-triton-w32",
+    "rmsnorm-eager-reference",
+    "rmsnorm-inductor-comparator",
+    "correctness",
+    "timing",
+    "pending",
+    "running",
+    "success",
+    "passed",
+    "completed",
+    "compiled",
+    "profiled",
+    "validated",
+    "native_triton",
+    "inductor",
+    "eager",
+    "input",
+    "parameter",
+    "residual",
+    "gamma",
+    "cuda:0",
+    "cuda",
+    "torch.bfloat16",
+    "torch.strided",
+    "float32",
+    "bfloat16",
+    "normal_0_1_fp32_cpu",
+    "torch.profiler.cuda_events",
+    "cubin",
+    "zeros",
+    "cancellation",
+    "overflow",
+    "12.8",
+    "3.4.0",
+    "2.8.0+cu128",
+    "NVIDIA H100 80GB HBM3",
+    "CPython",
+    "rmsnorm-triton-w4-correctness",
+    "rmsnorm-triton-w4-timing",
+    "rmsnorm-triton-w8-correctness",
+    "rmsnorm-triton-w8-timing",
+    "rmsnorm-triton-w16-correctness",
+    "rmsnorm-triton-w16-timing",
+    "rmsnorm-triton-w32-correctness",
+    "rmsnorm-triton-w32-timing",
+    "rmsnorm-eager-reference-correctness",
+    "rmsnorm-eager-reference-timing",
+    "rmsnorm-inductor-comparator-correctness",
+    "rmsnorm-inductor-comparator-timing",
+    "heliostune_fusion_v2::residual_rmsnorm_w4",
+    "heliostune_fusion_v2::residual_rmsnorm_w8",
+    "heliostune_fusion_v2::residual_rmsnorm_w16",
+    "heliostune_fusion_v2::residual_rmsnorm_w32",
+    "reference_template.residual_rmsnorm_reference",
+    "reference_template.residual_rmsnorm_candidate",
+    "residual_rmsnorm_4",
+    "residual_rmsnorm_8",
+    "residual_rmsnorm_16",
+    "residual_rmsnorm_32",
+    "highest",
+    "H100",
+    "default",
+)
+_COMPACT_STRING_CODES = {name: index for index, name in enumerate(_COMPACT_STRING_NAMES)}
+_COMPACT_TAGS = frozenset({"$c", "$f4", "$f8", "$h"})
 _RENAME_NOREPLACE = 1
 
 ReceiptStatus = Literal["completed", "failed", "aborted", "unresolved"]
@@ -103,6 +396,317 @@ def _compress_result_envelope(payload: bytes) -> bytes:
         write_content_size=True,
         write_dict_id=False,
     ).compress(payload)
+
+
+def _compact_hex_tag(value: object, *, length: int, tag: str) -> dict[str, bytes] | None:
+    if (
+        type(value) is not str
+        or len(value) != length * 2
+        or any(character not in "0123456789abcdef" for character in value)
+    ):
+        return None
+    return {tag: bytes.fromhex(value)}
+
+
+def _float32_roundtrips_exactly(value: float) -> bool:
+    try:
+        packed = struct.pack(">f", value)
+    except (OverflowError, struct.error):
+        return False
+    roundtrip = struct.unpack(">f", packed)[0]
+    return struct.pack(">d", roundtrip) == struct.pack(">d", value)
+
+
+def _compact_pack_value(value: object, *, key: str | None = None) -> object:
+    if key in _COMPACT_SHA256_KEYS:
+        tagged = _compact_hex_tag(value, length=32, tag="$h")
+        if tagged is not None:
+            return tagged
+    elif key in _COMPACT_COMMIT_KEYS:
+        tagged = _compact_hex_tag(value, length=20, tag="$c")
+        if tagged is not None:
+            return tagged
+    if key == "samples_ms" and type(value) is list:
+        samples = cast(list[object], value)
+        if any(type(sample) is not float or not math.isfinite(sample) for sample in samples):
+            raise SchemaError("compact samples_ms must contain only finite floats")
+        floats = cast(list[float], samples)
+        use_float32 = all(_float32_roundtrips_exactly(sample) for sample in floats)
+        width = 4 if use_float32 else 8
+        format_code = "f" if use_float32 else "d"
+        packed = struct.pack(f">{len(floats)}{format_code}", *floats)
+        return {f"$f{width}": packed}
+    if type(value) is dict:
+        mapping = cast(dict[object, object], value)
+        if any(type(item_key) is not str for item_key in mapping):
+            raise SchemaError("compact envelope object keys must be strings")
+        string_mapping = cast(dict[str, object], mapping)
+        collisions = _COMPACT_TAGS.intersection(string_mapping)
+        if collisions:
+            raise SchemaError("compact envelope contains a reserved tag key")
+        return {
+            item_key: _compact_pack_value(item_value, key=item_key)
+            for item_key, item_value in string_mapping.items()
+        }
+    if type(value) is list:
+        return [_compact_pack_value(item) for item in cast(list[object], value)]
+    return value
+
+
+def _compact_unpack_float(value: object, *, width: int) -> list[float]:
+    if type(value) is not bytes:
+        raise SchemaError(f"compact float{width * 8} tag must contain bytes")
+    raw = value
+    if len(raw) % width:
+        raise SchemaError(f"compact float{width * 8} tag has the wrong decoded byte length")
+    count = len(raw) // width
+    format_code = "f" if width == 4 else "d"
+    samples = list(struct.unpack(f">{count}{format_code}", raw))
+    if any(not math.isfinite(sample) for sample in samples):
+        raise SchemaError("compact samples_ms must contain only finite floats")
+    return samples
+
+
+def _compact_unpack_value(value: object, *, key: str | None = None) -> object:
+    if type(value) is list:
+        return [_compact_unpack_value(item) for item in cast(list[object], value)]
+    if type(value) is not dict:
+        return value
+    mapping = cast(dict[object, object], value)
+    if any(type(item_key) is not str for item_key in mapping):
+        raise SchemaError("compact envelope object keys must be strings")
+    string_mapping = cast(dict[str, object], mapping)
+    tags = _COMPACT_TAGS.intersection(string_mapping)
+    if tags:
+        if len(tags) != 1 or len(string_mapping) != 1:
+            raise SchemaError("compact envelope contains an ambiguous tag")
+        tag = next(iter(tags))
+        tagged_value = string_mapping[tag]
+        if tag == "$h":
+            if key not in _COMPACT_SHA256_KEYS:
+                raise SchemaError("compact SHA-256 tag is not valid for this field")
+            if type(tagged_value) is not bytes or len(tagged_value) != 32:
+                raise SchemaError("compact SHA-256 tag has the wrong byte length")
+            return tagged_value.hex()
+        if tag == "$c":
+            if key not in _COMPACT_COMMIT_KEYS:
+                raise SchemaError("compact commit tag is not valid for this field")
+            if type(tagged_value) is not bytes or len(tagged_value) != 20:
+                raise SchemaError("compact commit tag has the wrong byte length")
+            return tagged_value.hex()
+        if key != "samples_ms":
+            raise SchemaError("compact float tag is not valid for this field")
+        return _compact_unpack_float(tagged_value, width=4 if tag == "$f4" else 8)
+    return {
+        item_key: _compact_unpack_value(item_value, key=item_key)
+        for item_key, item_value in string_mapping.items()
+    }
+
+
+def _compact_write_uint(output: bytearray, value: int) -> None:
+    if value < 0 or value > _COMPACT_UINT64_MAX:
+        raise SchemaError("compact envelope integer is outside the uint64 range")
+    while value >= 0x80:
+        output.append((value & 0x7F) | 0x80)
+        value >>= 7
+    output.append(value)
+
+
+def _compact_write_value(output: bytearray, value: object) -> None:
+    if value is None:
+        output.append(0)
+        return
+    if value is False:
+        output.append(1)
+        return
+    if value is True:
+        output.append(2)
+        return
+    if type(value) is int:
+        if value < _COMPACT_INT64_MIN or value > _COMPACT_INT64_MAX:
+            raise SchemaError("compact envelope integer is outside the int64 range")
+        output.append(3)
+        _compact_write_uint(output, value * 2 if value >= 0 else (-value * 2) - 1)
+        return
+    if type(value) is float:
+        if not math.isfinite(value):
+            raise SchemaError("compact envelope floats must be finite")
+        output.append(4)
+        output.extend(struct.pack(">d", value))
+        return
+    if type(value) is str:
+        code = _COMPACT_STRING_CODES.get(value)
+        if code is not None:
+            output.append(5)
+            _compact_write_uint(output, code)
+            return
+        try:
+            encoded = value.encode("utf-8")
+        except UnicodeError as exc:
+            raise SchemaError("compact envelope string must be valid UTF-8") from exc
+        output.append(9)
+        _compact_write_uint(output, len(encoded))
+        output.extend(encoded)
+        return
+    if type(value) is bytes:
+        output.append(6)
+        _compact_write_uint(output, len(value))
+        output.extend(value)
+        return
+    if type(value) is list:
+        output.append(7)
+        _compact_write_uint(output, len(value))
+        for item in value:
+            _compact_write_value(output, item)
+        return
+    if type(value) is dict:
+        mapping = cast(dict[object, object], value)
+        if any(type(key) is not str for key in mapping):
+            raise SchemaError("compact envelope object keys must be strings")
+        mapping_items = sorted(cast(dict[str, object], mapping).items())
+        output.append(8)
+        _compact_write_uint(output, len(mapping_items))
+        for key, item in mapping_items:
+            code = _COMPACT_KEY_CODES.get(key, 0)
+            _compact_write_uint(output, code)
+            if code == 0:
+                try:
+                    encoded_key = key.encode("utf-8")
+                except UnicodeError as exc:
+                    raise SchemaError("compact envelope object key must be valid UTF-8") from exc
+                _compact_write_uint(output, len(encoded_key))
+                output.extend(encoded_key)
+            _compact_write_value(output, item)
+        return
+    raise SchemaError(f"compact envelope contains unsupported {type(value).__name__}")
+
+
+def _compact_read_uint(payload: bytes, offset: int) -> tuple[int, int]:
+    value = 0
+    start = offset
+    for byte_index in range(10):
+        if offset >= len(payload):
+            raise SchemaError("compact envelope is truncated")
+        byte = payload[offset]
+        offset += 1
+        if byte_index == 9:
+            if byte & 0x80 or byte > 1:
+                raise SchemaError("compact envelope integer is outside the uint64 range")
+            if byte == 0:
+                raise SchemaError("compact envelope contains a noncanonical integer")
+            return value | (byte << 63), offset
+        value |= (byte & 0x7F) << (byte_index * 7)
+        if byte < 0x80:
+            if offset - start > 1 and byte == 0:
+                raise SchemaError("compact envelope contains a noncanonical integer")
+            return value, offset
+    raise AssertionError("unreachable")
+
+
+def _compact_read_bytes(payload: bytes, offset: int) -> tuple[bytes, int]:
+    length, offset = _compact_read_uint(payload, offset)
+    end = offset + length
+    if end > len(payload):
+        raise SchemaError("compact envelope is truncated")
+    return payload[offset:end], end
+
+
+def _compact_read_value(payload: bytes, offset: int) -> tuple[object, int]:
+    if offset >= len(payload):
+        raise SchemaError("compact envelope is truncated")
+    tag = payload[offset]
+    offset += 1
+    if tag == 0:
+        return None, offset
+    if tag == 1:
+        return False, offset
+    if tag == 2:
+        return True, offset
+    if tag == 3:
+        encoded, offset = _compact_read_uint(payload, offset)
+        return (encoded // 2 if encoded % 2 == 0 else -((encoded // 2) + 1)), offset
+    if tag == 4:
+        end = offset + 8
+        if end > len(payload):
+            raise SchemaError("compact envelope is truncated")
+        value = struct.unpack(">d", payload[offset:end])[0]
+        if not math.isfinite(value):
+            raise SchemaError("compact envelope floats must be finite")
+        return value, end
+    if tag == 5:
+        code, offset = _compact_read_uint(payload, offset)
+        if code >= len(_COMPACT_STRING_NAMES):
+            raise SchemaError("compact envelope contains an unknown string code")
+        return _COMPACT_STRING_NAMES[code], offset
+    if tag == 6:
+        return _compact_read_bytes(payload, offset)
+    if tag == 7:
+        count, offset = _compact_read_uint(payload, offset)
+        items: list[object] = []
+        for _ in range(count):
+            item, offset = _compact_read_value(payload, offset)
+            items.append(item)
+        return items, offset
+    if tag == 8:
+        count, offset = _compact_read_uint(payload, offset)
+        mapping: dict[str, object] = {}
+        previous_key: str | None = None
+        for _ in range(count):
+            code, offset = _compact_read_uint(payload, offset)
+            if code:
+                if code > len(_COMPACT_KEY_NAMES):
+                    raise SchemaError("compact envelope contains an unknown object key code")
+                key = _COMPACT_KEY_NAMES[code - 1]
+            else:
+                raw_key, offset = _compact_read_bytes(payload, offset)
+                try:
+                    key = raw_key.decode("utf-8")
+                except UnicodeError as exc:
+                    raise SchemaError("compact envelope object key must be valid UTF-8") from exc
+            if previous_key is not None and key <= previous_key:
+                raise SchemaError("compact envelope object keys are not canonical")
+            item, offset = _compact_read_value(payload, offset)
+            mapping[key] = item
+            previous_key = key
+        return mapping, offset
+    if tag == 9:
+        raw, offset = _compact_read_bytes(payload, offset)
+        try:
+            return raw.decode("utf-8"), offset
+        except UnicodeError as exc:
+            raise SchemaError("compact envelope string must be valid UTF-8") from exc
+    raise SchemaError("compact envelope contains an unknown binary tag")
+
+
+def _compact_decode(payload: bytes) -> object:
+    if not payload.startswith(_COMPACT_MAGIC):
+        raise SchemaError("compact remote result has the wrong binary magic")
+    value, offset = _compact_read_value(payload, len(_COMPACT_MAGIC))
+    if offset != len(payload):
+        raise SchemaError("compact remote result has trailing bytes")
+    return value
+
+
+def _compact_envelope_bytes(envelope: Mapping[str, object]) -> bytes:
+    output = bytearray(_COMPACT_MAGIC)
+    _compact_write_value(
+        output,
+        {"schema": _COMPACT_SCHEMA, "envelope": _compact_pack_value(dict(envelope))},
+    )
+    return bytes(output)
+
+
+def _transport_wrapper_bytes(*, encoding: str, packed: bytes) -> bytes:
+    compressed = _compress_result_envelope(packed)
+    return canonical_json_line_bytes(
+        {
+            "schema": TRANSPORT_SCHEMA,
+            "encoding": encoding,
+            "payload": base64.b64encode(compressed).decode("ascii"),
+            "uncompressed_bytes": len(packed),
+            "uncompressed_sha256": sha256_bytes(packed),
+        }
+    )
 
 
 def _digest(value: object, *, context: str, length: int = 64) -> str:
@@ -892,15 +1496,15 @@ class RemoteResultEnvelope:
 
     def to_transport_json(self) -> str:
         envelope_bytes = self.to_json().encode("utf-8")
-        compressed = _compress_result_envelope(envelope_bytes)
-        wrapper = canonical_json_line_bytes(
-            {
-                "schema": TRANSPORT_SCHEMA,
-                "encoding": _TRANSPORT_ENCODING,
-                "payload": base64.b64encode(compressed).decode("ascii"),
-                "uncompressed_bytes": len(envelope_bytes),
-                "uncompressed_sha256": sha256_bytes(envelope_bytes),
-            }
+        wrapper = _transport_wrapper_bytes(encoding=_TRANSPORT_ENCODING, packed=envelope_bytes)
+        if len(wrapper) <= REMOTE_RESULT_TRANSPORT_MAX_BYTES:
+            return wrapper.decode("utf-8")
+        compact_bytes = _compact_envelope_bytes(self.to_dict())
+        if len(compact_bytes) > REMOTE_RESULT_ENVELOPE_MAX_BYTES:
+            raise SchemaError("compact remote result packed byte count exceeds limit")
+        wrapper = _transport_wrapper_bytes(
+            encoding=_COMPACT_TRANSPORT_ENCODING,
+            packed=compact_bytes,
         )
         if len(wrapper) > REMOTE_RESULT_TRANSPORT_MAX_BYTES:
             raise SchemaError(
@@ -928,8 +1532,11 @@ class RemoteResultEnvelope:
         if schema != TRANSPORT_SCHEMA:
             raise SchemaError(f"remote result transport schema must be {TRANSPORT_SCHEMA!r}")
         encoding = nonblank_string(data["encoding"], context="remote result transport encoding")
-        if encoding != _TRANSPORT_ENCODING:
-            raise SchemaError(f"remote result transport encoding must be {_TRANSPORT_ENCODING!r}")
+        if encoding not in {_TRANSPORT_ENCODING, _COMPACT_TRANSPORT_ENCODING}:
+            raise SchemaError(
+                "remote result transport encoding must be "
+                f"{_TRANSPORT_ENCODING!r} or {_COMPACT_TRANSPORT_ENCODING!r}"
+            )
         encoded = nonblank_string(data["payload"], context="remote result transport payload")
         try:
             compressed = base64.b64decode(encoded.encode("ascii"), validate=True)
@@ -954,7 +1561,7 @@ class RemoteResultEnvelope:
                 raise SchemaError(
                     "remote result transport uncompressed byte count does not match zstd frame"
                 )
-            envelope_bytes = zstandard.ZstdDecompressor(
+            packed = zstandard.ZstdDecompressor(
                 max_window_size=REMOTE_RESULT_ENVELOPE_MAX_BYTES
             ).decompress(
                 compressed,
@@ -967,17 +1574,41 @@ class RemoteResultEnvelope:
             raise SchemaError(
                 "remote result transport payload is not one bounded zstd frame"
             ) from exc
-        if len(envelope_bytes) != uncompressed_bytes:
+        if len(packed) != uncompressed_bytes:
             raise SchemaError("remote result transport uncompressed byte count does not match")
-        if sha256_bytes(envelope_bytes) != uncompressed_sha256:
+        if sha256_bytes(packed) != uncompressed_sha256:
             raise SchemaError("remote result transport uncompressed digest does not match")
-        if _compress_result_envelope(envelope_bytes) != compressed:
+        if _compress_result_envelope(packed) != compressed:
             raise SchemaError("remote result transport payload is not the canonical zstd frame")
-        try:
-            envelope_json = envelope_bytes.decode("utf-8")
-        except UnicodeError as exc:
-            raise SchemaError("remote result envelope is not valid UTF-8") from exc
-        return cls.from_json(envelope_json)
+        if encoding == _TRANSPORT_ENCODING:
+            try:
+                packed_json = packed.decode("utf-8")
+            except UnicodeError as exc:
+                raise SchemaError("remote result packed payload is not valid UTF-8") from exc
+            result = cls.from_json(packed_json)
+            if result.to_transport_json() != payload:
+                raise SchemaError("remote result transport does not use the canonical encoding")
+            return result
+        compact_data = exact_fields(
+            _compact_decode(packed),
+            required=_COMPACT_FIELDS,
+            context="compact remote result",
+        )
+        compact_schema = nonblank_string(
+            compact_data["schema"], context="compact remote result schema"
+        )
+        if compact_schema != _COMPACT_SCHEMA:
+            raise SchemaError(f"compact remote result schema must be {_COMPACT_SCHEMA!r}")
+        envelope = _compact_unpack_value(compact_data["envelope"])
+        if type(envelope) is not dict:
+            raise SchemaError("compact remote result envelope must be an object")
+        envelope_mapping = cast(dict[str, object], envelope)
+        if _compact_envelope_bytes(envelope_mapping) != packed:
+            raise SchemaError("compact remote result is not in canonical compact form")
+        result = cls.from_json(canonical_json_bytes(envelope_mapping).decode("utf-8"))
+        if result.to_transport_json() != payload:
+            raise SchemaError("remote result transport does not use the canonical encoding")
+        return result
 
     @classmethod
     def from_json(cls, payload: str) -> RemoteResultEnvelope:
