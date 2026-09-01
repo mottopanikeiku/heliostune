@@ -55,7 +55,7 @@ jobs:
             --ignore=tests/test_selection.py \
             --ignore=tests/test_research_artifacts.py \
             --ignore=tests/test_v2_addendum.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: coverage-fast
           path: .coverage.fast
@@ -80,7 +80,7 @@ jobs:
           uv run coverage run --branch --data-file=.coverage.evidence -m pytest \
             tests/test_selection.py \
             tests/test_v2_addendum.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: coverage-evidence
           path: .coverage.evidence
@@ -104,7 +104,7 @@ jobs:
         run: |
           uv run coverage run --branch --data-file=.coverage.catalog -m pytest \
             tests/test_research_artifacts.py
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: coverage-catalog
           path: .coverage.catalog
