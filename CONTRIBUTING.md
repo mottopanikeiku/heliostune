@@ -79,10 +79,10 @@ and
 pair. The local result is `heliostune.local_executor/2`, published through
 `heliostune.native_fusion_executor/2` as a strict `heliostune.bundle/1`; the
 digest-selected Modal API is `heliostune.modal_fusion_executor/2`, published as
-`heliostune.remote-receipt/1`. Implementation is not capability: no retained
-SM90 run exists, all six arms' local and remote declarations remain `unprobed`,
-and contributors must not describe the suite as available or executable on
-their current host.
+`heliostune.remote-receipt/1`. A retained authenticated H100 stage-gate
+observation now exists, but it does not promote capability: all six arms' local
+and remote declarations remain `unprobed`, and contributors must not describe
+the suite as available or executable on their current host.
 
 The four native configurations remain fixed at `block_size=4096`,
 `num_warps=4|8|16|32`, and `num_stages=1`. Preserve the gate order: compile and
@@ -93,13 +93,35 @@ profiler event for one invocation with input/output revalidation; then exactly
 fallback or retry and must block that arm's later gates. Capability rejection
 must invoke no backend and retain all cells as blocked.
 
+The retained H100 [report](site/native-rmsnorm-h100.html), strict
+[summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed
+[raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and
+[publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) record all
+four native candidates passing correctness, complete zero-spill resource, and
+profile gates and becoming eligible. Each profiled one-invocation check observed
+exactly one matching CUDA kernel event, but `fusion_claim=false`. The native
+winner was `rmsnorm-triton-w8` at median **0.0505920015 ms**, versus eager at
+**0.085072 ms** and Inductor at **0.045952 ms**. The fair
+`best_baseline_median / candidate_median` ratio was **0.908286**, below the
+predeclared **1.10** threshold, so the exact decision is
+**`STOP_BELOW_THRESHOLD`**, with no expansion or correctness, performance,
+fusion, or publication-eligibility claim.
+
+The first attempt remains an unresolved receipt after its result exceeded the
+6144-byte inline transport limit and establishes no execution result; a compact
+transport retry completed afterward. Provider physical starts and restarts,
+total GPU time and its upper bound, total time upper bound, and actual cost
+remain unknown. This publication is retained static evidence, not a methodology
+bundle, and remains `publication_eligible=false`.
+
 Do not substitute copied or renamed declarations in either documented command.
 Local invocation is restricted to the exact H100 SM90, PyTorch 2.8.0, and Triton
 3.4.0 predicate. Before any paid Modal invocation, follow the clean committed
 wheel rule above, obtain explicit authorization and approved bounds, use a fresh
 unique output path, and preserve the one-spawn journal. `retries=0` does not make
-Modal physical starts observable; never state a total GPU-time or cost bound and
-never retry an unresolved receipt.
+Modal physical starts observable. An unresolved receipt must remain unresolved;
+any separately authorized follow-up needs a fresh output and attempt journal and
+must not overwrite or reinterpret the earlier receipt.
 
 Preserve complete source custody: exact plugin/suite bytes, the package-wide
 source digest and count, and the path/size/digest inventory for
@@ -110,11 +132,13 @@ weaken descriptor-pinned publication, atomic no-replace output, or failure and
 unresolved-state retention.
 
 The deterministic stage gate may authorize exploratory expansion only at
-`1.10x` or better versus the faster complete eager/Inductor baseline. It remains
-non-confirmatory, makes no correctness, fusion, or performance claim, and is not
-publication eligible. Native gated MLP is deferred after an unfavorable
-feasibility audit and must remain absent from this increment. Attention/KV
-cache, quantized linear, MoE, and FP8 are catalog/design candidates until
+`1.10x` or better versus the faster complete eager/Inductor baseline. The
+retained H100 ratio was `0.908286`, so it authorized no expansion. The analysis
+remains non-confirmatory, makes no correctness, fusion, or performance claim,
+and is not publication eligible. Native gated MLP is deferred after an
+unfavorable feasibility audit and must remain absent from this increment.
+Attention/KV cache, quantized linear, MoE, and FP8 are catalog/design candidates
+until
 separate promotion revisions meet the above requirements. A scope or template
 pull request does not authorize a paid campaign; paid execution needs its own
 frozen protocol, approved bounds, committed bytes, and evidence controls.

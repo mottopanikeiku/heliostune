@@ -763,7 +763,16 @@ def _list_scope(_args: argparse.Namespace) -> int:
             ),
             (
                 "native_local_runtime_gpu_evidence",
-                "unobserved",
+                "one retained remote H100 stage-gate observation",
+            ),
+            (
+                "native_local_runtime_stage_gate_status",
+                "STOP_BELOW_THRESHOLD; execution gates passed; 1.1x expansion threshold not met; "
+                "one completed receipt and one unresolved transport-overflow receipt",
+            ),
+            (
+                "native_local_runtime_evidence",
+                "benchmarks/results/native-rmsnorm-h100-summary.json",
             ),
             (
                 "generic_remote_runtime_backend",
@@ -782,9 +791,11 @@ def _list_scope(_args: argparse.Namespace) -> int:
             (
                 "limitation",
                 "Schema verification alone does not claim execution, correctness, or performance. "
-                "The two generic frozen templates have exploratory H100 receipts only; native "
-                "local runtime GPU evidence is unobserved; plugin capability declarations remain "
-                "unprobed and Modal provider restarts remain unobservable.",
+                "The two generic frozen templates have exploratory H100 receipts only. Native "
+                "evidence is one exploratory remote H100 stage-gate observation; capability "
+                "declarations remain unprobed; correctness gates passed only for the exact frozen "
+                "observation; no performance, fusion, or publication claim is made; Modal provider "
+                "restarts remain unknown.",
             ),
         ),
     )
