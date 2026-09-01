@@ -96,6 +96,7 @@ _EXPECTED_ARTIFACT_PATHS = {
         "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
         "benchmarks/parhelion-v3-config-manifest.json",
         "benchmarks/parhelion-v3-h200-freeze.json",
+        "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json",
         "benchmarks/parhelion-v3-h200-freeze.sha256",
         "benchmarks/results/parhelion-v3-a100-selection.json",
         "benchmarks/results/parhelion-v3-h200-engineering.json",
@@ -196,7 +197,7 @@ def test_catalog_verifies_all_bytes_counts_aliases_and_frozen_v2_points() -> Non
 
     assert facts == {
         "measurement_rows": 278_406,
-        "json_artifacts": 33,
+        "json_artifacts": 34,
         "html_reports": 6,
         "file_artifacts": 10,
         "compressed_raw_artifacts": 4,

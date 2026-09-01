@@ -445,6 +445,11 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
             "parhelion-v3-raw-validation-source-manifest",
         ),
     ]
+    v3_engineering_derivation_manifest = _json_entry(
+        repository,
+        "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json",
+        "parhelion-v3-h200-engineering-derivation-manifest-v1",
+    )
     v3_engineering_freeze = _json_entry(
         repository,
         "benchmarks/parhelion-v3-h200-freeze.json",
@@ -718,6 +723,11 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                         "https://modal.com/apps/mottopanikeiku/main/ap-dKaK5ML43S2EqbaW33OTtA"
                     ),
                 },
+                "commands": {
+                    "check": (
+                        "uv run python scripts/build_parhelion_v3_engineering_result.py --check"
+                    ),
+                },
                 "validity_limits": [
                     "explicitly overrides the original pre-H200 no-retry rule",
                     "A100 selection uses a declared mixed PCIe/SXM engineering domain",
@@ -728,6 +738,7 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                 "results": v3_engineering_results,
                 "files": v3_engineering_files,
                 "reports": [v3_engineering_report],
+                "manifests": [v3_engineering_derivation_manifest],
                 "result_links": {
                     "selection": "benchmarks/results/parhelion-v3-a100-selection.json",
                     "final": "benchmarks/results/parhelion-v3-h200-engineering.json",

@@ -1,0 +1,83 @@
+{
+  "analysis_status": "operator_authorized_engineering_protocol_deviation",
+  "campaign_status": {
+    "engineering_deviation": "not_retroactively_upgraded",
+    "original_failed_campaign": "terminal"
+  },
+  "claim": null,
+  "commands": {
+    "check": "uv run python scripts/build_parhelion_v3_engineering_result.py --check",
+    "generate": "uv run python scripts/build_parhelion_v3_engineering_result.py"
+  },
+  "confirmatory_claim": false,
+  "derivation": {
+    "note": "These final repository sources reproduce the committed engineering result; they were not predeclared and are not evidence of the code used during collection.",
+    "original_campaign_code": false,
+    "predeclared_campaign_code": false,
+    "role": "final_post_run_reproducer"
+  },
+  "implementation": {
+    "result_builder": {
+      "bytes": 19732,
+      "path": "scripts/build_parhelion_v3_engineering_result.py",
+      "sha256": "93e85e4fed0fe1847fe2d0d7864f5b7951a70554d33aa86ca29dc7ed63c9bec4"
+    },
+    "uncertainty": {
+      "bytes": 6053,
+      "path": "src/heliostune/uncertainty.py",
+      "sha256": "ba91dd631fe359d83daea46856e9723f991dfc9ce1f2ecd8f5a5921a7b919102"
+    }
+  },
+  "inputs": {
+    "config": {
+      "bytes": 467095,
+      "path": "benchmarks/parhelion-v3-config-manifest.json",
+      "sha256": "7e8e31c56fdadcf0f4be382c0717d9d9cc0155941bf7669aca4267586b2dfb50"
+    },
+    "final_archive": {
+      "bytes": 3249518,
+      "path": "benchmarks/data/parhelion-v3-final.jsonl.zst",
+      "sha256": "e6ccb1399fc64e841a2e9611832d67feea8b61252841075ebd83f93e94f54d6f"
+    },
+    "final_publication_manifest": {
+      "bytes": 1797,
+      "path": "benchmarks/data/parhelion-v3-final.jsonl.zst.manifest.json",
+      "sha256": "1617daa5d99b758eec2b11542403c3b8a1cdae3eba936e51838622fbb6ca3d01"
+    },
+    "freeze": {
+      "bytes": 41882,
+      "path": "benchmarks/parhelion-v3-h200-freeze.json",
+      "sha256": "2fb12d53f6cdef72c22c25087241930bf7d8e0f06fbe8e338bd900f1edcfaf10"
+    },
+    "h200_publication_manifest": {
+      "bytes": 1416,
+      "path": "benchmarks/data/parhelion-v3-h200.jsonl.zst.manifest.json",
+      "sha256": "fa033d570d773982508bdcb4fea1bbf0129da8e6b38ca60c7705d9c218fcff81"
+    },
+    "selection": {
+      "bytes": 9420,
+      "path": "benchmarks/results/parhelion-v3-a100-selection.json",
+      "sha256": "e4a9bbe1c75e17ed865b27531e6f6583367341c9c6fb063343f3aaa86c8ae71e"
+    },
+    "validation_publication_manifest": {
+      "bytes": 18151,
+      "path": "benchmarks/data/parhelion-v3-validation.jsonl.zst.manifest.json",
+      "sha256": "2e62cbbd7a6fe02e06792663f9b6bc11e9dc222316c88406b74e81114c473b2d"
+    }
+  },
+  "outputs": {
+    "report": {
+      "bytes": 7259,
+      "path": "site/parhelion-v3-engineering.html",
+      "sha256": "31c1b94ba2a7523328ed45f5d0146e5ca903c7456ee10e57d8e6b8f68b962911"
+    },
+    "result": {
+      "bytes": 688884,
+      "path": "benchmarks/results/parhelion-v3-h200-engineering.json",
+      "sha256": "e8cd9819d4f3bcad2808ffdbaefac2cc238d8e98456077ff4b0cad5ef537604b"
+    }
+  },
+  "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
+  "schema_version": 1,
+  "study_id": "parhelion-v3-operator-authorized-engineering"
+}
