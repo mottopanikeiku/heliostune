@@ -42,6 +42,7 @@ _EXPECTED_STUDY_REGISTRY = (
         "operator_authorized_engineering_protocol_deviation",
     ),
     ("fusion-remote-h100-exploratory", "post_hoc_exploratory"),
+    ("native-rmsnorm-h100-stage-gate", "predeclared_exploratory_stage_gate"),
 )
 
 
@@ -516,6 +517,31 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
         schema="html5",
         status="published_mixed_completed_unresolved",
     )
+    native_raw = _compressed_json_entry(
+        repository,
+        "benchmarks/data/native-rmsnorm-h100.json.zst",
+        "heliostune.native-rmsnorm-h100.raw/1",
+        status="published_stop_below_threshold",
+    )
+    native_summary = _json_entry(
+        repository,
+        "benchmarks/results/native-rmsnorm-h100-summary.json",
+        "heliostune.native-rmsnorm-h100.summary/1",
+        status="published_stop_below_threshold",
+    )
+    native_manifest = _json_entry(
+        repository,
+        "benchmarks/native-rmsnorm-h100-manifest.json",
+        "heliostune.native-rmsnorm-h100.manifest/1",
+        status="published_stop_below_threshold",
+    )
+    native_report = _file_entry(
+        repository,
+        "site/native-rmsnorm-h100.html",
+        "self_contained_html_report",
+        schema="html5",
+        status="published_stop_below_threshold",
+    )
     catalog = {
         "schema_version": 1,
         "catalog_id": "heliostune-research-artifacts-1",
@@ -719,6 +745,18 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                 "raw_artifacts": [fusion_raw],
                 "results": [fusion_summary],
                 "reports": [fusion_report],
+            },
+            {
+                "study_id": "native-rmsnorm-h100-stage-gate",
+                "analysis_status": "predeclared_exploratory_stage_gate",
+                "outcome_status": "STOP_BELOW_THRESHOLD",
+                "measurement_schema": "heliostune.native-rmsnorm-h100.raw/1",
+                "split_design": "single frozen case; two retained remote attempts",
+                "publication_eligible": False,
+                "manifests": [native_manifest],
+                "raw_artifacts": [native_raw],
+                "results": [native_summary],
+                "reports": [native_report],
             },
         ],
         "absent_freeze_aliases": baseline["absent_freeze_aliases"],
