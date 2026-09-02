@@ -2,14 +2,14 @@
 
 ## Supported versions
 
-This repository was archived on 2026-09-01. No version is supported after archive, and no security fixes or dependency updates are promised.
+The latest [GitHub release](https://github.com/mottopanikeiku/heliostune/releases/latest) is supported for HeliosTune's base and CPU-only functionality. Earlier releases are not supported. Support is limited to evaluating security reports that affect maintained functionality and issuing fixes in a new version when a fix is warranted; it does not guarantee a response time or make research workloads suitable for a security boundary.
 
-## Frozen research software and evidence
+## Frozen GPU reproduction software and evidence
 
-The frozen GPU dependencies and the software that uses them are research-only. Run them only on trusted inputs in an isolated environment. They are not maintained for use as a service or at a security boundary.
+The GPU dependency pins and configurations preserved for reproduction are frozen research inputs, not maintained production dependencies. Use them only with trusted inputs in an isolated environment. They are not supported for services, multi-tenant use, or operation at a security boundary.
 
-Historical benchmark artifacts, reports, and other frozen evidence are never rewritten, including in response to a security disclosure. Any new investigation or changed software belongs in a fork or a new project.
+Published benchmark artifacts, reports, protocols, and other frozen evidence are never rewritten in response to a security fix. Fixes ship in new versions, and any new investigation or changed evidence uses a new protocol and path while preserving the original bytes.
 
-## Private integrity disclosures
+## Private vulnerability reporting
 
-GitHub's [private vulnerability reporting form](https://github.com/mottopanikeiku/heliostune/security/advisories/new) remains available only for privately disclosing exposed project credentials or evidence that repository integrity was compromised, such as tampered tags, releases, attestations, or archived content. It is not a support channel, and a disclosure does not promise a response, mitigation, fix, or new release.
+Report vulnerabilities in the supported release, exposed project credentials, or repository and release-integrity concerns through GitHub's [private vulnerability reporting form](https://github.com/mottopanikeiku/heliostune/security/advisories/new). Include affected versions, impact, and reproduction details when possible. Please do not disclose an unaddressed vulnerability publicly.
