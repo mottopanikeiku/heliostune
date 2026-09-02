@@ -2311,7 +2311,7 @@
           "kind": "json_artifact",
           "path": "benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json",
           "schema": "parhelion-v3-h200-engineering-derivation-manifest-v1",
-          "sha256": "ea5c60ce87bdfb463cc114a80bd04575f81f835bff8fcfd90adad628807820db"
+          "sha256": "733a9e368c80fcf9e4e4dee7c99d1e838e2d558e9b9e35292c5d69cc6441f4f5"
         }
       ],
       "measurement_schema": "heliostune-measurement-v2",
