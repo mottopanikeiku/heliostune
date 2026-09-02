@@ -1,21 +1,26 @@
 # HeliosTune
 
-An archived GPU autotuning, fusion, and evidence-control research corpus with reproducible negative, failed, non-confirmatory, and stopped results.
+An actively maintained retrieval-first GPU autotuning and evidence-control/replay research program with reproducible negative, failed, non-confirmatory, and stopped results.
 
 > [!IMPORTANT]
-> **Concluded 2026-08-31; archived 2026-09-01.** HeliosTune is unsupported. `v0.5.0`
-> is the final archival release; this repository will have no new research
-> campaigns, features, contributions, or releases. Frozen evidence remains
-> published for inspection and replay, and derivative work belongs in a fork or
-> a new project without rewriting that evidence.
->
-> The program ended after its bounded studies did not establish the intended
-> transfer benefit: the frozen primary H100 comparison was negative, selected
-> transfer strengths were zero, the predeclared H200 campaign stopped before
-> any timing row, its separate operator-authorized engineering run was
+> **Maintained project.** The transferred-posterior superiority hypothesis is
+> concluded and unsupported: the frozen primary H100 comparison was negative,
+> selected transfer strengths were zero, the predeclared H200 campaign stopped
+> before any timing row, its separate operator-authorized engineering run was
 > non-confirmatory, and the engineering expansion gates stopped below their
 > thresholds. These outcomes remain negative, stopped, or non-confirmatory as
-> originally reported; archive status does not strengthen them.
+> originally reported.
+>
+> HeliosTune continues as a retrieval-first GPU autotuning and
+> evidence-control/replay project. `v0.5.0` is the next hardened release.
+> Contributions and later releases may add work at new versioned paths, but
+> must never rewrite frozen evidence or strengthen its claims. The bounded
+> continuation is ordered: (1) complete generic protocol/bundle custody and an
+> offline verifier using CPU-only work; (2) separate active execution
+> dependencies from frozen reproduction pins; (3) pass a no-cost
+> feasibility/capability design gate for one new domain. Only after that gate
+> may a new, separately approved, predeclared paid protocol be proposed; no GPU
+> spending is implied or authorized by this roadmap.
 
 **Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
@@ -25,7 +30,7 @@ An archived GPU autotuning, fusion, and evidence-control research corpus with re
 
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the final, partially implemented evidence-control design specification; it is a non-retroactive target, not a claim that legacy evidence conforms or a completion plan for this archive. [Experiment scope](EXPERIMENT_SCOPE.md) preserves the declaration state and staged design inventory for the additive plugin/suite v1 surface while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the active, partially implemented evidence-control design target; it is non-retroactive and does not claim that legacy evidence conforms. [Experiment scope](EXPERIMENT_SCOPE.md) records the implemented declaration state and bounded continuation roadmap for the additive plugin/suite v1 surface while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
 
 ## Result
 
@@ -129,22 +134,25 @@ The v3 [development protocol](benchmarks/parhelion-v3-development-protocol.json)
 
 The additive [H200 derivation manifest](benchmarks/parhelion-v3-h200-engineering-derivation-manifest.json) binds the final post-run reproducer, every consumed input, and the committed result/report. Its check recomputes every scientific/result field and the report while reusing only the committed environment-specific `runtime` provenance; it does not claim environment-independent full-result regeneration or predeclared code custody.
 
-### Final archival release and preservation
+### Hardened releases and preservation
 
-`v0.5.0` is the final release. A no-input manual action from protected `main`,
-gated by the `archival-release` environment, builds and smoke-checks the
-distribution before creating the tag itself. It publishes the wheel, sdist,
-`SHA256SUMS`, and a workflow-verified Git bundle containing canonical `main`
-plus the semantic version tags; every release asset is attested.
+`v0.5.0` is the next release. A no-input manual action dispatched from protected
+`main`, gated by the `release` environment, checks out, builds, and
+smoke-checks the dispatch event's exact `GITHUB_SHA` before tagging that tested
+snapshot. `main` may advance after dispatch without changing the source selected
+for that immutable release.
 
-Preserve the Git bundle together with `SHA256SUMS`. The checksum file verifies
-the downloaded assets, while the bundle preserves the canonical branch and tag
-history independently of mutable GitHub references. Repository-wide support
-ends with the 2026-09-01 archive.
+For every version, the release publishes a wheel, sdist, `SHA256SUMS`, and a
+workflow-verified Git bundle containing the semantic tag history; every release
+asset is attested. Preserve the Git bundle together with `SHA256SUMS`: the
+checksum file verifies the downloaded assets, while the bundle preserves the
+released source and tag history independently of mutable GitHub references.
+Published releases are immutable; later work uses a new version and new paths.
 
 ## Run locally
 
-The archived `v0.5.0` release records Python 3.11–3.13 and uv 0.12.5. To inspect or replay it from a clean clone:
+The next release, `v0.5.0`, records Python 3.11–3.13 and uv 0.12.5. To inspect
+or replay its published snapshot from a clean clone:
 
 ```bash
 git clone https://github.com/mottopanikeiku/heliostune.git
@@ -214,8 +222,8 @@ predeclared **1.10** threshold, so the retained decision is
 **`STOP_BELOW_THRESHOLD`**: no expansion, correctness claim, performance claim,
 fusion claim, or publication-eligibility claim follows.
 
-The archived tree retains the guarded paid Modal path for provenance; it uses
-executor API `heliostune.modal_fusion_executor/2`:
+The retained guarded paid Modal path documents executor API
+`heliostune.modal_fusion_executor/2`:
 
 ```bash
 uv run python scripts/build_modal_wheel.py
@@ -225,10 +233,10 @@ uv run --extra modal modal run modal_fusion_executor.py::main \
   --output "artifacts/fusion-remote/residual-rmsnorm-triton-v1-$(date -u +%Y%m%dT%H%M%S%N)"
 ```
 
-Do not make that paid call from this archived project. The preserved procedure
-required a clean committed `HEAD`, the freshly built and verified wheel plus
-adjacent manifest, an approved bound, and a fresh output path. Any derivative
-use requires separate authorization outside HeliosTune. The client permits one spawn and no
+Do not make that paid call without separate explicit approval of a predeclared
+protocol and bound. An approved invocation must use a clean committed `HEAD`,
+the freshly built and verified wheel plus adjacent manifest, and a fresh
+versioned output path. The client permits one spawn and no
 automatic retry, but Modal's physical starts and restarts are unobservable, so
 provider physical attempt count, total GPU time and its upper bound, total time
 upper bound, and actual cost remain unknown. A remote run publishes
@@ -305,9 +313,12 @@ The replay writes under `artifacts/replay/` because the research artifact catalo
 
 The local `heliostune demo` is synthetic and supports no hardware claim.
 
-## Historical Modal collection procedure
+## Retained Modal collection procedure
 
-The commands below document the preserved collection procedure; the archived project authorizes no paid call. Any derivative campaign must run from a separately governed fork or new project with its own authorization and must not rewrite frozen HeliosTune evidence:
+The commands below document the preserved collection procedure; they are not
+authorization for a paid call. Any new campaign in HeliosTune requires a new
+versioned protocol and artifact paths, separate explicit approval, and must not
+rewrite frozen evidence:
 
 ```bash
 uv run python scripts/build_modal_wheel.py
@@ -322,7 +333,7 @@ binds the request, journal, wheel, source, hardware, and final data digests. Res
 an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 `FunctionCall` IDs and spawns no replacements.
 
-`modal_bench.py` gates `L4`, `A10`, `T4`, `H100`, `A100-80GB`, and `H200` identities before tensor allocation. H100 uses Modal's exact `H100!` selector. Do not rerun the published H100 protocol; any independent study belongs in a fork or new project.
+`modal_bench.py` gates `L4`, `A10`, `T4`, `H100`, `A100-80GB`, and `H200` identities before tensor allocation. H100 uses Modal's exact `H100!` selector. Do not rerun the published H100 protocol; any independent study requires a new frozen protocol, new versioned paths, and separate approval.
 
 ## Repository map
 
@@ -348,7 +359,7 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 - `benchmarks/` — frozen protocols, chain manifests, compressed matrices, selections, and results
 - `benchmarks/plugins/` and `benchmarks/suites/` — frozen reference declarations and suite hashes
 - `EXPERIMENT_SCOPE.md` — declaration state matrix, numeric/fusion scope, baselines, and promotion rules
-- `site/` — offline final report, downloadable JSON, and archived v1 report
+- `site/` — offline published report, downloadable JSON, and retained v1 report
 
 ## Scope
 
@@ -366,11 +377,12 @@ The `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
 `gated_mlp_epilogue.v1` and `residual_rmsnorm.v1` are frozen initial fusion
 templates, constrained to FP16/BF16 input/storage, FP32 accumulation,
 FP16/BF16/FP32 output, null quantization, and disabled TF32. Attention and KV
-cache, quantized linear, MoE, and FP8 are retained catalog/design inventory,
-not an active implementation roadmap. No backend work, promotion, or paid
-campaign is planned or authorized here. See
-[Experiment scope](EXPERIMENT_SCOPE.md) for the final state matrix, exact
-contracts, hashes, and preserved requirements for derivative work.
+cache, quantized linear, MoE, and FP8 remain catalog/design inventory governed
+by the ordered CPU-custody, dependency-split, and one-domain no-cost design
+gates above. Inventory is not capability, implementation, correctness, or
+performance evidence, and the roadmap authorizes no paid campaign. See
+[Experiment scope](EXPERIMENT_SCOPE.md) for the active state matrix, exact
+contracts, hashes, continuation gates, and evidence-preservation requirements.
 
 ## License
 
