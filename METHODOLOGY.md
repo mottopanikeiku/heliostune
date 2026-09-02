@@ -2,7 +2,7 @@
 
 ## Status and normative language
 
-This is HeliosTune's final, partially implemented design specification, preserved when the project was archived on 2026-09-01. It records the evidence-control target and the exact boundaries reached; this repository has no plan to complete the unimplemented surfaces. The document is normative only for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts or claim that the current CLI or every study implements the contract; see [Implementation status](#implementation-status). The additive plugin/suite declaration scope and its deliberately narrower final implementation status are described in [Experiment scope](EXPERIMENT_SCOPE.md).
+This is HeliosTune's active, partially implemented evidence-control design target. The document is normative only for artifacts whose exact schema literal is `heliostune.protocol/1` or `heliostune.bundle/1`. It does not upgrade older artifacts or claim that the current CLI or every study implements the contract; see [Implementation status](#11-implementation-status). Frozen protocols, bundles, and published evidence remain immutable, while new implementation work may land at new versioned paths without rewriting those bytes or claims.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as described by RFC 2119. Each mandatory rule below states both the failure it prevents and the machine check that enforces it. A verifier has no warning-only path for a failed mandatory rule.
 
@@ -584,7 +584,7 @@ A conforming implementation demonstrates at least these observable tests:
 
 ## 11. Implementation status
 
-This final table separates the preserved design target from repository reality. “Partial” is not v1 eligibility, and no listed gap is a completion plan for this archived project.
+This table separates the active, partially implemented design target from repository reality. “Partial” is not v1 eligibility: each gap remains a fail-closed implementation boundary until its stated controls and acceptance tests pass.
 
 | Surface | Current repository status | Consequence |
 |---|---|---|
@@ -601,4 +601,4 @@ This final table separates the preserved design target from repository reality. 
 | EvidenceBundle closure, offline replay, complete registry/catalog, and atomic root publication | Partial building blocks exist; the full v1 verifier/publication transaction is not implemented end to end. | Publication under existing workflows is legacy rather than a v1 conformance claim. |
 | Existing Parhelion and Hopper evidence | Immutable legacy evidence. Hopper is a one-instance same-bank engineering STOP; Parhelion uncertainty is conditional policy-seed Monte Carlo evidence. | No retroactive promotion, stronger provenance, population scope, or inference is assigned. |
 
-Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility. HeliosTune will not complete the remaining surfaces here; derivative implementation belongs in a fork or new project and must not rewrite frozen evidence.
+Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility. Implementation proceeds in bounded order: first complete generic protocol/bundle custody and an offline verifier with CPU-only evidence; second separate active execution dependencies from frozen reproduction pins; third run a no-cost feasibility/capability design gate for exactly one new domain. Each stage stops until its prerequisites pass. Only after the third gate may a separately approved, predeclared paid protocol be proposed at new versioned paths. This roadmap authorizes no GPU spending and never permits rewriting frozen evidence.

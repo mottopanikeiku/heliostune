@@ -1,11 +1,27 @@
 # Contributing
 
 > [!IMPORTANT]
-> HeliosTune concluded on 2026-08-31 and was archived on 2026-09-01. This repository is
-> unsupported and does not accept contributions, new research campaigns,
-> features, or releases. The rules below are retained as preservation guidance
-> for derivative work: use a fork or new project, keep frozen evidence and its
-> claims unchanged, and place any new work at new paths under separate custody.
+> HeliosTune is active and maintained. Contributions to retrieval-first GPU
+> autotuning and evidence-control/replay tooling are welcome. The
+> transferred-posterior superiority hypothesis is concluded and unsupported;
+> do not reopen it by relabeling or strengthening the frozen results. New work
+> belongs at new versioned paths with separate custody, while existing evidence
+> bytes and claims remain immutable.
+
+## Continuation boundaries
+
+Work proceeds in order:
+
+1. complete generic protocol/bundle custody and offline verification using
+   CPU-only work;
+2. separate active execution dependencies from frozen reproduction pins; then
+3. run a no-cost feasibility/capability design gate for one new domain.
+
+Each stage must stop until its own implementation and CPU evidence are complete.
+The third stage selects at most one domain and authorizes no GPU execution. Only
+after it passes may contributors propose a new predeclared paid protocol at new
+versioned paths; dispatch still requires separate explicit approval and a frozen
+cost bound.
 
 ## CPU changes
 
@@ -22,34 +38,34 @@ Changes to public types or numerical code must also pass mypy with the real GPU 
 
 ## GPU changes
 
-Never start a paid Modal call from an uncommitted tree or a source-mounted image. Build the committed wheel with `scripts/build_modal_wheel.py`, preserve the attempt journal, validate the requested hardware before tensor allocation, and use the exact protocol, banks, dependency versions, and failure rules declared for the campaign. Do not automatically retry a failed or unresolved call.
+Never start a paid Modal call from an uncommitted tree or a source-mounted image, or without separate explicit approval of a predeclared protocol and cost bound. Build the committed wheel with `scripts/build_modal_wheel.py`, preserve the attempt journal, validate the requested hardware before tensor allocation, and use the exact protocol, banks, dependency versions, and failure rules declared for the campaign. Do not automatically retry a failed or unresolved call.
 
-## Final archival release
+## Hardened releases
 
-`v0.5.0` is the only final archival release. `release.yml` is a no-input manual
-action that accepts only protected `main` and requires approval through the
-`archival-release` environment. It builds and smoke-checks the distribution
-before creating the `v0.5.0` tag itself; operators do not create or push the tag
-in advance.
+`v0.5.0` is the next hardened release. `release.yml` is a no-input manual action
+that accepts only protected `main` and requires approval through the `release`
+environment. It checks out, builds, tests, and smoke-checks the dispatch event's
+exact `GITHUB_SHA` before tagging that tested snapshot; operators do not create
+or push the tag in advance. `main` may advance afterward without changing the
+immutable released snapshot.
 
-The release publishes a wheel, sdist, `SHA256SUMS`, and a verified Git bundle
-containing canonical `main` plus the semantic version tags. Every release asset
-is attested. The workflow retains `id-token: write` and `attestations: write`
-because the provenance action consumes both permissions and writes the signed
-statements to the repository attestation store.
+Every version publishes a wheel, sdist, `SHA256SUMS`, and a verified Git bundle
+containing semantic-tag history. Every release asset is attested. The workflow
+retains `id-token: write` and `attestations: write` because the provenance action
+consumes both permissions and writes the signed statements to the repository
+attestation store. Distribution remains GitHub Releases only, with no PyPI
+publication. Published versions are immutable; subsequent work receives a new
+version.
 
-Distribution remains GitHub Releases only, with no PyPI publication. There is
-no release after `v0.5.0`.
+## Evidence preservation
 
-## Evidence preservation in forks
+For a new study in this repository, [HeliosTune methodology v1](METHODOLOGY.md) defines the intended evidence contract: use the exact `heliostune.protocol/1` and `heliostune.bundle/1` schemas or catalog the work explicitly as legacy. Wrapping older bytes never upgrades their eligibility.
 
-For a new study in a derivative fork or project, [HeliosTune methodology v1](METHODOLOGY.md) preserves the intended evidence contract: use the exact `heliostune.protocol/1` and `heliostune.bundle/1` schemas or catalog the work explicitly as legacy. Wrapping older bytes never upgrades their eligibility.
+Files already present under `site/`, the historical benchmark manifest, frozen Parhelion v2 protocol/manifests, existing compressed data/result artifacts, and the two reference fusion plugin/suite declarations are immutable. New analysis or structural candidates use new versioned paths, record input/source/output SHA-256 digests as applicable, distinguish confirmatory from post-hoc work, and report negative, null, or failed outcomes without substitution. A pull request that adds evidence must state the study ID, analysis status, sampling unit, conditioning set, and chain of custody.
 
-Files already present under `site/`, the historical benchmark manifest, frozen Parhelion v2 protocol/manifests, existing compressed data/result artifacts, and the two reference fusion plugin/suite declarations are immutable. A derivative project must preserve those bytes. New analysis or structural candidates use new paths, record input/source/output SHA-256 digests as applicable, distinguish confirmatory from post-hoc work, and report negative, null, or failed outcomes without substitution. A derivative pull request that adds evidence must state the study ID, analysis status, sampling unit, conditioning set, and chain of custody.
+## Experiment-scope preservation
 
-## Experiment-scope preservation in forks
-
-Before changing scope in a derivative fork, read [Experiment scope](EXPERIMENT_SCOPE.md) and preserve the distinctions around
+Before changing scope, read [Experiment scope](EXPERIMENT_SCOPE.md) and preserve the distinctions around
 `heliostune.plugin/1`, `heliostune.suite/1`, their templates, or the closed
 domain/dtype vocabularies. Keep vocabulary membership, structural schema
 support, frozen-template inclusion, source registry availability, local/remote
@@ -73,7 +89,7 @@ applicable. A timing plan must have an earlier correctness cell for the same
 case, arm, and input seed; an executor must also retain a passing observation
 for that exact key before timing dispatch.
 
-For a new or promoted suite in a derivative fork, the pull request must:
+For a new or promoted suite, the pull request must:
 
 1. freeze complete case semantics, ordered fusion boundaries, tensor/output
    contracts, inline shape constraints, numeric/reference policies, and seeds;
@@ -132,12 +148,12 @@ bundle, and remains `publication_eligible=false`.
 
 Do not substitute copied or renamed declarations in either documented command.
 Local invocation is restricted to the exact H100 SM90, PyTorch 2.8.0, and Triton
-3.4.0 predicate. The archived project authorizes no paid Modal invocation. A
-derivative fork must follow the clean committed-wheel rule, obtain its own
-explicit authorization and approved bounds, use a fresh unique output path,
+3.4.0 predicate. No documented command authorizes a paid Modal invocation. An
+approved run must follow the clean committed-wheel rule, use the separately
+approved frozen protocol and cost bound, write to a fresh versioned output path,
 and preserve the one-spawn journal. `retries=0` does not make Modal physical
 starts observable. An unresolved receipt must remain unresolved; a separately
-authorized derivative follow-up needs a fresh output and attempt journal and
+authorized follow-up needs a fresh output and attempt journal and
 must not overwrite or reinterpret the earlier receipt.
 
 Preserve complete source custody: exact plugin/suite bytes, the package-wide
@@ -154,10 +170,12 @@ retained H100 ratio was `0.908286`, so it authorized no expansion. The analysis
 remains non-confirmatory, makes no correctness, fusion, or performance claim,
 and is not publication eligible. Native gated MLP remains absent after an
 unfavorable feasibility audit. Attention/KV cache, quantized linear, MoE, and
-FP8 are retained catalog/design inventory, not planned promotion revisions.
-The archived repository authorizes no scope change or paid campaign. A
-derivative project must use its own revision, frozen protocol, approved bounds,
-committed bytes, and evidence controls.
+FP8 remain catalog/design inventory for the ordered no-cost domain gate, not
+executable suites or authorization for promotion. At most one may advance after
+the CPU custody/verifier and dependency-split stages are complete, through its
+own reviewed revision and no-cost feasibility/capability evidence. Any later
+paid proposal requires a new frozen protocol, approved bound, committed bytes,
+new versioned paths, and the full evidence controls above.
 
 The published Parhelion and Hopper studies remain immutable legacy plugins.
 Do not relabel or migrate them to plugin/suite v1 merely because a declaration

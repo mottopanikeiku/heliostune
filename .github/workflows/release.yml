@@ -20,17 +20,17 @@ jobs:
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    environment: archival-release
+    environment: release
     permissions:
       contents: write
       id-token: write
       attestations: write
     steps:
-      - name: Check out protected main
+      - name: Check out protected-main dispatch snapshot
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
-          ref: refs/heads/main
+          ref: ${{ github.sha }}
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
         with:
           version: "0.12.5"
@@ -117,16 +117,6 @@ jobs:
             fi
           }
 
-          require_current_main() {
-            git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
-            if [[ "$(git rev-parse refs/remotes/origin/main)" != "${GITHUB_SHA}" ]]; then
-              echo "origin/main advanced after this release was dispatched" >&2
-              exit 1
-            fi
-          }
-
-          require_current_main
-
           set +e
           git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null
           remote_status=$?
@@ -139,14 +129,12 @@ jobs:
             if git show-ref --verify --quiet "refs/tags/${RELEASE_TAG}"; then
               verify_release_tag
             else
-              require_current_main
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git tag --annotate "${RELEASE_TAG}" "${GITHUB_SHA}" \
                 --message "Release ${RELEASE_TAG}"
               verify_release_tag
             fi
-            require_current_main
             if ! git push origin \
               "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"; then
               git fetch --force --no-tags origin \
@@ -161,7 +149,7 @@ jobs:
           git fetch --force --no-tags origin \
             "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
           verify_release_tag
-      - name: Create and verify archival bundle and checksums
+      - name: Create and verify release-history bundle and checksums
         env:
           RELEASE_TAG: ${{ steps.release.outputs.tag }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
@@ -171,7 +159,6 @@ jobs:
           release_dir="${RUNNER_TEMP}/heliostune-release"
           bundle="${release_dir}/dist/heliostune-${RELEASE_VERSION}.git.bundle"
 
-          git update-ref refs/heads/main "${GITHUB_SHA}"
           mapfile -t semantic_tags < <(
             git for-each-ref --format='%(refname)' refs/tags |
               while IFS= read -r ref; do
@@ -181,12 +168,11 @@ jobs:
               done
           )
           test "${#semantic_tags[@]}" -gt 0
-          git bundle create "${bundle}" refs/heads/main "${semantic_tags[@]}"
+          git bundle create "${bundle}" "${semantic_tags[@]}"
           git bundle verify "${bundle}"
 
           bundle_heads="${RUNNER_TEMP}/heliostune-release/bundle-heads"
           git bundle list-heads "${bundle}" > "${bundle_heads}"
-          grep -Fqx "${GITHUB_SHA} refs/heads/main" "${bundle_heads}"
           for ref in "${semantic_tags[@]}"; do
             tag_object="$(git rev-parse "${ref}")"
             grep -Fqx "${tag_object} ${ref}" "${bundle_heads}"
@@ -212,14 +198,8 @@ jobs:
           local_assets="${release_dir}/local-assets.tsv"
           remote_assets="${release_dir}/remote-assets.tsv"
           release_json="${release_dir}/release.json"
-
-          require_current_main() {
-            git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
-            if [[ "$(git rev-parse refs/remotes/origin/main)" != "${GITHUB_SHA}" ]]; then
-              echo "origin/main advanced after this release was dispatched" >&2
-              exit 1
-            fi
-          }
+          release_title="HeliosTune ${RELEASE_TAG}"
+          release_notes="Maintained HeliosTune release of protected-main snapshot ${GITHUB_SHA}, as tested by the release workflow. Verify all assets with SHA256SUMS. The Git bundle contains every semantic release tag and the complete history reachable from those tags; it does not contain a mutable main-branch ref."
 
           find_matching_release() {
             gh api --paginate --slurp \
@@ -238,8 +218,6 @@ jobs:
               exit 1
             fi
           }
-
-          require_current_main
 
           shopt -s nullglob
           expected_assets=(
@@ -260,14 +238,12 @@ jobs:
           find_matching_release
           release_count="$(jq 'length' "${matching_releases}")"
           if [[ "${release_count}" -eq 0 ]]; then
-            require_current_main
             gh release create "${RELEASE_TAG}" \
               --draft \
               --verify-tag \
               --fail-on-no-commits \
-              --generate-notes \
-              --title "HeliosTune ${RELEASE_TAG} - final archive" \
-              --notes "Final archival release. HeliosTune is concluded and unsupported; this immutable release preserves negative, failed, non-confirmatory, and STOP evidence and authorizes no further campaign. Verify all assets with SHA256SUMS; the Git bundle contains canonical main and every semantic release tag."
+              --title "${release_title}" \
+              --notes "${release_notes}"
             find_matching_release
             release_count="$(jq 'length' "${matching_releases}")"
           fi
@@ -285,12 +261,12 @@ jobs:
           fi
 
           if [[ "${is_draft}" == "true" ]]; then
-            require_current_main
             gh release upload "${RELEASE_TAG}" "${expected_assets[@]}" --clobber
             verify_remote_assets
-            require_current_main
             gh api --method PATCH \
               "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              -f name="${release_title}" \
+              -f body="${release_notes}" \
               -F draft=false > "${release_json}"
             if [[ "$(jq -r '.draft' "${release_json}")" != "false" ]]; then
               echo "Release was not published: ${RELEASE_TAG}" >&2
@@ -298,7 +274,6 @@ jobs:
             fi
             verify_remote_assets
           elif [[ "${is_draft}" == "false" ]]; then
-            require_current_main
             verify_remote_assets
           else
             echo "Could not determine release state for ${RELEASE_TAG}" >&2

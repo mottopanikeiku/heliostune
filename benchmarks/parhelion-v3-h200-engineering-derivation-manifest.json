@@ -19,9 +19,9 @@
   "implementation": {
     "dependency_contract": [
       {
-        "bytes": 2310,
+        "bytes": 2292,
         "path": "pyproject.toml",
-        "sha256": "54eb001d5f713de0bdbb30eb17de9bb8a82f35e434ae5007ae8bca0c0d6ff903"
+        "sha256": "185551829df602f6d363b9d26a024c129c086e7ddf70461354dadacd1667cbb4"
       },
       {
         "bytes": 289908,

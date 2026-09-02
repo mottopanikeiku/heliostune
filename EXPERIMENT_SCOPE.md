@@ -2,18 +2,17 @@
 
 ## Status
 
-This final scope record describes the implemented `heliostune.plugin/1` and
-`heliostune.suite/1` declaration surface and preserves the unimplemented areas
-as design inventory. It is not an active roadmap, a completion plan, or
-authorization for another paid run. It is narrower than the normative evidence
-lifecycle in [METHODOLOGY.md](METHODOLOGY.md): validating a declaration is not
-executing a study, validating correctness, measuring performance, or making a
-claim.
+This active scope record describes the implemented `heliostune.plugin/1` and
+`heliostune.suite/1` declaration surface and the bounded roadmap for surfaces
+not yet implemented. It is narrower than the normative evidence lifecycle in
+[METHODOLOGY.md](METHODOLOGY.md): validating a declaration is not executing a
+study, validating correctness, measuring performance, or making a claim.
 
-The new schemas are additive and non-retroactive. The published Parhelion and
+The schemas are additive and non-retroactive. The published Parhelion and
 Hopper studies remain immutable legacy plugins and evidence. They have not been
-migrated to plugin/suite v1, and the new declarations do not upgrade their
-eligibility, custody, numerical checks, or conclusions.
+migrated to plugin/suite v1, and new declarations do not upgrade their
+eligibility, custody, numerical checks, or conclusions. New work may land in
+this repository only at new versioned paths with its own custody.
 
 ## Keep the state axes separate
 
@@ -290,9 +289,9 @@ correctness/performance conclusion or publication-eligible claim.
 
 ### Historical remote Modal H100 execution
 
-The commands below preserve the historical invocation contract; this archive
-authorizes no paid call. The procedure built and verified a fresh wheel and its
-adjacent supplemental manifest from a clean final Git `HEAD`. Retained gated
+The commands below preserve the historical invocation contract; they do not
+authorize a paid call. The procedure built and verified a fresh wheel and its
+adjacent supplemental manifest from a clean committed Git `HEAD`. Retained gated
 MLP reference command:
 
 ```text
@@ -308,8 +307,8 @@ uv run --extra modal modal run modal_fusion_executor.py::main --suite benchmarks
 ```
 
 The native Modal executor is also implemented. Its guarded command is retained
-for provenance and must not be run from the archived project; derivative use
-requires separate authorization outside HeliosTune:
+for provenance and may run only under a separately approved, predeclared paid
+protocol and cost bound at a fresh versioned path:
 
 ```text
 uv run python scripts/build_modal_wheel.py
@@ -452,11 +451,23 @@ amortization. An evaluation oracle remains evaluation-only. Missing a strong
 applicable baseline blocks promotion; it is not evidence that the baseline is
 slow.
 
-## Retained staged design inventory
+## Bounded continuation roadmap
 
-The following areas are retained scope candidates, not planned work or frozen executable suite IDs:
+The roadmap is ordered and fail-closed:
 
-| Candidate | Preserved design requirements for a derivative suite revision |
+| Stage | Required work and go evidence | Stop boundary |
+|---|---|---|
+| 1. Generic custody and offline verification | Complete generic `heliostune.protocol/1` and `heliostune.bundle/1` reference closure, including transitive plugin → suite custody, and prove the offline verifier with CPU-only fixtures for completed, failed, aborted, and tampered bundles. | **STOP** while any referenced byte, lifecycle state, attempt, claim input, or expected artifact cannot be checked offline. No GPU execution belongs to this stage. |
+| 2. Dependency split | Separate actively maintained execution dependencies from frozen reproduction pins, and verify that each historical environment remains reproducible without constraining the active environment. | **STOP** if an active dependency update changes frozen reproduction identity or if a reproduction pin silently governs new execution. |
+| 3. One-domain no-cost design gate | Select at most one inventory domain below and freeze a reviewed feasibility/capability design: semantics, numerics, applicability, baseline hierarchy, backend requirements, custody, expected cells, and explicit infeasibility criteria. The gate performs no paid execution and makes no correctness or performance claim. | **STOP** on missing semantics, baseline, feasible backend design, custody plan, or bounded execution design. Other inventory domains remain inventory. |
+| 4. Optional paid-protocol proposal | Only after stages 1–3 pass may a new, predeclared protocol with new versioned paths and its own frozen paid plan be proposed for separate approval. | A passed design gate permits review of a proposal, not dispatch. Without explicit approval and a cost bound, **STOP** before any paid call. |
+
+This roadmap authorizes no GPU spending. Stage evidence and decisions must be
+retained even when they stop continuation.
+
+The stage-3 inventory contains no frozen executable suite ID:
+
+| Candidate | Design requirements for a new suite revision |
 |---|---|
 | Attention and KV cache | Freeze dense/paged semantics, causal and masking behavior, head/group mapping, sequence and ragged layouts, cache update/read boundaries, decode/prefill regimes, reference behavior, and applicable framework/vendor baselines. |
 | Quantized linear | Freeze exact integer/sub-byte packing, signedness, group/axis/block scales, zero points, dequantization and accumulation, rounding/saturation, calibration provenance, output contract, and vendor/domain baselines. |
@@ -468,13 +479,14 @@ not template status, capability evidence, correctness, performance, an
 implementation commitment, or authorization for a paid run.
 
 The native gated-MLP candidate was deferred after an unfavorable feasibility
-audit. No native gated-MLP plugin, suite, kernel, or execution plan exists in
-the archived project, and none is planned here.
+audit. No native gated-MLP plugin, suite, kernel, or execution plan currently
+exists; that retained outcome is unchanged and the candidate does not bypass
+the ordered roadmap.
 
-## Preserved promotion requirements for derivative work
+### Promotion requirements for the selected domain
 
-A derivative project may turn a catalog-only candidate into an executable suite only through a separate
-reviewed revision that:
+HeliosTune may turn the single stage-3 selection into an executable suite only
+through a separate reviewed revision that:
 
 1. freezes semantic cases, fusion boundaries and tensor/output contracts;
 2. freezes the exact numeric and error contract, representative and adversarial
@@ -486,23 +498,20 @@ reviewed revision that:
 6. adds focused structural and behavioral acceptance coverage; and
 7. continues to report backend, correctness and performance states separately.
 
-HeliosTune will not promote or execute these inventory candidates. The
-requirements below are retained only as design guidance for derivative work.
-A derivative execution still needs a matching backend implementation and
-retained probe evidence. Performance work needs retained passing correctness
-observations, a frozen timing protocol, and a complete evidence lifecycle. Any
-paid campaign additionally needs its own independently approved, frozen paid
-plan; this archive authorizes none.
+Execution still needs a matching backend implementation and retained probe
+evidence. Performance work needs retained passing correctness observations, a
+frozen timing protocol, and a complete evidence lifecycle. A paid proposal
+additionally needs its own independently approved, frozen paid plan; neither
+this document nor a merged suite revision authorizes dispatch.
 
-The archived local and remote reference branches stop at the frozen gated MLP
-and residual RMSNorm reference templates. The native Triton RMSNorm suite is
+The current local and remote reference branches retain the frozen gated MLP and
+residual RMSNorm reference templates. The native Triton RMSNorm suite is
 structurally executable: its frozen digest dispatches to dedicated local and
 Modal native executors, and the retained H100 observation establishes only the
 narrow stage-gate facts published above. It does not promote the suite's
 capability declarations or authorize a claim. Attention/KV-cache,
-quantized-linear, MoE, and FP8 remain inventory; any derivative implementation
-requires its own suite revision, backend, custody, and review outside this
-repository.
+quantized-linear, MoE, and FP8 remain inventory until the ordered gate selects
+one through a new suite revision, backend, custody record, and review.
 
 ## Focused acceptance boundary
 
@@ -568,6 +577,6 @@ unprobed and its publication is not methodology-bundle or claim eligible. No
 generic executor exists for the staged attention, KV-cache, MoE,
 quantized-linear, or FP8 domains.
 
-For the preserved protocol, evidence, claim, and legacy rules, see
-[METHODOLOGY.md](METHODOLOGY.md). For evidence-preservation requirements in
-derivative work, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For the protocol, evidence, claim, and legacy rules, see
+[METHODOLOGY.md](METHODOLOGY.md). For contribution and evidence-preservation
+requirements in this repository, see [CONTRIBUTING.md](CONTRIBUTING.md).
