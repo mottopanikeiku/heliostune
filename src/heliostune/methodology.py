@@ -8,14 +8,16 @@ explicit rather than implying publication eligibility.
 from __future__ import annotations
 
 import hashlib
+import os
 import re
-from collections.abc import Collection
+import stat
+from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
-from heliostune.artifacts import read_json, strict_json_loads
+from heliostune.artifacts import read_json, strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.validation import (
     exact_fields,
@@ -84,6 +86,87 @@ PROTOCOL_DIGEST_ROLES: tuple[ProtocolDigestRole, ...] = (
     "parent_protocol",
 )
 CELL_IDENTITY_ROLES: tuple[CellIdentityRole, ...] = ("expected_cells", "terminal_cells")
+_ATTEMPT_CHAIN_SCHEMA = "heliostune.attempt-chain/1"
+_SELECTED_SUITE_SCHEMA = "heliostune.selected-suite/1"
+_ATTEMPT_CHAIN_INITIAL_HEAD = hashlib.sha256(b"").hexdigest()
+
+
+def plugin_suite_role(index: int) -> str:
+    """Return the reserved artifact role for a plugin suite inventory index."""
+
+    exact_int(index, context="plugin suite index", minimum=0)
+    return f"plugin_suite_{index}"
+
+
+def plugin_suite_path(index: int) -> str:
+    """Return the required flat bundle path for a plugin suite inventory index."""
+
+    return f"{plugin_suite_role(index)}.json"
+
+
+def attempt_chain_descriptor_bytes() -> bytes:
+    """Return the exact descriptor selecting chained attempt-journal parsing."""
+
+    return strict_json_dumps({"schema": _ATTEMPT_CHAIN_SCHEMA}).encode("utf-8")
+
+
+def selected_suite_descriptor_bytes(index: int) -> bytes:
+    """Return the exact descriptor binding the selected suite inventory index."""
+
+    exact_int(index, context="selected suite plugin_suite_index", minimum=0)
+    return strict_json_dumps(
+        {"schema": _SELECTED_SUITE_SCHEMA, "plugin_suite_index": index}
+    ).encode("utf-8")
+
+
+def _canonical_attempt_row(
+    cell_id: object,
+    status: object,
+    predecessor_sha256: str,
+    *,
+    context: str,
+) -> bytes:
+    parsed_cell_id = nonblank_string(cell_id, context=f"{context} cell_id")
+    parsed_status = _enum(
+        status,
+        allowed={"pending", "running", "success", "failure"},
+        context=f"{context} status",
+    )
+    return (
+        strict_json_dumps(
+            {
+                "cell_id": parsed_cell_id,
+                "predecessor_sha256": predecessor_sha256,
+                "status": parsed_status,
+            },
+            compact=True,
+        ).encode("utf-8")
+        + b"\n"
+    )
+
+
+def encode_attempt_journal(
+    transitions: Iterable[Mapping[str, object]],
+) -> tuple[bytes, str]:
+    """Encode transitions into canonical predecessor-linked JSONL bytes."""
+
+    rows: list[bytes] = []
+    head = _ATTEMPT_CHAIN_INITIAL_HEAD
+    for index, transition in enumerate(transitions, start=1):
+        data = exact_fields(
+            transition,
+            required=("cell_id", "status"),
+            context=f"attempt transition {index}",
+        )
+        row = _canonical_attempt_row(
+            data["cell_id"],
+            data["status"],
+            head,
+            context=f"attempt transition {index}",
+        )
+        rows.append(row)
+        head = _sha256(row)
+    return b"".join(rows), head
 
 
 _DIGEST_RE = re.compile(r"[0-9a-f]{64}\Z")
@@ -1081,7 +1164,8 @@ class VerificationLimitations:
     protocol_ancestry: Literal["not_checked"] = "not_checked"
     evidence_nonpromotion: Literal["not_checked"] = "not_checked"
     semantic_content_beyond_digests: Literal["not_checked"] = "not_checked"
-    attempt_journal_hash_chain: Literal["not_checked"] = "not_checked"
+    plugin_suite_custody: Literal["not_checked", "checked"] = "not_checked"
+    attempt_journal_hash_chain: Literal["not_checked", "checked"] = "not_checked"
     attempt_reconciliation: Literal["not_checked", "checked"] = "not_checked"
     claim_eligibility: Literal["not_checked"] = "not_checked"
     analyzer_replay: Literal["not_checked"] = "not_checked"
@@ -1116,6 +1200,7 @@ class VerifiedBundle:
             self.limitations.protocol_ancestry,
             self.limitations.evidence_nonpromotion,
             self.limitations.semantic_content_beyond_digests,
+            self.limitations.plugin_suite_custody,
             self.limitations.attempt_journal_hash_chain,
             self.limitations.attempt_reconciliation,
             self.limitations.claim_eligibility,
@@ -1153,35 +1238,74 @@ def _resolve_file(path: str | Path, *, context: str) -> Path:
     return resolved
 
 
-def _resolve_reference(
-    directory: Path,
-    relative_path: str,
-    *,
-    context: str,
-    occupied: set[Path],
-) -> Path:
-    # The schema check rejects lexical traversal.  Resolution additionally
-    # closes symlink aliases and prevents a symlink from escaping the bundle.
-    _relative_path(relative_path, context=f"{context} path")
-    candidate = directory / relative_path
-    try:
-        resolved = candidate.resolve(strict=True)
-    except OSError as exc:
-        raise ArtifactError(f"cannot resolve {context} {relative_path!r}: {exc}") from exc
-    try:
-        resolved.relative_to(directory)
-    except ValueError as exc:
-        raise ArtifactError(
-            f"{context} path escapes the bundle directory: {relative_path!r}"
-        ) from exc
-    if not resolved.is_file():
-        raise ArtifactError(f"{context} is not a regular file: {relative_path!r}")
-    if resolved in occupied:
-        raise ArtifactError(
-            f"{context} resolves to a path already used by the closed bundle: {relative_path!r}"
-        )
-    occupied.add(resolved)
-    return resolved
+class _BundleDirectoryReader:
+    """Read one bundle tree through a pinned directory descriptor."""
+
+    def __init__(self, root_manifest_path: str | Path) -> None:
+        if (
+            not hasattr(os, "O_DIRECTORY")
+            or not hasattr(os, "O_NOFOLLOW")
+            or os.open not in os.supports_dir_fd
+        ):
+            raise ArtifactError("descriptor-pinned bundle verification is unsupported")
+        source = Path(root_manifest_path)
+        self.root_relative_path = _relative_path(source.name, context="bundle root path")
+        try:
+            self.directory = source.parent.resolve(strict=True)
+            self._directory_fd = os.open(
+                self.directory,
+                os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_CLOEXEC", 0) | os.O_NOFOLLOW,
+            )
+        except OSError as exc:
+            raise ArtifactError(f"cannot open bundle directory for {source}: {exc}") from exc
+        self._occupied: set[tuple[int, int]] = set()
+
+    def close(self) -> None:
+        os.close(self._directory_fd)
+
+    def read(self, relative_path: str, *, context: str) -> tuple[Path, bytes]:
+        normalized = _relative_path(relative_path, context=f"{context} path")
+        parts = normalized.split("/")
+        current_fd = self._directory_fd
+        opened_directories: list[int] = []
+        file_fd: int | None = None
+        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | os.O_NOFOLLOW
+        try:
+            for component in parts[:-1]:
+                current_fd = os.open(
+                    component,
+                    flags | getattr(os, "O_DIRECTORY", 0),
+                    dir_fd=current_fd,
+                )
+                opened_directories.append(current_fd)
+            file_fd = os.open(parts[-1], flags, dir_fd=current_fd)
+            identity = os.fstat(file_fd)
+            if not stat.S_ISREG(identity.st_mode):
+                raise ArtifactError(f"{context} is not a regular file: {normalized!r}")
+            key = (identity.st_dev, identity.st_ino)
+            if key in self._occupied:
+                raise ArtifactError(
+                    f"{context} uses a file identity already used by the closed bundle: "
+                    f"{normalized!r}"
+                )
+            chunks: list[bytes] = []
+            while chunk := os.read(file_fd, 1024 * 1024):
+                chunks.append(chunk)
+            self._occupied.add(key)
+            return self.directory / normalized, b"".join(chunks)
+        except ArtifactError:
+            raise
+        except OSError as exc:
+            raise ArtifactError(
+                f"cannot open {context} {normalized!r}; symlinks are forbidden and a path that "
+                "escapes the bundle directory is rejected: "
+                f"{exc}"
+            ) from exc
+        finally:
+            if file_fd is not None:
+                os.close(file_fd)
+            for descriptor in reversed(opened_directories):
+                os.close(descriptor)
 
 
 def _sha256(payload: bytes) -> str:
@@ -1268,12 +1392,18 @@ def _parse_attempt_transitions(
     payload: bytes,
     *,
     source: Path,
-) -> tuple[tuple[str, ...], dict[str, AttemptTransitionStatus]]:
-    try:
-        text = payload.decode("utf-8")
-    except UnicodeError as exc:
-        raise ArtifactError(f"cannot decode attempts journal {source} as UTF-8: {exc}") from exc
-
+    chained: bool,
+) -> tuple[
+    tuple[str, ...],
+    dict[str, AttemptTransitionStatus],
+    dict[str, AttemptTransitionStatus],
+    str,
+]:
+    if payload and (not payload.endswith(b"\n") or b"\r" in payload):
+        raise ArtifactError(
+            f"attempts journal {source} must use LF-terminated rows without carriage returns"
+        )
+    rows = payload[:-1].split(b"\n") if payload else []
     states: dict[str, AttemptTransitionStatus] = {}
     allowed: dict[AttemptTransitionStatus | None, set[AttemptTransitionStatus]] = {
         None: {"pending"},
@@ -1282,14 +1412,19 @@ def _parse_attempt_transitions(
         "success": set(),
         "failure": set(),
     }
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        if not line.strip():
+    head = _ATTEMPT_CHAIN_INITIAL_HEAD
+    for line_number, encoded_line in enumerate(rows, start=1):
+        if not encoded_line:
             raise ArtifactError(f"attempts journal {source}:{line_number} contains a blank line")
         try:
+            line = encoded_line.decode("utf-8")
             value = strict_json_loads(line, source=source, line_number=line_number)
+            required = (
+                ("cell_id", "predecessor_sha256", "status") if chained else ("cell_id", "status")
+            )
             data = exact_fields(
                 value,
-                required=("cell_id", "status"),
+                required=required,
                 context=f"attempt transition line {line_number}",
             )
             cell_id = nonblank_string(
@@ -1303,6 +1438,30 @@ def _parse_attempt_transitions(
                     context=f"attempt transition line {line_number} status",
                 ),
             )
+            if chained:
+                predecessor = _digest(
+                    data["predecessor_sha256"],
+                    context=f"attempt transition line {line_number} predecessor_sha256",
+                )
+                canonical = _canonical_attempt_row(
+                    cell_id,
+                    status,
+                    predecessor,
+                    context=f"attempt transition line {line_number}",
+                )
+                actual_row = encoded_line + b"\n"
+                if actual_row != canonical:
+                    raise ArtifactError(f"attempts journal {source}:{line_number} is not canonical")
+                if predecessor != head:
+                    raise ArtifactError(
+                        f"attempt chain predecessor mismatch at {source}:{line_number}: "
+                        f"expected {head}, found {predecessor}"
+                    )
+                head = _sha256(actual_row)
+        except UnicodeError as exc:
+            raise ArtifactError(
+                f"cannot decode attempts journal {source}:{line_number} as UTF-8: {exc}"
+            ) from exc
         except SchemaError as exc:
             raise ArtifactError(f"invalid attempts journal {source}: {exc}") from exc
         previous = states.get(cell_id)
@@ -1315,7 +1474,130 @@ def _parse_attempt_transitions(
     terminal = {
         cell_id: status for cell_id, status in states.items() if status in {"success", "failure"}
     }
-    return tuple(states), terminal
+    return tuple(states), terminal, states, head
+
+
+def _parse_selected_suite_descriptor(payload: bytes, *, source: Path) -> int:
+    try:
+        value = strict_json_loads(payload.decode("utf-8"), source=source)
+        data = exact_fields(
+            value,
+            required=("schema", "plugin_suite_index"),
+            context="selected suite descriptor",
+        )
+        schema = nonblank_string(data["schema"], context="selected suite descriptor schema")
+        if schema != _SELECTED_SUITE_SCHEMA:
+            raise SchemaError(
+                f"selected suite descriptor schema must be {_SELECTED_SUITE_SCHEMA!r}"
+            )
+        index = exact_int(
+            data["plugin_suite_index"],
+            context="selected suite descriptor plugin_suite_index",
+            minimum=0,
+        )
+    except (UnicodeError, SchemaError) as exc:
+        raise ArtifactError(f"invalid selected suite descriptor {source}: {exc}") from exc
+    if payload != selected_suite_descriptor_bytes(index):
+        raise ArtifactError(f"selected suite descriptor {source} is not canonical")
+    return index
+
+
+def _verify_plugin_suite_custody(
+    protocol: ProtocolV1,
+    artifacts_by_role: Mapping[str, Artifact],
+    payloads_by_role: Mapping[str, bytes],
+    paths_by_role: Mapping[str, Path],
+) -> Literal["not_checked", "checked"]:
+    reserved = {
+        role
+        for role in artifacts_by_role
+        if role.startswith("plugin_suite") or role.startswith("selected_suite")
+    }
+    if not reserved:
+        return "not_checked"
+    if "selected_suite" not in reserved:
+        raise ArtifactError("plugin suite custody is missing required role 'selected_suite'")
+
+    suite_indexes: list[int] = []
+    for role in reserved - {"selected_suite"}:
+        match = re.fullmatch(r"plugin_suite_(0|[1-9][0-9]*)", role)
+        if match is None:
+            raise ArtifactError(f"malformed reserved plugin suite role {role!r}")
+        suite_indexes.append(int(match.group(1)))
+    suite_indexes.sort()
+    if not suite_indexes or suite_indexes != list(range(len(suite_indexes))):
+        raise ArtifactError(
+            "plugin suite custody roles must be nonempty and contiguous from index 0"
+        )
+
+    expected_reserved = {
+        "selected_suite",
+        *(plugin_suite_role(index) for index in suite_indexes),
+    }
+    if reserved != expected_reserved:
+        raise ArtifactError("plugin suite custody contains missing or extra reserved roles")
+
+    selected_artifact = artifacts_by_role["selected_suite"]
+    if (
+        selected_artifact.path != "selected_suite.json"
+        or selected_artifact.media_type != "application/json"
+    ):
+        raise ArtifactError(
+            "selected_suite must use path 'selected_suite.json' and media type 'application/json'"
+        )
+    selected_index = _parse_selected_suite_descriptor(
+        payloads_by_role["selected_suite"],
+        source=paths_by_role["selected_suite"],
+    )
+    if selected_index >= len(suite_indexes):
+        raise ArtifactError("selected suite descriptor index is outside the plugin suite inventory")
+
+    suite_artifacts: list[tuple[Path, bytes]] = []
+    for index in suite_indexes:
+        role = plugin_suite_role(index)
+        artifact = artifacts_by_role[role]
+        if artifact.path != plugin_suite_path(index) or artifact.media_type != "application/json":
+            raise ArtifactError(
+                f"{role} must use path {plugin_suite_path(index)!r} and media type "
+                "'application/json'"
+            )
+        suite_artifacts.append((paths_by_role[role], payloads_by_role[role]))
+
+    from heliostune.scope import verify_plugin_inventory
+
+    verified = verify_plugin_inventory(
+        paths_by_role["plugin"],
+        payloads_by_role["plugin"],
+        suite_artifacts,
+    )
+    if verified.plugin.plugin_id != protocol.plugin.id:
+        raise ArtifactError("protocol plugin ID does not match inventoried plugin ID")
+    if str(verified.plugin.version) != protocol.plugin.version:
+        raise ArtifactError(
+            "protocol plugin version is not the canonical decimal inventoried plugin version"
+        )
+    return "checked"
+
+
+def _attempt_chain_is_enabled(
+    artifacts_by_role: Mapping[str, Artifact],
+    payloads_by_role: Mapping[str, bytes],
+    paths_by_role: Mapping[str, Path],
+) -> bool:
+    reserved = {role for role in artifacts_by_role if role.startswith("attempt_chain")}
+    if not reserved:
+        return False
+    if reserved != {"attempt_chain"}:
+        raise ArtifactError("attempt chain custody contains malformed reserved roles")
+    artifact = artifacts_by_role["attempt_chain"]
+    if artifact.path != "attempt_chain.json" or artifact.media_type != "application/json":
+        raise ArtifactError(
+            "attempt_chain must use path 'attempt_chain.json' and media type 'application/json'"
+        )
+    payload = payloads_by_role["attempt_chain"]
+    if payload != attempt_chain_descriptor_bytes():
+        raise ArtifactError(f"invalid attempt chain descriptor {paths_by_role['attempt_chain']}")
+    return True
 
 
 def _verify_declared_closure(
@@ -1326,6 +1608,7 @@ def _verify_declared_closure(
     terminal_ids: tuple[str, ...],
     journal_ids: tuple[str, ...],
     terminal_statuses: dict[str, AttemptTransitionStatus],
+    chained: bool,
 ) -> None:
     closed_states = {"SEALED", "VERIFIED", "ANALYZED", "PUBLISHED"}
     if bundle.lifecycle.state not in closed_states:
@@ -1339,6 +1622,8 @@ def _verify_declared_closure(
         raise ArtifactError("attempt journal contains a cell not present in expected_cells")
     if set(terminal_statuses) != terminal_set:
         raise ArtifactError("attempt journal terminal cell IDs do not match terminal_cells")
+    if chained and journal_ids and len(terminal_statuses) != len(journal_ids):
+        raise ArtifactError("a chained closed attempt journal cannot end in a live state")
 
     coverage = bundle.coverage
     expected_count = len(expected_ids)
@@ -1422,127 +1707,146 @@ def verify_protocol_v1(path: str | Path) -> VerifiedProtocol:
 
 
 def verify_bundle_v1(root_manifest_path: str | Path) -> VerifiedBundle:
-    """Verify structural closure only, not publication eligibility.
+    """Verify a descriptor-pinned local bundle inventory and structural closure."""
 
-    This resolves and hashes the local inventory, binds protocol digest roles,
-    parses cell-identity artifacts, and reconciles the strict attempt journal.
-    Every deeper semantic, ancestry, replay, cryptographic, provenance, catalog,
-    and offline-reproduction control remains explicit in ``limitations``.
-    """
-
-    root_path = _resolve_file(root_manifest_path, context="bundle root")
-    root_payload = _read_verified_file(root_path, context="bundle root")
-    bundle = _parse_bundle_bytes(root_payload, source=root_path)
-    directory = root_path.parent
-    occupied = {root_path}
-
-    protocol_path = _resolve_reference(
-        directory,
-        bundle.protocol.path,
-        context="bundle protocol",
-        occupied=occupied,
-    )
-    protocol_payload = _read_verified_file(protocol_path, context="bundle protocol")
-    _require_file_identity(
-        protocol_payload,
-        expected_sha256=bundle.protocol.sha256,
-        expected_bytes=bundle.protocol.bytes,
-        context="bundle protocol",
-    )
-    protocol = VerifiedProtocol(
-        protocol=_parse_protocol_bytes(protocol_payload, source=protocol_path),
-        path=protocol_path,
-        sha256=_sha256(protocol_payload),
-        bytes=len(protocol_payload),
-    )
-
-    attempts_path = _resolve_reference(
-        directory,
-        bundle.attempts.path,
-        context="bundle attempts",
-        occupied=occupied,
-    )
-    attempts_payload = _read_verified_file(attempts_path, context="bundle attempts")
-    _require_file_identity(
-        attempts_payload,
-        expected_sha256=bundle.attempts.sha256,
-        expected_bytes=None,
-        context="bundle attempts",
-    )
-
-    artifacts_by_role: dict[str, Artifact] = {}
-    payloads_by_role: dict[str, bytes] = {}
-    paths_by_role: dict[str, Path] = {}
-    artifact_paths: list[Path] = []
-    for artifact in bundle.artifacts:
-        artifacts_by_role[artifact.role] = artifact
-        artifact_path = _resolve_reference(
-            directory,
-            artifact.path,
-            context=f"bundle artifact role {artifact.role!r}",
-            occupied=occupied,
+    reader = _BundleDirectoryReader(root_manifest_path)
+    try:
+        root_path, root_payload = reader.read(
+            reader.root_relative_path,
+            context="bundle root",
         )
-        artifact_payload = _read_verified_file(
-            artifact_path, context=f"bundle artifact role {artifact.role!r}"
+        bundle = _parse_bundle_bytes(root_payload, source=root_path)
+
+        protocol_path, protocol_payload = reader.read(
+            bundle.protocol.path,
+            context="bundle protocol",
         )
         _require_file_identity(
-            artifact_payload,
-            expected_sha256=artifact.sha256,
-            expected_bytes=artifact.bytes,
-            context=f"bundle artifact role {artifact.role!r}",
+            protocol_payload,
+            expected_sha256=bundle.protocol.sha256,
+            expected_bytes=bundle.protocol.bytes,
+            context="bundle protocol",
         )
-        payloads_by_role[artifact.role] = artifact_payload
-        paths_by_role[artifact.role] = artifact_path
-        artifact_paths.append(artifact_path)
+        protocol = VerifiedProtocol(
+            protocol=_parse_protocol_bytes(protocol_payload, source=protocol_path),
+            path=protocol_path,
+            sha256=_sha256(protocol_payload),
+            bytes=len(protocol_payload),
+        )
 
-    digest_bindings = _protocol_digest_bindings(protocol.protocol)
-    for role, expected_sha256 in digest_bindings.items():
-        bound_artifact = artifacts_by_role.get(role)
-        if bound_artifact is None:
-            raise ArtifactError(f"bundle is missing protocol digest role {role!r}")
-        if bound_artifact.sha256 != expected_sha256:
-            raise ArtifactError(
-                f"bundle artifact role {role!r} does not match its protocol SHA-256"
-            )
-    for optional_role in ("paid_plan", "parent_protocol"):
-        if optional_role in artifacts_by_role and optional_role not in digest_bindings:
-            raise ArtifactError(
-                f"bundle artifact role {optional_role!r} has no protocol digest to bind"
-            )
-    if "terminal_cells" not in artifacts_by_role:
-        raise ArtifactError("bundle is missing required artifact role 'terminal_cells'")
+        attempts_path, attempts_payload = reader.read(
+            bundle.attempts.path,
+            context="bundle attempts",
+        )
+        _require_file_identity(
+            attempts_payload,
+            expected_sha256=bundle.attempts.sha256,
+            expected_bytes=None,
+            context="bundle attempts",
+        )
 
-    expected_ids = _parse_cell_ids(
-        payloads_by_role["expected_cells"],
-        role="expected_cells",
-        source=paths_by_role["expected_cells"],
-    )
-    terminal_ids = _parse_cell_ids(
-        payloads_by_role["terminal_cells"],
-        role="terminal_cells",
-        source=paths_by_role["terminal_cells"],
-    )
-    journal_ids, terminal_statuses = _parse_attempt_transitions(
-        attempts_payload,
-        source=attempts_path,
-    )
-    _verify_declared_closure(
-        bundle,
-        protocol.protocol,
-        expected_ids=expected_ids,
-        terminal_ids=terminal_ids,
-        journal_ids=journal_ids,
-        terminal_statuses=terminal_statuses,
-    )
-    return VerifiedBundle(
-        bundle=bundle,
-        protocol=protocol,
-        root_path=root_path,
-        root_sha256=_sha256(root_payload),
-        root_bytes=len(root_payload),
-        referenced_paths=(protocol_path, attempts_path, *artifact_paths),
-        limitations=VerificationLimitations(attempt_reconciliation="checked"),
-    )
+        artifacts_by_role: dict[str, Artifact] = {}
+        payloads_by_role: dict[str, bytes] = {}
+        paths_by_role: dict[str, Path] = {}
+        artifact_paths: list[Path] = []
+        for artifact in bundle.artifacts:
+            artifacts_by_role[artifact.role] = artifact
+            artifact_path, artifact_payload = reader.read(
+                artifact.path,
+                context=f"bundle artifact role {artifact.role!r}",
+            )
+            _require_file_identity(
+                artifact_payload,
+                expected_sha256=artifact.sha256,
+                expected_bytes=artifact.bytes,
+                context=f"bundle artifact role {artifact.role!r}",
+            )
+            payloads_by_role[artifact.role] = artifact_payload
+            paths_by_role[artifact.role] = artifact_path
+            artifact_paths.append(artifact_path)
+
+        digest_bindings = _protocol_digest_bindings(protocol.protocol)
+        for role, expected_sha256 in digest_bindings.items():
+            bound_artifact = artifacts_by_role.get(role)
+            if bound_artifact is None:
+                raise ArtifactError(f"bundle is missing protocol digest role {role!r}")
+            if bound_artifact.sha256 != expected_sha256:
+                raise ArtifactError(
+                    f"bundle artifact role {role!r} does not match its protocol SHA-256"
+                )
+        for optional_role in ("paid_plan", "parent_protocol"):
+            if optional_role in artifacts_by_role and optional_role not in digest_bindings:
+                raise ArtifactError(
+                    f"bundle artifact role {optional_role!r} has no protocol digest to bind"
+                )
+        if "terminal_cells" not in artifacts_by_role:
+            raise ArtifactError("bundle is missing required artifact role 'terminal_cells'")
+
+        custody = _verify_plugin_suite_custody(
+            protocol.protocol,
+            artifacts_by_role,
+            payloads_by_role,
+            paths_by_role,
+        )
+        chained = _attempt_chain_is_enabled(
+            artifacts_by_role,
+            payloads_by_role,
+            paths_by_role,
+        )
+        expected_ids = _parse_cell_ids(
+            payloads_by_role["expected_cells"],
+            role="expected_cells",
+            source=paths_by_role["expected_cells"],
+        )
+        terminal_ids = _parse_cell_ids(
+            payloads_by_role["terminal_cells"],
+            role="terminal_cells",
+            source=paths_by_role["terminal_cells"],
+        )
+        journal_ids, terminal_statuses, final_states, final_head = _parse_attempt_transitions(
+            attempts_payload,
+            source=attempts_path,
+            chained=chained,
+        )
+        if chained and bundle.attempts.hash_chain_head != final_head:
+            raise ArtifactError(
+                "attempt chain final head mismatch: "
+                f"expected {bundle.attempts.hash_chain_head}, found {final_head}"
+            )
+        _verify_declared_closure(
+            bundle,
+            protocol.protocol,
+            expected_ids=expected_ids,
+            terminal_ids=terminal_ids,
+            journal_ids=journal_ids,
+            terminal_statuses=terminal_statuses,
+            chained=chained,
+        )
+        attempts = bundle.attempts
+        execution = protocol.protocol.execution
+        reconciled = (
+            execution.retry_policy == "none"
+            and execution.max_physical_attempts == 1
+            and attempts.physical == attempts.logical
+            and attempts.orphaned == 0
+            and len(final_states) == attempts.logical
+            and all(status in {"success", "failure"} for status in final_states.values())
+        )
+        return VerifiedBundle(
+            bundle=bundle,
+            protocol=protocol,
+            root_path=root_path,
+            root_sha256=_sha256(root_payload),
+            root_bytes=len(root_payload),
+            referenced_paths=(protocol_path, attempts_path, *artifact_paths),
+            limitations=VerificationLimitations(
+                plugin_suite_custody=custody,
+                attempt_journal_hash_chain="checked" if chained else "not_checked",
+                attempt_reconciliation="checked" if reconciled else "not_checked",
+            ),
+        )
+    finally:
+        reader.close()
 
 
 __all__ = [
@@ -1567,8 +1871,13 @@ __all__ = [
     "VerificationLimitations",
     "VerifiedBundle",
     "VerifiedProtocol",
+    "attempt_chain_descriptor_bytes",
+    "encode_attempt_journal",
     "load_bundle_v1",
     "load_protocol_v1",
+    "plugin_suite_path",
+    "plugin_suite_role",
+    "selected_suite_descriptor_bytes",
     "verify_bundle_v1",
     "verify_protocol_v1",
 ]

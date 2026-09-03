@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal, Protocol, cast
@@ -1292,11 +1293,13 @@ class SuiteRef:
 
     def __post_init__(self) -> None:
         path = nonblank_string(self.path, context="suite ref path")
+        parsed = PurePosixPath(path)
         if (
             "\\" in path
             or "\x00" in path
-            or PurePosixPath(path).is_absolute()
-            or path != PurePosixPath(path).as_posix()
+            or parsed.is_absolute()
+            or path != parsed.as_posix()
+            or (parsed.parts and parsed.parts[0].endswith(":"))
         ):
             raise SchemaError("suite ref path must be a normalized POSIX relative path")
         _digest(self.sha256, "suite ref sha256")
@@ -1449,32 +1452,56 @@ def verify_suite(path: str | Path) -> VerifiedSuite:
     return VerifiedSuite(resolved, payload, hashlib.sha256(payload).hexdigest(), suite)
 
 
-def verify_plugin(path: str | Path) -> VerifiedPlugin:
-    """Verify plugin bytes and the contained, digest-bound suites they reference."""
-    resolved, payload = _read_verified(path, "plugin")
-    plugin = Plugin.from_dict(_parse_verified_json(payload, resolved))
-    containment_root = resolved.parent.parent.resolve()
-    suites: list[VerifiedSuite] = []
+def verify_plugin_inventory(
+    plugin_path: str | Path,
+    plugin_bytes: bytes,
+    suite_artifacts_in_ref_order: Sequence[tuple[str | Path, bytes]],
+) -> VerifiedPlugin:
+    """Verify a plugin exclusively from an already-captured byte inventory.
+
+    Suite artifact paths are diagnostic identities only.  This function never
+    resolves a plugin reference or performs filesystem I/O.
+    """
+
+    source = Path(plugin_path)
+    plugin = Plugin.from_dict(_parse_verified_json(plugin_bytes, source))
+    artifacts = tuple(suite_artifacts_in_ref_order)
+    if len(artifacts) != len(plugin.suite_refs):
+        raise ArtifactError(
+            "plugin suite inventory count mismatch: "
+            f"expected {len(plugin.suite_refs)}, found {len(artifacts)}"
+        )
     for ref in plugin.suite_refs:
-        target = (resolved.parent / ref.path).resolve()
-        if target == containment_root or containment_root not in target.parents:
+        virtual_path = ["plugins"]
+        for component in ref.path.split("/"):
+            if component == "..":
+                if not virtual_path:
+                    raise ArtifactError(
+                        f"suite ref path escapes plugin containment root: {ref.path!r}"
+                    )
+                virtual_path.pop()
+            elif component in {"", "."}:
+                raise ArtifactError(f"suite ref path is not normalized: {ref.path!r}")
+            else:
+                virtual_path.append(component)
+        if not virtual_path:
             raise ArtifactError(f"suite ref path escapes plugin containment root: {ref.path!r}")
-        verified = verify_suite(target)
-        if verified.sha256 != ref.sha256:
+
+    suites: list[VerifiedSuite] = []
+    for ref, (suite_path, suite_bytes) in zip(plugin.suite_refs, artifacts, strict=True):
+        suite_source = Path(suite_path)
+        suite = Suite.from_dict(_parse_verified_json(suite_bytes, suite_source))
+        digest = hashlib.sha256(suite_bytes).hexdigest()
+        if digest != ref.sha256:
             raise ArtifactError(
-                f"suite digest mismatch for {ref.path!r}: expected {ref.sha256}, got {verified.sha256}"
+                f"suite digest mismatch for {ref.path!r}: expected {ref.sha256}, got {digest}"
             )
-        if (verified.suite.suite_id, verified.suite.revision) != (
-            ref.suite_id,
-            ref.revision,
-        ):
+        if (suite.suite_id, suite.revision) != (ref.suite_id, ref.revision):
             raise ArtifactError(f"suite identity mismatch for {ref.path!r}")
-        if (verified.suite.plugin_id, verified.suite.plugin_version) != (
-            plugin.plugin_id,
-            plugin.version,
-        ):
+        if (suite.plugin_id, suite.plugin_version) != (plugin.plugin_id, plugin.version):
             raise ArtifactError(f"suite plugin identity mismatch for {ref.path!r}")
-        suites.append(verified)
+        suites.append(VerifiedSuite(suite_source, suite_bytes, digest, suite))
+
     domains = tuple(dict.fromkeys(item.suite.domain for item in suites))
     arm_ids = tuple(dict.fromkeys(arm.id for item in suites for arm in item.suite.arms))
     if domains != plugin.domains:
@@ -1482,5 +1509,25 @@ def verify_plugin(path: str | Path) -> VerifiedPlugin:
     if arm_ids != plugin.arm_ids:
         raise ArtifactError("plugin arm_ids must exactly equal referenced suite arms in order")
     return VerifiedPlugin(
-        resolved, payload, hashlib.sha256(payload).hexdigest(), plugin, tuple(suites)
+        source,
+        plugin_bytes,
+        hashlib.sha256(plugin_bytes).hexdigest(),
+        plugin,
+        tuple(suites),
     )
+
+
+def verify_plugin(path: str | Path) -> VerifiedPlugin:
+    """Verify plugin bytes and its digest-bound suites from one captured inventory."""
+
+    resolved, payload = _read_verified(path, "plugin")
+    plugin = Plugin.from_dict(_parse_verified_json(payload, resolved))
+    containment_root = resolved.parent.parent.resolve()
+    suite_artifacts: list[tuple[Path, bytes]] = []
+    for ref in plugin.suite_refs:
+        target = (resolved.parent / ref.path).resolve()
+        if target == containment_root or containment_root not in target.parents:
+            raise ArtifactError(f"suite ref path escapes plugin containment root: {ref.path!r}")
+        suite_path, suite_payload = _read_verified(target, "suite")
+        suite_artifacts.append((suite_path, suite_payload))
+    return verify_plugin_inventory(resolved, payload, suite_artifacts)

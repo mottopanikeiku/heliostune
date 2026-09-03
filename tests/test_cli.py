@@ -728,6 +728,7 @@ def test_verify_bundle_prints_verified_inventory_and_all_limitations(
         "protocol_ancestry",
         "evidence_nonpromotion",
         "semantic_content_beyond_digests",
+        "plugin_suite_custody",
         "attempt_journal_hash_chain",
         "claim_eligibility",
         "analyzer_replay",
@@ -738,7 +739,7 @@ def test_verify_bundle_prints_verified_inventory_and_all_limitations(
     ):
         assert f"limitation.{limitation}: not_checked" in output
     assert "limitation.attempt_reconciliation: checked" in output
-    assert output.count(": not_checked") == 10
+    assert output.count(": not_checked") == 11
     assert "publication eligible" not in output.lower()
     assert "authenticated" not in output.lower()
 
@@ -1238,7 +1239,11 @@ def _fake_verified_local_bundle(
         root_path=root_path,
         root_sha256="a" * 64,
         bundle=SimpleNamespace(coverage=coverage),
-        limitations=VerificationLimitations(),
+        limitations=VerificationLimitations(
+            plugin_suite_custody="checked",
+            attempt_journal_hash_chain="checked",
+            attempt_reconciliation="checked",
+        ),
     )
 
 
@@ -1293,6 +1298,9 @@ def test_run_local_suite_completed_writes_and_reports_bundle(
     assert "cells.failures: 0" in printed
     assert f"bundle_root: {output / 'bundle.json'}" in printed
     assert "structural_limitation.protocol_ancestry: not_checked" in printed
+    assert "structural_limitation.plugin_suite_custody: checked" in printed
+    assert "structural_limitation.attempt_journal_hash_chain: checked" in printed
+    assert "structural_limitation.attempt_reconciliation: checked" in printed
     assert "Bundle verification is structural only" in printed
     assert "speedup" not in printed.lower()
     assert "publication eligible" not in printed.lower()

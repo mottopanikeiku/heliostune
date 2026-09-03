@@ -27,6 +27,7 @@ from heliostune.scope import (
     load_plugin,
     load_suite,
     verify_plugin,
+    verify_plugin_inventory,
     verify_suite,
 )
 
@@ -564,6 +565,92 @@ def test_plugin_suite_digest_and_path_closure(
     target.write_text(json.dumps(bad))
     with pytest.raises(ArtifactError, match="suite identity mismatch"):
         verify_plugin(target)
+
+
+def _reference_inventory() -> tuple[bytes, list[tuple[Path, bytes]]]:
+    return (
+        PLUGIN.read_bytes(),
+        [(Path("suite-0.json"), MLP.read_bytes()), (Path("suite-1.json"), RMS.read_bytes())],
+    )
+
+
+def test_in_memory_plugin_inventory_never_traverses_plugin_ref_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugin_payload, suites = _reference_inventory()
+
+    def forbidden_read(*args: object, **kwargs: object) -> tuple[Path, bytes]:
+        raise AssertionError("filesystem lookup from in-memory inventory")
+
+    monkeypatch.setattr(scope_module, "_read_verified", forbidden_read)
+    verified = verify_plugin_inventory("plugin.json", plugin_payload, suites)
+
+    assert [suite.sha256 for suite in verified.suites] == [
+        ref.sha256 for ref in verified.plugin.suite_refs
+    ]
+    assert verified.plugin.domains == ("fused_mlp", "rmsnorm_residual")
+
+
+@pytest.mark.parametrize("mutation", ["missing", "extra", "reordered"])
+def test_in_memory_plugin_inventory_requires_exact_ref_order_and_count(mutation: str) -> None:
+    plugin_payload, suites = _reference_inventory()
+    if mutation == "missing":
+        suites.pop()
+    elif mutation == "extra":
+        suites.append((Path("suite-2.json"), RMS.read_bytes()))
+    else:
+        suites.reverse()
+
+    with pytest.raises(ArtifactError, match="count mismatch|digest mismatch"):
+        verify_plugin_inventory("plugin.json", plugin_payload, suites)
+
+
+@pytest.mark.parametrize(
+    "mutation,match",
+    [
+        ("suite_id", "suite identity mismatch"),
+        ("revision", "suite identity mismatch"),
+        ("plugin_id", "suite plugin identity mismatch"),
+        ("plugin_version", "suite plugin identity mismatch"),
+        ("domains", "plugin domains"),
+        ("arms", "plugin arm_ids"),
+        ("escape", "escapes"),
+    ],
+)
+def test_in_memory_plugin_inventory_rejects_identity_back_reference_and_aggregate_faults(
+    mutation: str,
+    match: str,
+) -> None:
+    plugin_raw = _json(PLUGIN)
+    suite_raw = _json(MLP)
+    refs = plugin_raw["suite_refs"]
+    assert isinstance(refs, list) and isinstance(refs[0], dict)
+    if mutation in {"suite_id", "revision", "plugin_id", "plugin_version"}:
+        if mutation == "suite_id":
+            suite_raw["suite_id"] = "different-suite"
+        elif mutation == "revision":
+            suite_raw["revision"] = 2
+        elif mutation == "plugin_id":
+            suite_raw["plugin_id"] = "different-plugin"
+        else:
+            suite_raw["plugin_version"] = 2
+        first_payload = json.dumps(suite_raw).encode("utf-8")
+        refs[0]["sha256"] = hashlib.sha256(first_payload).hexdigest()
+    else:
+        first_payload = MLP.read_bytes()
+        if mutation == "domains":
+            plugin_raw["domains"] = ["rmsnorm_residual", "fused_mlp"]
+        elif mutation == "arms":
+            arm_ids = plugin_raw["arm_ids"]
+            assert isinstance(arm_ids, list)
+            plugin_raw["arm_ids"] = list(reversed(arm_ids))
+        else:
+            refs[0]["path"] = "../../outside.json"
+    plugin_payload = json.dumps(plugin_raw).encode("utf-8")
+    suites = [(Path("suite-0.json"), first_payload), (Path("suite-1.json"), RMS.read_bytes())]
+
+    with pytest.raises(ArtifactError, match=match):
+        verify_plugin_inventory("plugin.json", plugin_payload, suites)
 
 
 def _suite_with_fp32_output() -> dict[str, object]:
