@@ -26,7 +26,7 @@ jobs:
   typing:
     name: Typing
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
@@ -34,7 +34,11 @@ jobs:
           version: "0.12.5"
           python-version: "3.11"
           enable-cache: true
-      - run: uv sync --locked --extra dev --extra gpu --extra modal
+      - run: uv sync --locked --extra dev --extra modal
+      - name: Install hash-pinned Torch annotations without CUDA dependencies
+        run: |
+          uv pip install --python .venv/bin/python --no-deps \
+            "https://files.pythonhosted.org/packages/5a/63/4fdc45a0304536e75a5e1b1bbfb1b56dd0e2743c48ee83ca729f7ce44162/torch-2.8.0-cp311-cp311-manylinux_2_28_x86_64.whl#sha256=c12fa219f51a933d5f80eeb3a7a5d0cbe9168c0a14bbb4055f1979431660879b"
       - run: uv run mypy src/heliostune modal_bench.py modal_precision_probe.py scripts
 
   coverage-fast:
