@@ -942,6 +942,12 @@ def test_verify_closed_bundle_for_each_evidence_class(tmp_path: Path, evidence_c
     assert verified.root_path == root.resolve()
     assert verified.root_bytes == len(root.read_bytes())
     assert verified.root_sha256 == _file_digest(root.read_bytes())
+    assert verified.attempts_bytes == len((tmp_path / "attempts/journal.jsonl").read_bytes())
+    root_directory = root.parent.stat()
+    assert verified.root_directory_identity == (
+        root_directory.st_dev,
+        root_directory.st_ino,
+    )
     assert verified.referenced_paths[:2] == (
         (tmp_path / "protocol.json").resolve(),
         (tmp_path / "attempts/journal.jsonl").resolve(),

@@ -1190,6 +1190,8 @@ class VerifiedBundle:
     root_sha256: str
     root_bytes: int
     referenced_paths: tuple[Path, ...]
+    attempts_bytes: int
+    root_directory_identity: tuple[int, int]
     limitations: VerificationLimitations
 
     @property
@@ -1298,6 +1300,11 @@ class _BundleDirectoryReader:
         reader._directory_fd = pinned_fd
         reader._occupied = set()
         return reader
+
+    @property
+    def directory_identity(self) -> tuple[int, int]:
+        identity = os.fstat(self._directory_fd)
+        return identity.st_dev, identity.st_ino
 
     def close(self) -> None:
         os.close(self._directory_fd)
@@ -1895,6 +1902,8 @@ def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle
             root_path=root_path,
             root_sha256=_sha256(root_payload),
             root_bytes=len(root_payload),
+            attempts_bytes=len(attempts_payload),
+            root_directory_identity=reader.directory_identity,
             referenced_paths=(protocol_path, attempts_path, *artifact_paths),
             limitations=VerificationLimitations(
                 plugin_suite_custody=custody,
