@@ -546,7 +546,7 @@ def test_plugin_suite_digest_and_path_closure(
     refs[0]["sha256"] = hashlib.sha256(MLP.read_bytes()).hexdigest()
     refs[0]["path"] = "../../outside.json"
     target.write_text(json.dumps(bad))
-    with pytest.raises(ArtifactError, match="escapes"):
+    with pytest.raises(SchemaError, match="allowed only once"):
         verify_plugin(target)
     refs[0]["path"] = "/absolute.json"
     target.write_text(json.dumps(bad))
@@ -572,6 +572,63 @@ def _reference_inventory() -> tuple[bytes, list[tuple[Path, bytes]]]:
         PLUGIN.read_bytes(),
         [(Path("suite-0.json"), MLP.read_bytes()), (Path("suite-1.json"), RMS.read_bytes())],
     )
+
+
+def test_plugin_suite_ref_paths_must_be_unique() -> None:
+    plugin = _json(PLUGIN)
+    refs = plugin["suite_refs"]
+    assert isinstance(refs, list)
+    first, second = refs
+    assert isinstance(first, dict) and isinstance(second, dict)
+    second["path"] = first["path"]
+
+    with pytest.raises(SchemaError, match="ref paths must be unique"):
+        scope_module.Plugin.from_dict(plugin)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "x/../../suites/a.json",
+        "x/..",
+        "../..",
+        "../suites/../a.json",
+    ],
+)
+def test_plugin_suite_ref_rejects_nonleading_or_repeated_traversal(path: str) -> None:
+    plugin = _json(PLUGIN)
+    refs = plugin["suite_refs"]
+    assert isinstance(refs, list) and isinstance(refs[0], dict)
+    refs[0]["path"] = path
+
+    with pytest.raises(SchemaError, match="allowed only once"):
+        scope_module.Plugin.from_dict(plugin)
+
+
+def test_inventory_defensively_rejects_duplicate_effective_targets(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plugin = scope_module.Plugin.from_dict(_json(PLUGIN))
+    object.__setattr__(
+        plugin.suite_refs[1],
+        "path",
+        "x/../../suites/gated-mlp-epilogue-v1.json",
+    )
+
+    def return_ambiguous_plugin(
+        _cls: type[scope_module.Plugin],
+        _value: object,
+    ) -> scope_module.Plugin:
+        return plugin
+
+    monkeypatch.setattr(
+        scope_module.Plugin,
+        "from_dict",
+        classmethod(return_ambiguous_plugin),
+    )
+    plugin_payload, suites = _reference_inventory()
+    with pytest.raises(ArtifactError, match="normalized targets must be unique"):
+        verify_plugin_inventory("plugin.json", plugin_payload, suites)
 
 
 def test_in_memory_plugin_inventory_never_traverses_plugin_ref_paths(
@@ -606,20 +663,21 @@ def test_in_memory_plugin_inventory_requires_exact_ref_order_and_count(mutation:
 
 
 @pytest.mark.parametrize(
-    "mutation,match",
+    "mutation,match,error",
     [
-        ("suite_id", "suite identity mismatch"),
-        ("revision", "suite identity mismatch"),
-        ("plugin_id", "suite plugin identity mismatch"),
-        ("plugin_version", "suite plugin identity mismatch"),
-        ("domains", "plugin domains"),
-        ("arms", "plugin arm_ids"),
-        ("escape", "escapes"),
+        ("suite_id", "suite identity mismatch", ArtifactError),
+        ("revision", "suite identity mismatch", ArtifactError),
+        ("plugin_id", "suite plugin identity mismatch", ArtifactError),
+        ("plugin_version", "suite plugin identity mismatch", ArtifactError),
+        ("domains", "plugin domains", ArtifactError),
+        ("arms", "plugin arm_ids", ArtifactError),
+        ("escape", "allowed only once", SchemaError),
     ],
 )
 def test_in_memory_plugin_inventory_rejects_identity_back_reference_and_aggregate_faults(
     mutation: str,
     match: str,
+    error: type[Exception],
 ) -> None:
     plugin_raw = _json(PLUGIN)
     suite_raw = _json(MLP)
@@ -649,7 +707,7 @@ def test_in_memory_plugin_inventory_rejects_identity_back_reference_and_aggregat
     plugin_payload = json.dumps(plugin_raw).encode("utf-8")
     suites = [(Path("suite-0.json"), first_payload), (Path("suite-1.json"), RMS.read_bytes())]
 
-    with pytest.raises(ArtifactError, match=match):
+    with pytest.raises(error, match=match):
         verify_plugin_inventory("plugin.json", plugin_payload, suites)
 
 

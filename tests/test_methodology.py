@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import os
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +25,7 @@ from heliostune.methodology import (
     plugin_suite_role,
     selected_suite_descriptor_bytes,
     verify_bundle_v1,
+    verify_bundle_v1_from_directory_fd,
     verify_protocol_v1,
 )
 
@@ -1417,6 +1419,16 @@ def test_verify_bundle_rejects_reference_to_directory(tmp_path: Path) -> None:
         verify_bundle_v1(root)
 
 
+def test_verify_bundle_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    artifact = tmp_path / "raw/measurements.jsonl"
+    artifact.unlink()
+    os.mkfifo(artifact)
+
+    with pytest.raises(ArtifactError, match="regular file"):
+        verify_bundle_v1(root)
+
+
 @pytest.mark.parametrize("verifier", [verify_protocol_v1, verify_bundle_v1])
 def test_verifier_entry_path_cannot_be_symlink_escape(tmp_path: Path, verifier: Any) -> None:
     outside = tmp_path / "outside"
@@ -1488,6 +1500,32 @@ def test_legacy_bundle_remains_accepted_without_promoting_new_controls(tmp_path:
     verified = verify_bundle_v1(_write_closed_bundle(tmp_path))
 
     assert verified.limitations.plugin_suite_custody == "not_checked"
+    assert verified.limitations.attempt_journal_hash_chain == "not_checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
+
+
+@pytest.mark.parametrize("line_ending", ["missing_final_lf", "crlf"])
+def test_legacy_attempt_rows_preserve_historical_line_splitting(
+    tmp_path: Path,
+    line_ending: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    journal = tmp_path / "attempts/journal.jsonl"
+    payload = journal.read_bytes()
+    if line_ending == "missing_final_lf":
+        payload = payload.removesuffix(b"\n")
+    else:
+        payload = payload.replace(b"\n", b"\r\n")
+    journal.write_bytes(payload)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    attempts["sha256"] = _file_digest(payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    verified = verify_bundle_v1(root)
+
     assert verified.limitations.attempt_journal_hash_chain == "not_checked"
     assert verified.limitations.attempt_reconciliation == "checked"
 
@@ -1714,6 +1752,45 @@ def test_plugin_suite_reserved_roles_require_exact_complete_inventory(
         verify_bundle_v1(root)
 
 
+def test_plugin_suite_custody_rejects_duplicate_ref_paths_before_checked(
+    tmp_path: Path,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    plugin_artifact = _artifact_by_role(root_raw, "plugin")
+    plugin_path = tmp_path / str(plugin_artifact["path"])
+    plugin_raw = strict_json_loads(plugin_path.read_text(encoding="utf-8"))
+    assert isinstance(plugin_raw, dict)
+    refs = plugin_raw["suite_refs"]
+    assert isinstance(refs, list)
+    first, second = refs
+    assert isinstance(first, dict) and isinstance(second, dict)
+    second["path"] = first["path"]
+    plugin_payload = strict_json_dumps(plugin_raw).encode("utf-8")
+    plugin_path.write_bytes(plugin_payload)
+    plugin_artifact["bytes"] = len(plugin_payload)
+    plugin_artifact["sha256"] = _file_digest(plugin_payload)
+
+    protocol_path = tmp_path / "protocol.json"
+    protocol_raw = strict_json_loads(protocol_path.read_text(encoding="utf-8"))
+    assert isinstance(protocol_raw, dict)
+    protocol_plugin = protocol_raw["plugin"]
+    assert isinstance(protocol_plugin, dict)
+    protocol_plugin["artifact_sha256"] = _file_digest(plugin_payload)
+    protocol_payload = strict_json_dumps(protocol_raw).encode("utf-8")
+    protocol_path.write_bytes(protocol_payload)
+    protocol_binding = root_raw["protocol"]
+    assert isinstance(protocol_binding, dict)
+    protocol_binding["bytes"] = len(protocol_payload)
+    protocol_binding["sha256"] = _file_digest(protocol_payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(SchemaError, match="ref paths must be unique"):
+        verify_bundle_v1(root)
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -1812,7 +1889,30 @@ def test_bundle_rejects_hard_link_file_identity_alias(tmp_path: Path) -> None:
         verify_bundle_v1(root)
 
 
-def test_bundle_verifies_through_pinned_staging_directory_descriptor(tmp_path: Path) -> None:
+def test_bundle_verifies_through_pinned_staging_directory_descriptor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    directory_fd = os.open(tmp_path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+
+    def forbid_resolution(*_args: object, **_kwargs: object) -> Path:
+        raise AssertionError("pinned directory verifier resolved a diagnostic path")
+
+    monkeypatch.setattr(Path, "resolve", forbid_resolution)
+    try:
+        verified = verify_bundle_v1_from_directory_fd(
+            directory_fd,
+            diagnostic_directory=tmp_path,
+        )
+        assert stat.S_ISDIR(os.fstat(directory_fd).st_mode)
+    finally:
+        os.close(directory_fd)
+
+    assert verified.root_path == root
+
+
+def test_ordinary_path_verifier_preserves_proc_fd_compatibility(tmp_path: Path) -> None:
     root = _write_closed_bundle(tmp_path)
     directory_fd = os.open(tmp_path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
@@ -1821,3 +1921,37 @@ def test_bundle_verifies_through_pinned_staging_directory_descriptor(tmp_path: P
         os.close(directory_fd)
 
     assert verified.root_path == root
+
+
+def test_pinned_directory_fd_ignores_substituted_diagnostic_path(tmp_path: Path) -> None:
+    original = tmp_path / "staging"
+    original.mkdir()
+    _write_closed_bundle(original)
+    directory_fd = os.open(original, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    pinned = tmp_path / "pinned"
+    original.rename(pinned)
+    original.mkdir()
+    (original / "bundle.json").write_text("{}", encoding="utf-8")
+    try:
+        verified = verify_bundle_v1_from_directory_fd(
+            directory_fd,
+            diagnostic_directory=original,
+        )
+        with pytest.raises(SchemaError):
+            verify_bundle_v1(original / "bundle.json")
+    finally:
+        os.close(directory_fd)
+
+    assert verified.bundle.bundle_id == "methodology-bundle-test"
+    assert verified.root_path == original / "bundle.json"
+
+
+def test_directory_fd_entrypoint_rejects_file_fd_without_closing_caller(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    file_fd = os.open(root, os.O_RDONLY)
+    try:
+        with pytest.raises(ArtifactError, match="does not refer to a directory"):
+            verify_bundle_v1_from_directory_fd(file_fd)
+        assert os.fstat(file_fd).st_ino == root.stat().st_ino
+    finally:
+        os.close(file_fd)

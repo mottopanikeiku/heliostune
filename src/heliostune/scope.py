@@ -1294,14 +1294,21 @@ class SuiteRef:
     def __post_init__(self) -> None:
         path = nonblank_string(self.path, context="suite ref path")
         parsed = PurePosixPath(path)
+        components = path.split("/")
         if (
             "\\" in path
             or "\x00" in path
             or parsed.is_absolute()
             or path != parsed.as_posix()
             or (parsed.parts and parsed.parts[0].endswith(":"))
+            or any(component in {"", "."} for component in components)
+            or any(component == ".." for component in components[1:])
+            or components[-1] == ".."
         ):
-            raise SchemaError("suite ref path must be a normalized POSIX relative path")
+            raise SchemaError(
+                "suite ref path must be normalized and relative; '..' is allowed only once "
+                "as the leading component"
+            )
         _digest(self.sha256, "suite ref sha256")
         nonblank_string(self.suite_id, context="suite ref suite_id")
         exact_int(self.revision, context="suite ref revision", minimum=1)
@@ -1354,6 +1361,9 @@ class Plugin:
             raise SchemaError("plugin arm_ids must be nonempty and unique")
         if not self.suite_refs:
             raise SchemaError("plugin suite_refs must be nonempty")
+        paths = [ref.path for ref in self.suite_refs]
+        if len(set(paths)) != len(paths):
+            raise SchemaError("plugin suite ref paths must be unique")
         ids = [(ref.suite_id, ref.revision) for ref in self.suite_refs]
         if len(set(ids)) != len(ids):
             raise SchemaError("plugin suite refs must identify unique suite revisions")
@@ -1471,6 +1481,7 @@ def verify_plugin_inventory(
             "plugin suite inventory count mismatch: "
             f"expected {len(plugin.suite_refs)}, found {len(artifacts)}"
         )
+    virtual_targets: set[tuple[str, ...]] = set()
     for ref in plugin.suite_refs:
         virtual_path = ["plugins"]
         for component in ref.path.split("/"):
@@ -1486,6 +1497,10 @@ def verify_plugin_inventory(
                 virtual_path.append(component)
         if not virtual_path:
             raise ArtifactError(f"suite ref path escapes plugin containment root: {ref.path!r}")
+        target = tuple(virtual_path)
+        if target in virtual_targets:
+            raise ArtifactError("plugin suite ref normalized targets must be unique")
+        virtual_targets.add(target)
 
     suites: list[VerifiedSuite] = []
     for ref, (suite_path, suite_bytes) in zip(plugin.suite_refs, artifacts, strict=True):

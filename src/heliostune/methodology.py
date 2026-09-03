@@ -1241,13 +1241,17 @@ def _resolve_file(path: str | Path, *, context: str) -> Path:
 class _BundleDirectoryReader:
     """Read one bundle tree through a pinned directory descriptor."""
 
-    def __init__(self, root_manifest_path: str | Path) -> None:
+    @staticmethod
+    def _require_support() -> None:
         if (
             not hasattr(os, "O_DIRECTORY")
             or not hasattr(os, "O_NOFOLLOW")
             or os.open not in os.supports_dir_fd
         ):
             raise ArtifactError("descriptor-pinned bundle verification is unsupported")
+
+    def __init__(self, root_manifest_path: str | Path) -> None:
+        self._require_support()
         source = Path(root_manifest_path)
         self.root_relative_path = _relative_path(source.name, context="bundle root path")
         try:
@@ -1259,6 +1263,41 @@ class _BundleDirectoryReader:
         except OSError as exc:
             raise ArtifactError(f"cannot open bundle directory for {source}: {exc}") from exc
         self._occupied: set[tuple[int, int]] = set()
+
+    @classmethod
+    def from_directory_fd(
+        cls,
+        directory_fd: int,
+        root_relative_path: str,
+        *,
+        diagnostic_directory: str | Path | None,
+    ) -> _BundleDirectoryReader:
+        cls._require_support()
+        root = _relative_path(root_relative_path, context="bundle root path")
+        directory = (
+            Path(diagnostic_directory)
+            if diagnostic_directory is not None
+            else Path(f"<bundle-directory-fd-{directory_fd}>")
+        )
+        try:
+            pinned_fd = os.dup(directory_fd)
+        except OSError as exc:
+            raise ArtifactError(f"cannot duplicate bundle directory descriptor: {exc}") from exc
+        try:
+            identity = os.fstat(pinned_fd)
+            if not stat.S_ISDIR(identity.st_mode):
+                raise ArtifactError("bundle directory descriptor does not refer to a directory")
+        except (ArtifactError, OSError) as exc:
+            os.close(pinned_fd)
+            if isinstance(exc, ArtifactError):
+                raise
+            raise ArtifactError(f"cannot inspect bundle directory descriptor: {exc}") from exc
+        reader = cls.__new__(cls)
+        reader.root_relative_path = root
+        reader.directory = directory
+        reader._directory_fd = pinned_fd
+        reader._occupied = set()
+        return reader
 
     def close(self) -> None:
         os.close(self._directory_fd)
@@ -1278,7 +1317,11 @@ class _BundleDirectoryReader:
                     dir_fd=current_fd,
                 )
                 opened_directories.append(current_fd)
-            file_fd = os.open(parts[-1], flags, dir_fd=current_fd)
+            file_fd = os.open(
+                parts[-1],
+                flags | getattr(os, "O_NONBLOCK", 0),
+                dir_fd=current_fd,
+            )
             identity = os.fstat(file_fd)
             if not stat.S_ISREG(identity.st_mode):
                 raise ArtifactError(f"{context} is not a regular file: {normalized!r}")
@@ -1399,11 +1442,30 @@ def _parse_attempt_transitions(
     dict[str, AttemptTransitionStatus],
     str,
 ]:
-    if payload and (not payload.endswith(b"\n") or b"\r" in payload):
-        raise ArtifactError(
-            f"attempts journal {source} must use LF-terminated rows without carriage returns"
-        )
-    rows = payload[:-1].split(b"\n") if payload else []
+    rows: list[tuple[str, bytes | None]] = []
+    if chained:
+        if payload and (not payload.endswith(b"\n") or b"\r" in payload):
+            raise ArtifactError(
+                f"attempts journal {source} must use LF-terminated rows without carriage returns"
+            )
+        for line_number, encoded_line in enumerate(
+            payload[:-1].split(b"\n") if payload else [],
+            start=1,
+        ):
+            try:
+                line = encoded_line.decode("utf-8")
+            except UnicodeError as exc:
+                raise ArtifactError(
+                    f"cannot decode attempts journal {source}:{line_number} as UTF-8: {exc}"
+                ) from exc
+            rows.append((line, encoded_line))
+    else:
+        try:
+            text = payload.decode("utf-8")
+        except UnicodeError as exc:
+            raise ArtifactError(f"cannot decode attempts journal {source} as UTF-8: {exc}") from exc
+        rows.extend((line, None) for line in text.splitlines())
+
     states: dict[str, AttemptTransitionStatus] = {}
     allowed: dict[AttemptTransitionStatus | None, set[AttemptTransitionStatus]] = {
         None: {"pending"},
@@ -1413,11 +1475,10 @@ def _parse_attempt_transitions(
         "failure": set(),
     }
     head = _ATTEMPT_CHAIN_INITIAL_HEAD
-    for line_number, encoded_line in enumerate(rows, start=1):
-        if not encoded_line:
+    for line_number, (line, encoded_line) in enumerate(rows, start=1):
+        if not line.strip():
             raise ArtifactError(f"attempts journal {source}:{line_number} contains a blank line")
         try:
-            line = encoded_line.decode("utf-8")
             value = strict_json_loads(line, source=source, line_number=line_number)
             required = (
                 ("cell_id", "predecessor_sha256", "status") if chained else ("cell_id", "status")
@@ -1449,6 +1510,8 @@ def _parse_attempt_transitions(
                     predecessor,
                     context=f"attempt transition line {line_number}",
                 )
+                if encoded_line is None:
+                    raise AssertionError("chained attempt row lost its exact bytes")
                 actual_row = encoded_line + b"\n"
                 if actual_row != canonical:
                     raise ArtifactError(f"attempts journal {source}:{line_number} is not canonical")
@@ -1458,10 +1521,6 @@ def _parse_attempt_transitions(
                         f"expected {head}, found {predecessor}"
                     )
                 head = _sha256(actual_row)
-        except UnicodeError as exc:
-            raise ArtifactError(
-                f"cannot decode attempts journal {source}:{line_number} as UTF-8: {exc}"
-            ) from exc
         except SchemaError as exc:
             raise ArtifactError(f"invalid attempts journal {source}: {exc}") from exc
         previous = states.get(cell_id)
@@ -1706,10 +1765,8 @@ def verify_protocol_v1(path: str | Path) -> VerifiedProtocol:
     )
 
 
-def verify_bundle_v1(root_manifest_path: str | Path) -> VerifiedBundle:
-    """Verify a descriptor-pinned local bundle inventory and structural closure."""
-
-    reader = _BundleDirectoryReader(root_manifest_path)
+def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle:
+    """Verify a bundle through an already-pinned directory reader."""
     try:
         root_path, root_payload = reader.read(
             reader.root_relative_path,
@@ -1849,6 +1906,34 @@ def verify_bundle_v1(root_manifest_path: str | Path) -> VerifiedBundle:
         reader.close()
 
 
+def verify_bundle_v1(root_manifest_path: str | Path) -> VerifiedBundle:
+    """Verify a bundle by resolving and pinning its containing directory once."""
+
+    return _verify_bundle_with_reader(_BundleDirectoryReader(root_manifest_path))
+
+
+def verify_bundle_v1_from_directory_fd(
+    directory_fd: int,
+    root_relative_path: str = "bundle.json",
+    *,
+    diagnostic_directory: str | Path | None = None,
+) -> VerifiedBundle:
+    """Verify solely through a duplicate of an already-open bundle directory fd.
+
+    ``diagnostic_directory`` is never resolved or opened; it only labels paths
+    in the returned inventory and any diagnostics.
+    """
+
+    descriptor = exact_int(directory_fd, context="bundle directory descriptor", minimum=0)
+    return _verify_bundle_with_reader(
+        _BundleDirectoryReader.from_directory_fd(
+            descriptor,
+            root_relative_path,
+            diagnostic_directory=diagnostic_directory,
+        )
+    )
+
+
 __all__ = [
     "Analysis",
     "Artifact",
@@ -1879,5 +1964,6 @@ __all__ = [
     "plugin_suite_role",
     "selected_suite_descriptor_bytes",
     "verify_bundle_v1",
+    "verify_bundle_v1_from_directory_fd",
     "verify_protocol_v1",
 ]

@@ -955,7 +955,7 @@ def test_verify_plugin_rejects_escaping_suite_path_without_verified_claim(
     assert cli.main(["verify-plugin", str(plugin)]) == 2
 
     captured = capsys.readouterr()
-    assert "escapes plugin containment root" in captured.err
+    assert "allowed only once as the leading component" in captured.err
     assert "structurally verified" not in captured.out
 
 
