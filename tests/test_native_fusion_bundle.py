@@ -4,18 +4,22 @@ import hashlib
 import os
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
+from typing import cast
 
 import pytest
 
-from heliostune.artifacts import strict_json_loads
+from heliostune.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import CapabilityProbe
-from heliostune.methodology import verify_bundle_v1
+from heliostune.methodology import encode_attempt_journal, verify_bundle_v1
 from heliostune.native_fusion_bundle import (
+    _attempt_journal,
     preflight_native_fusion_bundle,
     write_native_fusion_bundle,
 )
 from heliostune.native_fusion_executor import NativeFusionExecutionResult, run_native_fusion_suite
+from heliostune.scope import verify_plugin
 from heliostune.wheel_verifier import source_digest, source_entries
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +27,6 @@ _SUITE = _ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
 _PLUGIN = _ROOT / "benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json"
 _LEGACY_PLUGIN = _ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"
 _EXTRA_ROLES = (
-    "suite",
     "terminal_cells",
     "observations",
     "capability_probe",
@@ -35,6 +38,8 @@ _EXTRA_ROLES = (
     "validation_evidence",
     "profile_evidence",
     "executor_sources",
+    "selected_suite",
+    "attempt_chain",
 )
 _DESCRIPTOR_PUBLICATION = (
     hasattr(os, "O_NOFOLLOW")
@@ -76,6 +81,45 @@ def _load(path: Path) -> object:
     return strict_json_loads(path.read_text(encoding="utf-8"), source=path)
 
 
+def _two_suite_plugin(tmp_path: Path) -> tuple[Path, tuple[bytes, bytes]]:
+    source_suite = _load(_SUITE)
+    source_plugin = _load(_PLUGIN)
+    assert type(source_suite) is dict
+    assert type(source_plugin) is dict
+
+    shadow_suite = dict(source_suite)
+    shadow_suite["suite_id"] = "residual-rmsnorm-triton-shadow"
+    shadow_payload = strict_json_dumps(shadow_suite).encode("utf-8")
+    selected_payload = _SUITE.read_bytes()
+
+    root = tmp_path / "inventory"
+    suites = root / "suites"
+    plugins = root / "plugins"
+    suites.mkdir(parents=True)
+    plugins.mkdir()
+    (suites / "shadow.json").write_bytes(shadow_payload)
+    (suites / "selected.json").write_bytes(selected_payload)
+
+    plugin = dict(source_plugin)
+    plugin["suite_refs"] = [
+        {
+            "path": "../suites/shadow.json",
+            "sha256": hashlib.sha256(shadow_payload).hexdigest(),
+            "suite_id": shadow_suite["suite_id"],
+            "revision": shadow_suite["revision"],
+        },
+        {
+            "path": "../suites/selected.json",
+            "sha256": hashlib.sha256(selected_payload).hexdigest(),
+            "suite_id": source_suite["suite_id"],
+            "revision": source_suite["revision"],
+        },
+    ]
+    plugin_path = plugins / "plugin.json"
+    plugin_path.write_bytes(strict_json_dumps(plugin).encode("utf-8"))
+    return plugin_path, (shadow_payload, selected_payload)
+
+
 @pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason="descriptor publication is unavailable")
 def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     tmp_path: Path, aborted: NativeFusionExecutionResult
@@ -90,9 +134,9 @@ def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     assert verified.bundle.lifecycle.state == "SEALED"
     assert verified.bundle.lifecycle.outcome == "aborted"
     assert verified.bundle.coverage.expected_cells == 12
-    assert verified.bundle.coverage.terminal_cells == 12
+    assert verified.bundle.coverage.terminal_cells == 0
     assert verified.bundle.coverage.successes == 0
-    assert verified.bundle.coverage.failures == 12
+    assert verified.bundle.coverage.failures == 0
     assert verified.bundle.provenance.attestation == "none"
     assert verified.protocol.protocol.evidence_class == "exploratory"
     assert (
@@ -100,6 +144,9 @@ def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     )
     assert verified.protocol.protocol.analysis.claims == ()
     assert not verified.publication_eligible
+    assert verified.limitations.plugin_suite_custody == "checked"
+    assert verified.limitations.attempt_journal_hash_chain == "checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
     assert verify_bundle_v1(verified.root_path).bundle == verified.bundle
 
     roles = {artifact.role for artifact in verified.bundle.artifacts}
@@ -111,6 +158,20 @@ def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     assert summary["fusion_claim"] is False
     assert summary["publication_eligible"] is False
     assert summary["environment"]["backend_invoked"] is False
+    assert summary["summary"] == dict(aborted.summary)
+    observations = (output / "observations.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(observations) == 12
+    assert all(
+        isinstance(row := strict_json_loads(line), dict) and row["status"] == "blocked"
+        for line in observations
+    )
+    attempts_payload = (output / "attempts.jsonl").read_bytes()
+    assert attempts_payload == b""
+    assert verified.bundle.attempts.hash_chain_head == hashlib.sha256(b"").hexdigest()
+    assert verified.bundle.attempts.logical == 0
+    assert verified.bundle.attempts.physical == 0
+    assert verified.bundle.attempts.terminal == 0
+    assert _load(output / "attempt_chain.json") == {"schema": "heliostune.attempt-chain/1"}
 
     comparators = _load(output / "comparators.json")
     assert type(comparators) is list
@@ -124,6 +185,70 @@ def test_cpu_unavailable_result_publishes_closed_claimless_bundle(
     assert predicate["architecture"] == "sm90"
     assert predicate["torch_version"] == "2.8.0"
     assert predicate["triton_version"] == "3.4.0"
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason="descriptor publication is unavailable")
+def test_native_publishes_every_plugin_suite_once_and_selects_by_index(
+    tmp_path: Path, aborted: NativeFusionExecutionResult
+) -> None:
+    plugin_path, suite_payloads = _two_suite_plugin(tmp_path)
+    plugin = verify_plugin(plugin_path)
+    assert tuple(item.bytes for item in plugin.suites) == suite_payloads
+
+    verified = write_native_fusion_bundle(
+        aborted,
+        plugin_path=plugin_path,
+        output_dir=tmp_path / "bundle",
+    )
+    output = verified.root_path.parent
+    artifacts = {artifact.role: artifact for artifact in verified.bundle.artifacts}
+    assert "suite" not in artifacts
+    assert [role for role in artifacts if role.startswith("plugin_suite_")] == [
+        "plugin_suite_0",
+        "plugin_suite_1",
+    ]
+    assert artifacts["plugin_suite_0"].path == "plugin_suite_0.json"
+    assert artifacts["plugin_suite_1"].path == "plugin_suite_1.json"
+    assert (output / "plugin.json").read_bytes() == plugin.bytes
+    assert (output / "plugin_suite_0.json").read_bytes() == suite_payloads[0]
+    assert (output / "plugin_suite_1.json").read_bytes() == suite_payloads[1]
+    assert _load(output / "selected_suite.json") == {
+        "schema": "heliostune.selected-suite/1",
+        "plugin_suite_index": 1,
+    }
+
+
+def test_native_nonempty_attempt_journal_uses_canonical_predecessor_chain() -> None:
+    result = cast(
+        NativeFusionExecutionResult,
+        SimpleNamespace(
+            capability=SimpleNamespace(available=True),
+            outcome="completed",
+            observations=(SimpleNamespace(cell_id="cell-a", status="passed"),),
+            attempts=(
+                {"cell_id": "cell-a", "status": "running"},
+                {"cell_id": "cell-a", "status": "success"},
+            ),
+        ),
+    )
+    transitions, terminal_ids, successes, failures = _attempt_journal(result)
+    assert terminal_ids == ("cell-a",)
+    assert (successes, failures) == (1, 0)
+
+    payload, final_head = encode_attempt_journal(transitions)
+    predecessor = hashlib.sha256(b"").hexdigest()
+    rows = payload.splitlines(keepends=True)
+    assert len(rows) == 3
+    for row_bytes, status in zip(rows, ("pending", "running", "success"), strict=True):
+        expected = {
+            "cell_id": "cell-a",
+            "predecessor_sha256": predecessor,
+            "status": status,
+        }
+        canonical = strict_json_dumps(expected, compact=True).encode("utf-8") + b"\n"
+        assert row_bytes == canonical
+        predecessor = hashlib.sha256(row_bytes).hexdigest()
+    assert final_head == predecessor
 
 
 @pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason="descriptor publication is unavailable")
@@ -291,4 +416,27 @@ def test_tampered_native_source_inventory_is_rejected(
     payload = source.read_bytes()
     source.write_bytes(bytes([payload[0] ^ 1]) + payload[1:])
     with pytest.raises(ArtifactError, match="SHA-256 mismatch"):
+        verify_bundle_v1(verified.root_path)
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason="descriptor publication is unavailable")
+@pytest.mark.parametrize("mutation", ["missing", "tampered"])
+def test_missing_or_tampered_plugin_suite_inventory_is_rejected(
+    tmp_path: Path,
+    aborted: NativeFusionExecutionResult,
+    mutation: str,
+) -> None:
+    verified = write_native_fusion_bundle(
+        aborted,
+        plugin_path=_PLUGIN,
+        output_dir=tmp_path / mutation,
+    )
+    suite_path = verified.root_path.parent / "plugin_suite_0.json"
+    if mutation == "missing":
+        suite_path.unlink()
+    else:
+        payload = suite_path.read_bytes()
+        suite_path.write_bytes(bytes([payload[0] ^ 1]) + payload[1:])
+
+    with pytest.raises(ArtifactError):
         verify_bundle_v1(verified.root_path)
