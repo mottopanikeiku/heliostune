@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import os
+import stat
 from pathlib import Path
 from typing import Any
 
@@ -15,9 +17,15 @@ from heliostune.methodology import (
     ProtocolV1,
     VerificationLimitations,
     VerifiedBundle,
+    attempt_chain_descriptor_bytes,
+    encode_attempt_journal,
     load_bundle_v1,
     load_protocol_v1,
+    plugin_suite_path,
+    plugin_suite_role,
+    selected_suite_descriptor_bytes,
     verify_bundle_v1,
+    verify_bundle_v1_from_directory_fd,
     verify_protocol_v1,
 )
 
@@ -783,6 +791,109 @@ def _artifact_by_role(document: dict[str, Any], role: str) -> dict[str, Any]:
     return matches[0]
 
 
+def _append_json_artifact(
+    root_raw: dict[str, Any],
+    directory: Path,
+    *,
+    role: str,
+    path: str,
+    payload: bytes,
+) -> None:
+    target = directory / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(payload)
+    artifacts = root_raw["artifacts"]
+    assert isinstance(artifacts, list)
+    artifacts.append(
+        {
+            "role": role,
+            "path": path,
+            "media_type": "application/json",
+            "bytes": len(payload),
+            "sha256": _file_digest(payload),
+        }
+    )
+
+
+def _enable_attempt_chain(root: Path) -> None:
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    journal_path = root.parent / str(attempts["path"])
+    transitions: list[dict[str, object]] = []
+    for line in journal_path.read_text(encoding="utf-8").splitlines():
+        transition = strict_json_loads(line)
+        assert isinstance(transition, dict)
+        transitions.append(transition)
+    payload, head = encode_attempt_journal(transitions)
+    journal_path.write_bytes(payload)
+    attempts["sha256"] = _file_digest(payload)
+    attempts["hash_chain_head"] = head
+    _append_json_artifact(
+        root_raw,
+        root.parent,
+        role="attempt_chain",
+        path="attempt_chain.json",
+        payload=attempt_chain_descriptor_bytes(),
+    )
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+
+def _enable_plugin_suite_custody(root: Path, *, selected_index: int = 0) -> None:
+    repository = Path(__file__).parents[1]
+    plugin_payload = (
+        repository / "benchmarks/plugins/fusion-reference-plugin-v1.json"
+    ).read_bytes()
+    suite_payloads = [
+        (repository / "benchmarks/suites/gated-mlp-epilogue-v1.json").read_bytes(),
+        (repository / "benchmarks/suites/residual-rmsnorm-v1.json").read_bytes(),
+    ]
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    plugin_artifact = _artifact_by_role(root_raw, "plugin")
+    plugin_path = root.parent / str(plugin_artifact["path"])
+    plugin_path.write_bytes(plugin_payload)
+    plugin_artifact["bytes"] = len(plugin_payload)
+    plugin_artifact["sha256"] = _file_digest(plugin_payload)
+
+    protocol_path = root.parent / "protocol.json"
+    protocol_raw = strict_json_loads(protocol_path.read_text(encoding="utf-8"))
+    assert isinstance(protocol_raw, dict)
+    plugin_binding = protocol_raw["plugin"]
+    assert isinstance(plugin_binding, dict)
+    plugin_binding.update(
+        {
+            "id": "fusion-reference-plugin",
+            "version": "1",
+            "artifact_sha256": _file_digest(plugin_payload),
+        }
+    )
+    protocol_payload = strict_json_dumps(protocol_raw).encode("utf-8")
+    protocol_path.write_bytes(protocol_payload)
+    root_binding = root_raw["protocol"]
+    assert isinstance(root_binding, dict)
+    root_binding["bytes"] = len(protocol_payload)
+    root_binding["sha256"] = _file_digest(protocol_payload)
+
+    for index, suite_payload in enumerate(suite_payloads):
+        _append_json_artifact(
+            root_raw,
+            root.parent,
+            role=plugin_suite_role(index),
+            path=plugin_suite_path(index),
+            payload=suite_payload,
+        )
+    _append_json_artifact(
+        root_raw,
+        root.parent,
+        role="selected_suite",
+        path="selected_suite.json",
+        payload=selected_suite_descriptor_bytes(selected_index),
+    )
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+
 def _bind_parent_protocol(root: Path, *, evidence_class: str = "exploratory") -> Path:
     parent_payload = strict_json_dumps(protocol_dict(evidence_class=evidence_class)).encode("utf-8")
     parent_path = root.parent / "artifacts/parent_protocol.json"
@@ -982,7 +1093,7 @@ def test_pre_measurement_retry_accepts_bounded_physical_attempts(tmp_path: Path)
 
     verified = verify_bundle_v1(root)
 
-    assert verified.limitations.attempt_reconciliation == "checked"
+    assert verified.limitations.attempt_reconciliation == "not_checked"
 
 
 def test_pre_measurement_retry_rejects_overbound_physical_attempts(tmp_path: Path) -> None:
@@ -1084,7 +1195,7 @@ def test_verify_bundle_rejects_resolved_path_aliases(tmp_path: Path) -> None:
     artifacts.append(duplicate)
     root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
 
-    with pytest.raises(ArtifactError, match="already used"):
+    with pytest.raises(ArtifactError, match="symlinks"):
         verify_bundle_v1(root)
 
 
@@ -1204,7 +1315,7 @@ def test_incomplete_exploratory_journal_accepts_the_next_running_prefix_cell(
 
     verified = verify_bundle_v1(root)
 
-    assert verified.limitations.attempt_reconciliation == "checked"
+    assert verified.limitations.attempt_reconciliation == "not_checked"
 
 
 def test_incomplete_exploratory_journal_cannot_skip_a_prefix_cell(tmp_path: Path) -> None:
@@ -1255,6 +1366,7 @@ def test_signatures_are_structural_only_and_limitations_are_explicit(
     assert verified.limitations.protocol_ancestry == "not_checked"
     assert verified.limitations.evidence_nonpromotion == "not_checked"
     assert verified.limitations.semantic_content_beyond_digests == "not_checked"
+    assert verified.limitations.plugin_suite_custody == "not_checked"
     assert verified.limitations.attempt_journal_hash_chain == "not_checked"
     assert VerificationLimitations().attempt_reconciliation == "not_checked"
     assert verified.limitations.attempt_reconciliation == "checked"
@@ -1307,6 +1419,16 @@ def test_verify_bundle_rejects_reference_to_directory(tmp_path: Path) -> None:
         verify_bundle_v1(root)
 
 
+def test_verify_bundle_rejects_fifo_without_blocking(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    artifact = tmp_path / "raw/measurements.jsonl"
+    artifact.unlink()
+    os.mkfifo(artifact)
+
+    with pytest.raises(ArtifactError, match="regular file"):
+        verify_bundle_v1(root)
+
+
 @pytest.mark.parametrize("verifier", [verify_protocol_v1, verify_bundle_v1])
 def test_verifier_entry_path_cannot_be_symlink_escape(tmp_path: Path, verifier: Any) -> None:
     outside = tmp_path / "outside"
@@ -1324,3 +1446,512 @@ def test_verifier_entry_path_cannot_be_symlink_escape(tmp_path: Path, verifier: 
 
     with pytest.raises(ArtifactError, match="escapes"):
         verifier(link)
+
+
+def test_attempt_chain_helpers_have_deterministic_empty_one_and_multi_vectors() -> None:
+    empty_payload, empty_head = encode_attempt_journal(())
+    assert empty_payload == b""
+    assert empty_head == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+    one_payload, one_head = encode_attempt_journal(({"cell_id": "cell-a", "status": "pending"},))
+    assert one_payload == (
+        b'{"cell_id":"cell-a","predecessor_sha256":'
+        b'"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",'
+        b'"status":"pending"}\n'
+    )
+    assert one_head == "81b40efebe452a227faaa00b49a524cf31372bface6966899e9a4d5a674108e9"
+
+    multi_payload, multi_head = encode_attempt_journal(
+        (
+            {"cell_id": "cell-a", "status": "pending"},
+            {"cell_id": "cell-a", "status": "running"},
+            {"cell_id": "cell-a", "status": "success"},
+        )
+    )
+    assert multi_payload.startswith(one_payload)
+    assert multi_head == "00ceccaa4e7172518364a816638d6d88f5e41ce6777aa633b05d8b07440c5c6b"
+    assert plugin_suite_role(2) == "plugin_suite_2"
+    assert plugin_suite_path(2) == "plugin_suite_2.json"
+    assert strict_json_loads(attempt_chain_descriptor_bytes().decode("utf-8")) == {
+        "schema": "heliostune.attempt-chain/1"
+    }
+    assert strict_json_loads(selected_suite_descriptor_bytes(1).decode("utf-8")) == {
+        "plugin_suite_index": 1,
+        "schema": "heliostune.selected-suite/1",
+    }
+
+
+def test_complete_bundle_reports_new_controls_checked_without_publication_eligibility(
+    tmp_path: Path,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root, selected_index=1)
+    _enable_attempt_chain(root)
+
+    verified = verify_bundle_v1(root)
+
+    assert verified.limitations.plugin_suite_custody == "checked"
+    assert verified.limitations.attempt_journal_hash_chain == "checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
+    assert verified.publication_eligible is False
+
+
+def test_legacy_bundle_remains_accepted_without_promoting_new_controls(tmp_path: Path) -> None:
+    verified = verify_bundle_v1(_write_closed_bundle(tmp_path))
+
+    assert verified.limitations.plugin_suite_custody == "not_checked"
+    assert verified.limitations.attempt_journal_hash_chain == "not_checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
+
+
+@pytest.mark.parametrize("line_ending", ["missing_final_lf", "crlf"])
+def test_legacy_attempt_rows_preserve_historical_line_splitting(
+    tmp_path: Path,
+    line_ending: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    journal = tmp_path / "attempts/journal.jsonl"
+    payload = journal.read_bytes()
+    if line_ending == "missing_final_lf":
+        payload = payload.removesuffix(b"\n")
+    else:
+        payload = payload.replace(b"\n", b"\r\n")
+    journal.write_bytes(payload)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    attempts["sha256"] = _file_digest(payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    verified = verify_bundle_v1(root)
+
+    assert verified.limitations.attempt_journal_hash_chain == "not_checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
+
+
+def test_orphaned_attempt_aggregate_remains_not_checked(tmp_path: Path) -> None:
+    root = _write_closed_bundle(
+        tmp_path,
+        outcome="failed",
+        expected_cells=1,
+        terminal_cells=0,
+        physical_attempts=1,
+        orphaned_attempts=1,
+    )
+    journal = tmp_path / "attempts/journal.jsonl"
+    payload = b'{"cell_id":"cell-0","status":"pending"}\n'
+    journal.write_bytes(payload)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    attempts["sha256"] = _file_digest(payload)
+    attempts["logical"] = 1
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    verified = verify_bundle_v1(root)
+
+    assert verified.limitations.attempt_reconciliation == "not_checked"
+
+
+@pytest.mark.parametrize("mutation", ["malformed_descriptor", "reserved_prefix"])
+def test_attempt_chain_opt_in_cannot_downgrade_on_partial_metadata(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_attempt_chain(root)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    artifact = _artifact_by_role(root_raw, "attempt_chain")
+    if mutation == "malformed_descriptor":
+        payload = b'{"schema":"wrong"}\n'
+        (tmp_path / "attempt_chain.json").write_bytes(payload)
+        artifact["bytes"] = len(payload)
+        artifact["sha256"] = _file_digest(payload)
+    else:
+        artifact["role"] = "attempt_chain_extra"
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match="attempt chain"):
+        verify_bundle_v1(root)
+
+
+@pytest.mark.parametrize("outcome", ["completed", "aborted"])
+def test_empty_chained_journal_verifies_against_h0(tmp_path: Path, outcome: str) -> None:
+    root = _write_closed_bundle(tmp_path, expected_cells=0, outcome=outcome)
+    _enable_attempt_chain(root)
+
+    verified = verify_bundle_v1(root)
+
+    assert verified.bundle.attempts.hash_chain_head == (
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    )
+    assert verified.limitations.attempt_journal_hash_chain == "checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
+
+
+@pytest.mark.parametrize(
+    "mutation,match",
+    [
+        ("predecessor", "predecessor mismatch"),
+        ("noncanonical", "not canonical"),
+        ("missing_lf", "LF-terminated"),
+        ("crlf", "carriage returns"),
+        ("mixed", "missing fields"),
+        ("reordered", "predecessor mismatch"),
+        ("truncated", "final head mismatch"),
+        ("wrong_head", "final head mismatch"),
+    ],
+)
+def test_chained_attempt_journal_faults_fail_closed(
+    tmp_path: Path,
+    mutation: str,
+    match: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_attempt_chain(root)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    journal = tmp_path / "attempts/journal.jsonl"
+    rows = journal.read_bytes().splitlines(keepends=True)
+    if mutation == "predecessor":
+        row = strict_json_loads(rows[0].decode("utf-8"))
+        assert isinstance(row, dict)
+        row["predecessor_sha256"] = "0" * 64
+        rows[0] = (strict_json_dumps(row, compact=True) + "\n").encode("utf-8")
+    elif mutation == "noncanonical":
+        row = strict_json_loads(rows[0].decode("utf-8"))
+        assert isinstance(row, dict)
+        reordered = {
+            "status": row["status"],
+            "predecessor_sha256": row["predecessor_sha256"],
+            "cell_id": row["cell_id"],
+        }
+        rows[0] = (strict_json_dumps(reordered, compact=True) + "\n").encode("utf-8")
+    elif mutation == "missing_lf":
+        rows[-1] = rows[-1].removesuffix(b"\n")
+    elif mutation == "crlf":
+        rows[0] = rows[0].removesuffix(b"\n") + b"\r\n"
+    elif mutation == "mixed":
+        row = strict_json_loads(rows[1].decode("utf-8"))
+        assert isinstance(row, dict)
+        del row["predecessor_sha256"]
+        rows[1] = (strict_json_dumps(row, compact=True) + "\n").encode("utf-8")
+    elif mutation == "reordered":
+        rows[0], rows[1] = rows[1], rows[0]
+    elif mutation == "truncated":
+        rows.pop()
+    elif mutation == "wrong_head":
+        attempts["hash_chain_head"] = "0" * 64
+    payload = b"".join(rows)
+    journal.write_bytes(payload)
+    attempts["sha256"] = _file_digest(payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match=match):
+        verify_bundle_v1(root)
+
+
+def test_chained_nonempty_closed_journal_cannot_have_live_tail(tmp_path: Path) -> None:
+    root = _write_closed_bundle(
+        tmp_path,
+        outcome="failed",
+        expected_cells=1,
+        terminal_cells=0,
+        physical_attempts=1,
+    )
+    journal = tmp_path / "attempts/journal.jsonl"
+    journal.write_bytes(b'{"cell_id":"cell-0","status":"pending"}\n')
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    attempts["sha256"] = _file_digest(journal.read_bytes())
+    attempts["logical"] = 1
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+    _enable_attempt_chain(root)
+
+    with pytest.raises(ArtifactError, match="live state"):
+        verify_bundle_v1(root)
+
+
+@pytest.mark.parametrize(
+    "mutation,match",
+    [("duplicate_terminal", "invalid attempt transition"), ("unknown_cell", "not present")],
+)
+def test_chained_attempt_journal_rejects_duplicate_terminal_and_unknown_rows(
+    tmp_path: Path,
+    mutation: str,
+    match: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_attempt_chain(root)
+    journal = tmp_path / "attempts/journal.jsonl"
+    transitions: list[dict[str, object]] = []
+    for line in journal.read_text(encoding="utf-8").splitlines():
+        row = strict_json_loads(line)
+        assert isinstance(row, dict)
+        transitions.append({"cell_id": row["cell_id"], "status": row["status"]})
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    attempts = root_raw["attempts"]
+    assert isinstance(attempts, dict)
+    if mutation == "duplicate_terminal":
+        transitions.append({"cell_id": "cell-0", "status": "failure"})
+    else:
+        transitions.append({"cell_id": "unknown-cell", "status": "pending"})
+        attempts["logical"] = 3
+        attempts["physical"] = 3
+    payload, head = encode_attempt_journal(transitions)
+    journal.write_bytes(payload)
+    attempts["sha256"] = _file_digest(payload)
+    attempts["hash_chain_head"] = head
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match=match):
+        verify_bundle_v1(root)
+
+
+@pytest.mark.parametrize("mutation", ["missing_selected", "hole", "extra", "malformed"])
+def test_plugin_suite_reserved_roles_require_exact_complete_inventory(
+    tmp_path: Path,
+    mutation: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    artifacts = root_raw["artifacts"]
+    assert isinstance(artifacts, list)
+    if mutation == "missing_selected":
+        artifacts[:] = [
+            artifact
+            for artifact in artifacts
+            if not isinstance(artifact, dict) or artifact.get("role") != "selected_suite"
+        ]
+    elif mutation == "hole":
+        _artifact_by_role(root_raw, "plugin_suite_1")["role"] = "plugin_suite_2"
+    elif mutation == "extra":
+        payload = (tmp_path / "plugin_suite_1.json").read_bytes()
+        _append_json_artifact(
+            root_raw,
+            tmp_path,
+            role="plugin_suite_2",
+            path="plugin_suite_2.json",
+            payload=payload,
+        )
+    else:
+        _artifact_by_role(root_raw, "plugin_suite_1")["role"] = "plugin_suite_01"
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match="plugin suite|reserved"):
+        verify_bundle_v1(root)
+
+
+def test_plugin_suite_custody_rejects_duplicate_ref_paths_before_checked(
+    tmp_path: Path,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    plugin_artifact = _artifact_by_role(root_raw, "plugin")
+    plugin_path = tmp_path / str(plugin_artifact["path"])
+    plugin_raw = strict_json_loads(plugin_path.read_text(encoding="utf-8"))
+    assert isinstance(plugin_raw, dict)
+    refs = plugin_raw["suite_refs"]
+    assert isinstance(refs, list)
+    first, second = refs
+    assert isinstance(first, dict) and isinstance(second, dict)
+    second["path"] = first["path"]
+    plugin_payload = strict_json_dumps(plugin_raw).encode("utf-8")
+    plugin_path.write_bytes(plugin_payload)
+    plugin_artifact["bytes"] = len(plugin_payload)
+    plugin_artifact["sha256"] = _file_digest(plugin_payload)
+
+    protocol_path = tmp_path / "protocol.json"
+    protocol_raw = strict_json_loads(protocol_path.read_text(encoding="utf-8"))
+    assert isinstance(protocol_raw, dict)
+    protocol_plugin = protocol_raw["plugin"]
+    assert isinstance(protocol_plugin, dict)
+    protocol_plugin["artifact_sha256"] = _file_digest(plugin_payload)
+    protocol_payload = strict_json_dumps(protocol_raw).encode("utf-8")
+    protocol_path.write_bytes(protocol_payload)
+    protocol_binding = root_raw["protocol"]
+    assert isinstance(protocol_binding, dict)
+    protocol_binding["bytes"] = len(protocol_payload)
+    protocol_binding["sha256"] = _file_digest(protocol_payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(SchemaError, match="ref paths must be unique"):
+        verify_bundle_v1(root)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        b'{"schema":"heliostune.selected-suite/1","plugin_suite_index":0}\n',
+        selected_suite_descriptor_bytes(2),
+        b'{"plugin_suite_index":0,"schema":"wrong"}\n',
+    ],
+)
+def test_selected_suite_descriptor_is_exact_and_in_range(
+    tmp_path: Path,
+    payload: bytes,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root)
+    selected = tmp_path / "selected_suite.json"
+    selected.write_bytes(payload)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    artifact = _artifact_by_role(root_raw, "selected_suite")
+    artifact["bytes"] = len(payload)
+    artifact["sha256"] = _file_digest(payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match="selected suite"):
+        verify_bundle_v1(root)
+
+
+@pytest.mark.parametrize(
+    "field,value,match",
+    [("id", "other-plugin", "plugin ID"), ("version", "01", "canonical decimal")],
+)
+def test_protocol_plugin_identity_is_bound_to_inventory(
+    tmp_path: Path,
+    field: str,
+    value: str,
+    match: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    _enable_plugin_suite_custody(root)
+    protocol_path = tmp_path / "protocol.json"
+    protocol_raw = strict_json_loads(protocol_path.read_text(encoding="utf-8"))
+    assert isinstance(protocol_raw, dict)
+    plugin = protocol_raw["plugin"]
+    assert isinstance(plugin, dict)
+    plugin[field] = value
+    protocol_payload = strict_json_dumps(protocol_raw).encode("utf-8")
+    protocol_path.write_bytes(protocol_payload)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    binding = root_raw["protocol"]
+    assert isinstance(binding, dict)
+    binding["bytes"] = len(protocol_payload)
+    binding["sha256"] = _file_digest(protocol_payload)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match=match):
+        verify_bundle_v1(root)
+
+
+def test_bundle_rejects_symlinked_intermediate_component(tmp_path: Path) -> None:
+    bundle_dir = tmp_path / "bundle"
+    bundle_dir.mkdir()
+    root = _write_closed_bundle(bundle_dir)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    payload = (bundle_dir / "raw/measurements.jsonl").read_bytes()
+    (outside / "measurements.jsonl").write_bytes(payload)
+    (bundle_dir / "linked").symlink_to(outside, target_is_directory=True)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    artifact = _artifact_by_role(root_raw, "raw-measurements")
+    artifact["path"] = "linked/measurements.jsonl"
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match="symlinks"):
+        verify_bundle_v1(root)
+
+
+def test_bundle_rejects_hard_link_file_identity_alias(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    source = tmp_path / "raw/measurements.jsonl"
+    alias = tmp_path / "raw/hard-link.jsonl"
+    alias.hardlink_to(source)
+    root_raw = strict_json_loads(root.read_text(encoding="utf-8"))
+    assert isinstance(root_raw, dict)
+    original = _artifact_by_role(root_raw, "raw-measurements")
+    duplicate = copy.deepcopy(original)
+    duplicate["role"] = "hard-link-alias"
+    duplicate["path"] = "raw/hard-link.jsonl"
+    artifacts = root_raw["artifacts"]
+    assert isinstance(artifacts, list)
+    artifacts.append(duplicate)
+    root.write_text(strict_json_dumps(root_raw), encoding="utf-8")
+
+    with pytest.raises(ArtifactError, match="file identity already used"):
+        verify_bundle_v1(root)
+
+
+def test_bundle_verifies_through_pinned_staging_directory_descriptor(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    directory_fd = os.open(tmp_path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+
+    def forbid_resolution(*_args: object, **_kwargs: object) -> Path:
+        raise AssertionError("pinned directory verifier resolved a diagnostic path")
+
+    monkeypatch.setattr(Path, "resolve", forbid_resolution)
+    try:
+        verified = verify_bundle_v1_from_directory_fd(
+            directory_fd,
+            diagnostic_directory=tmp_path,
+        )
+        assert stat.S_ISDIR(os.fstat(directory_fd).st_mode)
+    finally:
+        os.close(directory_fd)
+
+    assert verified.root_path == root
+
+
+def test_ordinary_path_verifier_preserves_proc_fd_compatibility(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    directory_fd = os.open(tmp_path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        verified = verify_bundle_v1(f"/proc/self/fd/{directory_fd}/bundle.json")
+    finally:
+        os.close(directory_fd)
+
+    assert verified.root_path == root
+
+
+def test_pinned_directory_fd_ignores_substituted_diagnostic_path(tmp_path: Path) -> None:
+    original = tmp_path / "staging"
+    original.mkdir()
+    _write_closed_bundle(original)
+    directory_fd = os.open(original, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    pinned = tmp_path / "pinned"
+    original.rename(pinned)
+    original.mkdir()
+    (original / "bundle.json").write_text("{}", encoding="utf-8")
+    try:
+        verified = verify_bundle_v1_from_directory_fd(
+            directory_fd,
+            diagnostic_directory=original,
+        )
+        with pytest.raises(SchemaError):
+            verify_bundle_v1(original / "bundle.json")
+    finally:
+        os.close(directory_fd)
+
+    assert verified.bundle.bundle_id == "methodology-bundle-test"
+    assert verified.root_path == original / "bundle.json"
+
+
+def test_directory_fd_entrypoint_rejects_file_fd_without_closing_caller(tmp_path: Path) -> None:
+    root = _write_closed_bundle(tmp_path)
+    file_fd = os.open(root, os.O_RDONLY)
+    try:
+        with pytest.raises(ArtifactError, match="does not refer to a directory"):
+            verify_bundle_v1_from_directory_fd(file_fd)
+        assert os.fstat(file_fd).st_ino == root.stat().st_ino
+    finally:
+        os.close(file_fd)

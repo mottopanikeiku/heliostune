@@ -10,18 +10,22 @@
 
 ## Continuation boundaries
 
-Work proceeds in order:
+Work proceeds in order. The active v0.6 milestone has implemented issue #31's
+additive transitive plugin → suite custody and canonical attempt chain for new
+local/native bundles. The next gates are:
 
-1. complete generic protocol/bundle custody and offline verification using
-   CPU-only work;
-2. separate active execution dependencies from frozen reproduction pins; then
-3. run a no-cost feasibility/capability design gate for one new domain.
+1. issue #32: emit durable canonical CPU-only VerificationRecords;
+2. issue #33: run deterministic network-disabled analyzer replay through an
+   audited registry;
+3. separate active execution dependencies from frozen reproduction pins; then
+4. run a no-cost feasibility/capability design gate for one new domain.
 
 Each stage must stop until its own implementation and CPU evidence are complete.
-The third stage selects at most one domain and authorizes no GPU execution. Only
-after it passes may contributors propose a new predeclared paid protocol at new
-versioned paths; dispatch still requires separate explicit approval and a frozen
-cost bound.
+Issue #31 does not complete either of the next two gates. The final design gate
+selects at most one domain and authorizes no GPU execution. Only after all gates
+pass may contributors propose a new predeclared paid protocol at new versioned
+paths; dispatch still requires separate explicit approval and a frozen cost
+bound. The maximum authorized spend for this roadmap remains **$0**.
 
 ## CPU changes
 
@@ -42,12 +46,12 @@ Never start a paid Modal call from an uncommitted tree or a source-mounted image
 
 ## Hardened releases
 
-`v0.5.0` is the next hardened release. `release.yml` is a no-input manual action
-that accepts only protected `main` and requires approval through the `release`
-environment. It checks out, builds, tests, and smoke-checks the dispatch event's
-exact `GITHUB_SHA` before tagging that tested snapshot; operators do not create
-or push the tag in advance. `main` may advance afterward without changing the
-immutable released snapshot.
+`v0.5.0` is the current published immutable release. `release.yml` is a no-input
+manual action that accepts only protected `main` and requires approval through
+the `release` environment. It checked out, built, tested, and smoke-checked the
+dispatch event's exact `GITHUB_SHA` before tagging that tested snapshot;
+operators did not create or push the tag in advance. Later `main` development
+for v0.6 does not change the immutable released snapshot.
 
 Every version publishes a wheel, sdist, `SHA256SUMS`, and a verified Git bundle
 containing semantic-tag history. Every release asset is attested. The workflow
@@ -77,8 +81,38 @@ A plugin suite reference must remain a normalized relative path with the exact
 suite SHA-256. Changing template semantics, cases, arms, numeric contracts,
 fusion boundaries, shape constraints, baselines, regimes, seeds, or expected
 cells creates a new suite revision and hash; do not edit a frozen template in
-place. Generic EvidenceBundle transitive plugin → suite custody is not
-implemented and must not be claimed until its verifier and tests exist.
+place.
+
+New local/native methodology bundles opt into full custody with flat,
+contiguous `plugin_suite_<index>` roles and matching
+`plugin_suite_<index>.json` paths in plugin `suite_refs` order. They also include
+`selected_suite` at `selected_suite.json`, whose exact closed descriptor has
+only schema literal `heliostune.selected-suite/1` and nonnegative integer
+`plugin_suite_index: index`. Encode
+the descriptor as two-space-indented, lexicographically sorted-key strict JSON
+plus one trailing LF. Bundle verification must traverse these inventoried bytes
+only—not the plugin's
+filesystem paths—and verify every digest, ID, revision, canonical decimal
+plugin-version back-reference, and aggregate domain/arm order.
+
+The attempt-chain opt-in is role `attempt_chain` at `attempt_chain.json` with
+the exact closed value `{"schema":"heliostune.attempt-chain/1"}`. Encode its
+descriptor with the same indented, sorted-key strict JSON plus one trailing LF.
+$H_0$ is `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`,
+the lowercase SHA-256 of empty bytes. Every journal transition then has exactly
+the ordered fields `cell_id`, `predecessor_sha256`, and `status`, encoded as
+compact strict JSON plus one LF. Its predecessor is the prior head and its new
+head is the SHA-256 of those exact row bytes. Do not pretty-print, reorder keys,
+write CRLF, omit the LF, or derive the root head from the whole journal.
+
+The descriptors are additive opt-ins, not permission for partial adoption.
+Any role beginning `plugin_suite` or `selected_suite` requires the complete
+contiguous inventory. Any `attempt_chain`-prefixed role requires the exact role,
+path, media type, payload, and canonical chained rows above. Partial, mixed,
+malformed, aliased, or digest-mismatched forms fail closed. Older valid
+v1 bundles with no descriptors remain parseable only with the applicable
+custody/chain status `not_checked`; never describe that as checked evidence.
+The chain provides internal consistency, not a signature or authentication.
 
 The two runtime-integrated reference templates permit only FP16/BF16
 input/storage, FP32 accumulation, FP16/BF16/FP32 output, null quantization, and
@@ -111,10 +145,10 @@ and
 pair. The local result is `heliostune.local_executor/2`, published through
 `heliostune.native_fusion_executor/2` as a strict `heliostune.bundle/1`; the
 digest-selected Modal API is `heliostune.modal_fusion_executor/2`, published as
-`heliostune.remote-receipt/1`. A retained authenticated H100 stage-gate
-observation now exists, but it does not promote capability: all six arms' local
-and remote declarations remain `unprobed`, and contributors must not describe
-the suite as available or executable on their current host.
+`heliostune.remote-receipt/1`. A retained H100 stage-gate observation exists,
+but it does not promote capability or establish methodology-v1 authenticity:
+all six arms' local and remote declarations remain `unprobed`, and contributors
+must not describe the suite as available or executable on their current host.
 
 The four native configurations remain fixed at `block_size=4096`,
 `num_warps=4|8|16|32`, and `num_stages=1`. Preserve the gate order: compile and
@@ -160,9 +194,24 @@ Preserve complete source custody: exact plugin/suite bytes, the package-wide
 source digest and count, and the path/size/digest inventory for
 `fusion_kernels.py`, `_fusion_gpu.py`, `native_fusion_executor.py`, and
 `local_executor.py`. Remote custody additionally binds the byte-verified wheel,
-adjacent manifest, clean commit, request, journal, and returned result. Do not
-weaken descriptor-pinned publication, atomic no-replace output, or failure and
-unresolved-state retention.
+adjacent manifest, clean commit, request, journal, and returned result.
+
+Do not weaken descriptor-pinned publication. Arbitrary bundle verification must
+open the resolved bundle directory once, open normalized components
+descriptor-relatively without following symlinks, hash and parse each regular
+file from the same descriptor, and reject duplicate `(st_dev, st_ino)`
+identities. Staging producers must call
+`verify_bundle_v1_from_directory_fd` with their already-open staging directory;
+the verifier duplicates that descriptor, and both pre-rename and post-rename
+verification operate solely through the pinned fd. Any supplied path is a
+diagnostic label only, never path-resolution authority. New local/native
+producers must emit both descriptors and the full
+inventory, then require `plugin_suite_custody`,
+`attempt_journal_hash_chain`, and no-retry `attempt_reconciliation` to be
+`checked` before atomic no-replace rename. Provider physical retries/billing,
+signatures/authenticity, analyzer replay, and complete offline reproduction
+remain `not_checked`, as does every applicable control for which no check ran.
+Preserve failure and unresolved-state retention.
 
 The deterministic stage gate may authorize exploratory expansion only at
 `1.10x` or better versus the faster complete eager/Inductor baseline. The
@@ -171,11 +220,12 @@ remains non-confirmatory, makes no correctness, fusion, or performance claim,
 and is not publication eligible. Native gated MLP remains absent after an
 unfavorable feasibility audit. Attention/KV cache, quantized linear, MoE, and
 FP8 remain catalog/design inventory for the ordered no-cost domain gate, not
-executable suites or authorization for promotion. At most one may advance after
-the CPU custody/verifier and dependency-split stages are complete, through its
-own reviewed revision and no-cost feasibility/capability evidence. Any later
-paid proposal requires a new frozen protocol, approved bound, committed bytes,
-new versioned paths, and the full evidence controls above.
+executable suites or authorization for promotion. At most one may advance only
+after the VerificationRecord, analyzer-replay, and dependency-split stages are
+complete, through its own reviewed revision and no-cost feasibility/capability
+evidence. Any later paid proposal requires a new frozen protocol, approved
+bound, committed bytes, new versioned paths, and the full evidence controls
+above.
 
 The published Parhelion and Hopper studies remain immutable legacy plugins.
 Do not relabel or migrate them to plugin/suite v1 merely because a declaration

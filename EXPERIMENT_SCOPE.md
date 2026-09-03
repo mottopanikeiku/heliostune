@@ -3,10 +3,12 @@
 ## Status
 
 This active scope record describes the implemented `heliostune.plugin/1` and
-`heliostune.suite/1` declaration surface and the bounded roadmap for surfaces
-not yet implemented. It is narrower than the normative evidence lifecycle in
-[METHODOLOGY.md](METHODOLOGY.md): validating a declaration is not executing a
-study, validating correctness, measuring performance, or making a claim.
+`heliostune.suite/1` declaration surface, the additive structural custody
+controls for new `heliostune.bundle/1` outputs, and the bounded roadmap for
+surfaces not yet implemented. It is narrower than the normative evidence
+lifecycle in [METHODOLOGY.md](METHODOLOGY.md): checked internal custody is not
+execution validation, correctness, provider truth, authenticity, analyzer
+replay, full offline reproduction, or a claim.
 
 The schemas are additive and non-retroactive. The published Parhelion and
 Hopper studies remain immutable legacy plugins and evidence. They have not been
@@ -24,6 +26,7 @@ one "supported" label.
 | Vocabulary | A domain, dtype, shape operator, or case option is a recognized closed enum value. | Strict plugin/suite parser and `heliostune list-scope`. | That any frozen suite uses it or any backend can execute it. |
 | Schema | A `heliostune.plugin/1` or `heliostune.suite/1` document has exact JSON types, no unknown or duplicate fields, and satisfies its cross-field rules. | `verify-plugin` and `verify-suite`. | That referenced code imports, a GPU is present, or a case is correct or fast. |
 | Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two generic reference templates and the separately integrated native Triton template, with their SHA-256 values below. | That a local or remote capability probe passed, or that the template is correct or fast. |
+| Bundle inventory custody | A new bundle's opted-in plugin and all transitive suites are internally closed by exact inventoried bytes, identities, order, and digests. | Reserved flat artifacts plus `heliostune verify-bundle`. | Who authored or executed the bytes, provider attempts/billing, semantic correctness, analyzer replay, full reproduction, or claim eligibility. |
 | Backend capability | A particular arm was not probed, or a retained probe found it available or unavailable. Local and remote are separate. | Suite arm `local_capability` and `remote_capability`: `unprobed`, `available`, or `unavailable`. | Correctness, performance, portability to another target, or claim eligibility. |
 | Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A narrow local executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
 | Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A narrow local executor/bundle observation, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
@@ -57,11 +60,65 @@ promotion/evidence requirement below; the narrow reference templates do not
 claim that a complete performance-baseline manifest has been implemented.
 
 `heliostune verify-plugin PATH` resolves each suite path relative to the plugin
-file and verifies the referenced bytes and suite structure. This makes
-standalone plugin validation transitive through plugin → suite. It does **not**
-extend the current generic `heliostune.bundle/1` verifier: generic
-EvidenceBundle custody does not yet resolve a bound plugin's suite references,
-and no transitive plugin → suite custody claim is made for bundles.
+file and verifies the referenced bytes and suite structure. The same in-memory
+inventory validator now supports an additive strict bundle mode that never
+follows the plugin's filesystem suite paths: it traverses only bytes already
+listed in the bundle artifact inventory, so verification is offline and cannot
+silently substitute a suite from the checkout.
+
+In plugin `suite_refs` order, strict bundles reserve contiguous roles
+`plugin_suite_<index>` at flat paths `plugin_suite_<index>.json`. Role
+`selected_suite` at `selected_suite.json` is an exact closed descriptor with
+only schema literal `heliostune.selected-suite/1` and nonnegative integer
+`plugin_suite_index: index`. Its
+payload uses two-space-indented, lexicographically sorted-key strict JSON plus
+one trailing LF. The integer binds the inventoried suite the bundle declares
+selected; it does not prove backend execution. The verifier checks
+each reference's digest, suite ID and revision; each suite's plugin ID and
+canonical decimal plugin-version back-reference; the protocol plugin identity
+and digest; and the plugin's first-seen aggregate domain and arm order.
+
+This inventory is a strict opt-in. With none of its reserved roles, an older
+valid v1 bundle remains parseable and reports
+`plugin_suite_custody: not_checked`; that status is not evidence of custody.
+Any role beginning
+`plugin_suite` or `selected_suite` activates complete mode, and a malformed
+prefix, missing descriptor, missing or gapped index, extra suite, identity
+mismatch, path mismatch, or digest mismatch fails closed.
+
+Attempt chaining is independently selected by reserved role `attempt_chain` at
+`attempt_chain.json`, containing the exact closed value
+`{"schema":"heliostune.attempt-chain/1"}`. Its payload uses the same indented,
+sorted-key strict JSON plus one trailing LF. Let $H_0$ be the SHA-256 of empty
+bytes, `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+Each row has exactly the ordered fields `cell_id`,
+`predecessor_sha256`, and `status`, encoded as compact strict JSON plus one LF;
+its predecessor is the prior head, and the new head is the SHA-256 of those
+exact row bytes. The bundle root's unchanged `hash_chain_head` stores the final
+head, including $H_0$ for an empty journal. Noncanonical encoding, CRLF,
+missing LF, blank lines, reorder, truncation, duplicate or unknown transitions,
+or a broken predecessor fails. Any `attempt_chain`-prefixed role activates
+strict handling, and every form except the exact role, path, media type, and
+payload above fails. With no such prefix, only exact legacy two-field rows
+remain accepted and chain status is `not_checked`; mixed or partial opt-in never
+falls back. This digest chain is an internal consistency
+control, not authentication or a provider signature.
+
+Arbitrary bundle verification opens the resolved bundle directory once, opens
+normalized relative components descriptor-relatively without following
+symlinks, and hashes and parses each regular file through the same descriptor.
+Duplicate `(st_dev, st_ino)` identities are rejected, so hard links cannot
+alias two declared roles. Staging producers pass their already-open directory
+to `verify_bundle_v1_from_directory_fd`, which duplicates the descriptor.
+Pre-rename and post-rename verification operate solely through that pinned fd;
+any supplied path is a diagnostic label, not path-resolution authority. New
+local and native producers keep all dynamic files flat, emit the complete
+inventory and both descriptors, and require
+plugin custody, attempt chaining, and no-retry reconciliation to be `checked`
+before atomic no-replace rename. Reconciliation is checked only when journal
+rows evidence all final logical states, retry policy is `none`,
+`max_physical_attempts` is one, physical equals logical, and orphaned is zero.
+Provider retry/billing reconciliation remains unchecked.
 
 ## Domain and dtype scope
 
@@ -168,8 +225,8 @@ runtime evidence byte:
 `reference_template_not_execution_freeze`: that status freezes declaration
 identity and does not itself establish capability or authorize paid dispatch.
 The exact declaration digest is integrated with a dedicated local executor and
-Modal executor API and now has one retained authenticated H100 SM90 observation.
-That observation does not promote declaration state: all six arms still declare
+Modal executor API and now has one retained H100 SM90 observation. That
+observation does not promote declaration state: all six arms still declare
 both capability states `unprobed` with null evidence digests.
 
 The suite freezes one case: contiguous BF16 `x` and `residual` tensors of shape
@@ -235,7 +292,7 @@ returns `expand_exploratory` only when
 `confirmatory: false`, `fusion_claim: false`, `publication_eligible: false`, and
 an empty claims list.
 
-The authenticated H100 [report](site/native-rmsnorm-h100.html), strict
+The retained H100 [report](site/native-rmsnorm-h100.html), strict
 [summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed
 [raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and
 [publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) retain the
@@ -261,7 +318,7 @@ publication, not a methodology bundle, and `publication_eligible=false`.
 
 ### Local CUDA execution
 
-`heliostune run-local-suite SUITE --output DIR` authenticates the selected suite
+`heliostune run-local-suite SUITE --output DIR` verifies the selected suite
 digest before dispatch. The generic branch for the two frozen reference
 templates remains unchanged; use `--plugin PLUGIN` when a suite is not at its
 committed template path. It requires the `gpu` extra (including exactly PyTorch
@@ -283,9 +340,13 @@ uv run --extra gpu heliostune run-local-suite benchmarks/suites/residual-rmsnorm
 This is an invocation contract, not a statement that the current host qualifies.
 The native serialized result is `heliostune.local_executor/2`; the written
 exploratory output is a strict `heliostune.bundle/1` whose protocol executor API
-is `heliostune.native_fusion_executor/2`. The bundle is structurally verified
-and preserves passing, failed, blocked, and aborted observations, but is not a
-correctness/performance conclusion or publication-eligible claim.
+is `heliostune.native_fusion_executor/2`. New outputs include the full
+plugin-suite inventory, selected-suite and attempt-chain descriptors, and
+canonical chained rows. Publication requires successful structural custody,
+chain verification, and no-retry reconciliation before atomic rename. These
+checks preserve passing, failed, blocked, and aborted observations, but do not
+establish a correctness/performance conclusion, provider authenticity,
+analyzer replay, full offline reproduction, or publication eligibility.
 
 ### Historical remote Modal H100 execution
 
@@ -453,17 +514,22 @@ slow.
 
 ## Bounded continuation roadmap
 
-The roadmap is ordered and fail-closed:
+The active v0.6 roadmap is ordered and fail-closed:
 
-| Stage | Required work and go evidence | Stop boundary |
+| Stage | Current state and required work | Stop boundary |
 |---|---|---|
-| 1. Generic custody and offline verification | Complete generic `heliostune.protocol/1` and `heliostune.bundle/1` reference closure, including transitive plugin → suite custody, and prove the offline verifier with CPU-only fixtures for completed, failed, aborted, and tampered bundles. | **STOP** while any referenced byte, lifecycle state, attempt, claim input, or expected artifact cannot be checked offline. No GPU execution belongs to this stage. |
+| 1a. Issue #31: custody and attempt chain | Implemented for new local/native bundles: unchanged v1 roots gain additive full plugin → suite inventory, selected-suite identity, canonical predecessor chaining, descriptor-contained reads, and truthful no-retry reconciliation. CPU fixtures cover completed, failed, aborted, legacy-unchecked, and tampered bundles. | This closes internal custody and chaining only. **STOP** on any missing/mismatched inventoried byte, reserved descriptor, predecessor, lifecycle/accounting fact, or unsafe path. No signature, provider-truth, analyzer, or full-reproduction claim follows. |
+| 1b. Issue #32: VerificationRecord | Next: emit a durable canonical CPU-only VerificationRecord that binds inputs, verifier identity, and every applicable control without upgrading deferred controls. | **STOP** while records are absent, nondeterministic, incomplete, or treat `not_checked` as success. Issue #31 does not complete this record. |
+| 1c. Issue #33: analyzer replay | After #32, add deterministic network-disabled replay through an audited analyzer registry and compare declared outputs. | **STOP** on undeclared access, network use, unavailable isolation, nondeterminism, or byte mismatch. Custody and a VerificationRecord do not themselves replay analysis. |
 | 2. Dependency split | Separate actively maintained execution dependencies from frozen reproduction pins, and verify that each historical environment remains reproducible without constraining the active environment. | **STOP** if an active dependency update changes frozen reproduction identity or if a reproduction pin silently governs new execution. |
 | 3. One-domain no-cost design gate | Select at most one inventory domain below and freeze a reviewed feasibility/capability design: semantics, numerics, applicability, baseline hierarchy, backend requirements, custody, expected cells, and explicit infeasibility criteria. The gate performs no paid execution and makes no correctness or performance claim. | **STOP** on missing semantics, baseline, feasible backend design, custody plan, or bounded execution design. Other inventory domains remain inventory. |
-| 4. Optional paid-protocol proposal | Only after stages 1–3 pass may a new, predeclared protocol with new versioned paths and its own frozen paid plan be proposed for separate approval. | A passed design gate permits review of a proposal, not dispatch. Without explicit approval and a cost bound, **STOP** before any paid call. |
+| 4. Optional paid-protocol proposal | Only after the preceding stages pass may a new, predeclared protocol with new versioned paths and its own frozen paid plan be proposed for separate approval. | A passed design gate permits review of a proposal, not dispatch. Without explicit approval and a cost bound, **STOP** before any paid call. |
 
-This roadmap authorizes no GPU spending. Stage evidence and decisions must be
-retained even when they stop continuation.
+This roadmap authorizes no GPU spending; its maximum authorized spend is
+**$0**. Stage evidence and decisions must be retained even when they stop
+continuation. Issue #31 does not check signatures or authenticity, provider
+physical retries or billing, analyzer replay, or complete offline reproduction;
+those statuses remain `not_checked`.
 
 The stage-3 inventory contains no frozen executable suite ID:
 
@@ -543,29 +609,42 @@ compilation/resource, correctness, profile, timing, or publication acceptance
 described in
 [METHODOLOGY.md](METHODOLOGY.md#10-acceptance-tests).
 
+Separate focused tests in `tests/test_methodology.py`,
+`tests/test_local_bundle.py`, and `tests/test_native_fusion_bundle.py` defend the
+issue-#31 bundle surface: strict/legacy opt-in selection, complete in-memory
+plugin-suite inventory, selected-suite identity, canonical predecessor bytes and
+empty head, sealed-state reconciliation, descriptor/inode containment, and
+producer pre-rename postconditions. Passing these tests checks only those
+controls; it does not supply the VerificationRecord or analyzer replay planned
+by issues #32 and #33.
+
 ## Inspect and verify
 
-The CPU-only declaration commands are:
+The CPU-only structural commands are:
 
 ```bash
 uv run heliostune verify-plugin path/to/plugin.json
 uv run heliostune verify-suite path/to/suite.json
+uv run heliostune verify-bundle path/to/bundle.json
 uv run heliostune list-scope
 ```
 
 `verify-plugin` checks the strict plugin root and resolves every relative suite
-path and digest. `verify-suite` checks one strict standalone suite. Their
-success output reports structure and counts and explicitly disclaims execution,
-correctness, and performance observation. `list-scope` prints the closed domain
-and dtype vocabularies and all three structurally executable template IDs in
-`EXECUTABLE_TEMPLATE_IDS`, then reports native implementation status separately.
-Membership in that tuple records structural executability, not retained runtime
-capability; the separately published H100 observation does not promote any
-declaration's `unprobed` capability state.
+path and digest. `verify-suite` checks one strict standalone suite.
+`verify-bundle` reports structural closure plus the custody, chain, and
+reconciliation status actually established; absence of the additive descriptors
+is reported as legacy `not_checked`, never promoted. It emits no durable
+VerificationRecord yet. These commands make no execution, correctness,
+performance, provider, billing, signature, analyzer-replay,
+full-offline-reproduction, or claim-eligibility assertion. `list-scope` prints
+the closed domain and dtype vocabularies and all three structurally executable
+template IDs in `EXECUTABLE_TEMPLATE_IDS`, then reports native implementation
+status separately. Membership in that tuple records structural executability,
+not retained runtime capability; the separately published H100 observation does
+not promote any declaration's `unprobed` capability state.
 
-The declaration commands do not execute kernels or establish correctness or
-performance. The generic local and Modal executor branches remain implemented
-for the two frozen reference templates, whose existing
+The generic local and Modal executor branches remain implemented for the two
+frozen reference templates, whose existing
 [post-hoc exploratory evidence](benchmarks/results/fusion-remote-exploratory-summary.json)
 is unchanged: both suites completed correctness and timing, but plugin
 capability declarations remain unprobed, the candidate/reference arithmetic is

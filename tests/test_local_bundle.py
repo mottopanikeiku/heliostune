@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
+import shutil
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Literal
@@ -33,11 +35,8 @@ _DESCRIPTOR_PUBLICATION = (
         function in os.supports_dir_fd
         for function in (os.open, os.mkdir, os.rename, os.stat, os.unlink, os.rmdir)
     )
-    and Path("/proc/self/fd").is_dir()
 )
-_DESCRIPTOR_REASON = (
-    "requires O_NOFOLLOW, O_DIRECTORY, dir_fd filesystem operations, and /proc/self/fd"
-)
+_DESCRIPTOR_REASON = "requires O_NOFOLLOW, O_DIRECTORY, and dir_fd filesystem operations"
 _MLP = _ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
 _RMS = _ROOT / "benchmarks/suites/residual-rmsnorm-v1.json"
 
@@ -236,7 +235,28 @@ def _root_dict(path: Path) -> dict[str, Any]:
     return value
 
 
-def test_complete_bundle_preserves_sources_and_closes_all_cells(tmp_path: Path) -> None:
+def _plugin_fixture(tmp_path: Path, suite_indices: tuple[int, ...]) -> Path:
+    plugin_raw = json.loads(_PLUGIN.read_text(encoding="utf-8"))
+    refs = plugin_raw["suite_refs"]
+    assert type(refs) is list
+    plugin_raw["suite_refs"] = [refs[index] for index in suite_indices]
+    suites = [verify_suite((_MLP, _RMS)[index]).suite for index in suite_indices]
+    plugin_raw["domains"] = list(dict.fromkeys(suite.domain for suite in suites))
+    plugin_raw["arm_ids"] = list(dict.fromkeys(arm.id for suite in suites for arm in suite.arms))
+    plugin_dir = tmp_path / "declarations/plugins"
+    suite_dir = tmp_path / "declarations/suites"
+    plugin_dir.mkdir(parents=True)
+    suite_dir.mkdir()
+    plugin_path = plugin_dir / "plugin.json"
+    plugin_path.write_text(strict_json_dumps(plugin_raw), encoding="utf-8")
+    for suite_path in (_MLP, _RMS):
+        (suite_dir / suite_path.name).write_bytes(suite_path.read_bytes())
+    return plugin_path
+
+
+def test_complete_bundle_preserves_transitive_sources_and_closes_all_cells(
+    tmp_path: Path,
+) -> None:
     verified = _write(tmp_path)
     bundle = verified.bundle
 
@@ -247,28 +267,120 @@ def test_complete_bundle_preserves_sources_and_closes_all_cells(tmp_path: Path) 
     assert bundle.coverage.successes == 4
     assert bundle.coverage.failures == 0
     assert bundle.attempts.logical == bundle.attempts.physical == bundle.attempts.terminal == 4
+    assert verified.limitations.plugin_suite_custody == "checked"
+    assert verified.limitations.attempt_journal_hash_chain == "checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
     assert not verified.publication_eligible
 
     output = verified.root_path.parent
     assert output.stat().st_mode & 0o777 == 0o700
     assert (output / "plugin.json").read_bytes() == _PLUGIN.read_bytes()
-    assert (output / "suite.json").read_bytes() == _MLP.read_bytes()
-    assert verify_plugin(_PLUGIN).plugin.plugin_id == "fusion-reference-plugin"
-    attempts: list[dict[str, object]] = []
-    for line in (output / "attempts.jsonl").read_text(encoding="utf-8").splitlines():
-        row = strict_json_loads(line, source="attempts")
-        assert type(row) is dict
-        attempts.append(row)
-    assert all(set(row) == {"cell_id", "status"} for row in attempts)
-    assert [row["status"] for row in attempts] == ["pending", "running", "success"] * 4
-    roles = {artifact.role for artifact in bundle.artifacts}
-    assert roles == {
+    assert (output / "plugin_suite_0.json").read_bytes() == _MLP.read_bytes()
+    assert (output / "plugin_suite_1.json").read_bytes() == _RMS.read_bytes()
+    assert not (output / "suite.json").exists()
+    assert strict_json_loads(
+        (output / "selected_suite.json").read_text(), source="selected suite"
+    ) == {
+        "schema": "heliostune.selected-suite/1",
+        "plugin_suite_index": 0,
+    }
+    assert strict_json_loads(
+        (output / "attempt_chain.json").read_text(), source="attempt chain"
+    ) == {"schema": "heliostune.attempt-chain/1"}
+
+    attempts_payload = (output / "attempts.jsonl").read_bytes()
+    expected_rows: list[dict[str, str]] = []
+    predecessor = hashlib.sha256(b"").hexdigest()
+    for cell in verify_suite(_MLP).suite.expected_cells:
+        for status in ("pending", "running", "success"):
+            row = {
+                "cell_id": cell.id,
+                "predecessor_sha256": predecessor,
+                "status": status,
+            }
+            expected_rows.append(row)
+            predecessor = hashlib.sha256(
+                (strict_json_dumps(row, compact=True) + "\n").encode()
+            ).hexdigest()
+    expected_attempts = "".join(
+        strict_json_dumps(row, compact=True) + "\n" for row in expected_rows
+    ).encode()
+    assert attempts_payload == expected_attempts
+    assert bundle.attempts.hash_chain_head == predecessor
+
+    expected_roles = {
         *local_bundle._PROTOCOL_ROLES,
         *local_bundle._EXTRA_ROLES,
+        "plugin_suite_0",
+        "plugin_suite_1",
     }
-    for role in roles - {"plugin", "suite", "observations"}:
-        payload = (output / f"{role}.json").read_text(encoding="utf-8")
-        assert payload == strict_json_dumps(strict_json_loads(payload, source=role))
+    role_paths = {artifact.role: artifact.path for artifact in bundle.artifacts}
+    assert set(role_paths) == expected_roles
+    assert set(path.name for path in output.iterdir()) == {
+        "bundle.json",
+        "protocol.json",
+        "attempts.jsonl",
+        *role_paths.values(),
+    }
+    for role, path in role_paths.items():
+        if role not in {"plugin", "plugin_suite_0", "plugin_suite_1", "observations"}:
+            payload = (output / path).read_text(encoding="utf-8")
+            assert payload == strict_json_dumps(strict_json_loads(payload, source=role))
+
+
+def test_bundle_verifies_offline_after_all_source_declarations_are_removed(
+    tmp_path: Path,
+) -> None:
+    plugin_path = _plugin_fixture(tmp_path, (0, 1))
+    verified = local_bundle.write_local_bundle(
+        _result(),
+        plugin_path=plugin_path,
+        output_dir=tmp_path / "bundle",
+    )
+
+    shutil.rmtree(tmp_path / "declarations")
+
+    reopened = verify_bundle_v1(verified.root_path)
+    assert reopened.limitations.plugin_suite_custody == "checked"
+    assert (verified.root_path.parent / "plugin_suite_0.json").read_bytes() == _MLP.read_bytes()
+    assert (verified.root_path.parent / "plugin_suite_1.json").read_bytes() == _RMS.read_bytes()
+
+
+def test_selected_suite_descriptor_uses_plugin_reference_order(tmp_path: Path) -> None:
+    plugin_path = _plugin_fixture(tmp_path, (1, 0))
+    verified = local_bundle.write_local_bundle(
+        _result(),
+        plugin_path=plugin_path,
+        output_dir=tmp_path / "bundle",
+    )
+
+    selected = strict_json_loads(
+        (verified.root_path.parent / "selected_suite.json").read_text(),
+        source="selected suite",
+    )
+    assert selected == {
+        "schema": "heliostune.selected-suite/1",
+        "plugin_suite_index": 1,
+    }
+    assert (verified.root_path.parent / "plugin_suite_0.json").read_bytes() == _RMS.read_bytes()
+    assert (verified.root_path.parent / "plugin_suite_1.json").read_bytes() == _MLP.read_bytes()
+
+
+def test_one_suite_plugin_emits_one_indexed_suite_without_selected_alias(
+    tmp_path: Path,
+) -> None:
+    plugin_path = _plugin_fixture(tmp_path, (0,))
+    verified = local_bundle.write_local_bundle(
+        _result(),
+        plugin_path=plugin_path,
+        output_dir=tmp_path / "bundle",
+    )
+    output = verified.root_path.parent
+
+    assert (output / "plugin_suite_0.json").read_bytes() == _MLP.read_bytes()
+    assert not (output / "plugin_suite_1.json").exists()
+    assert not (output / "suite.json").exists()
+    assert verify_bundle_v1(verified.root_path).limitations.plugin_suite_custody == "checked"
 
 
 def test_capability_unavailable_writes_valid_aborted_empty_prefix(tmp_path: Path) -> None:
@@ -280,6 +392,10 @@ def test_capability_unavailable_writes_valid_aborted_empty_prefix(tmp_path: Path
     assert (verified.root_path.parent / "terminal_cells.json").read_text() == "[]\n"
     assert (verified.root_path.parent / "observations.jsonl").read_bytes() == b""
     assert (verified.root_path.parent / "attempts.jsonl").read_bytes() == b""
+    assert verified.bundle.attempts.hash_chain_head == hashlib.sha256(b"").hexdigest()
+    assert verified.limitations.plugin_suite_custody == "checked"
+    assert verified.limitations.attempt_journal_hash_chain == "checked"
+    assert verified.limitations.attempt_reconciliation == "checked"
 
 
 def test_execution_summary_is_reconstructed_without_claims(tmp_path: Path) -> None:
@@ -667,7 +783,10 @@ def test_failed_timing_writes_sealed_exploratory_prefix_with_failure_journal(
         strict_json_loads(line, source="attempts")
         for line in (verified.root_path.parent / "attempts.jsonl").read_text().splitlines()
     ]
-    assert attempt_rows[-1] == {"cell_id": failure.cell_id, "status": "failure"}
+    assert type(attempt_rows[-1]) is dict
+    assert set(attempt_rows[-1]) == {"cell_id", "predecessor_sha256", "status"}
+    assert attempt_rows[-1]["cell_id"] == failure.cell_id
+    assert attempt_rows[-1]["status"] == "failure"
     assert verify_bundle_v1(verified.root_path).bundle == verified.bundle
 
 
@@ -765,7 +884,10 @@ def test_bundle_root_is_staged_last_and_root_failure_leaves_no_destination(
     assert not output.exists()
     assert set(writes[:-1]) == {
         *(f"{role}.json" for role in local_bundle._PROTOCOL_ROLES),
-        "suite.json",
+        "plugin_suite_0.json",
+        "plugin_suite_1.json",
+        "selected_suite.json",
+        "attempt_chain.json",
         "terminal_cells.json",
         "observations.jsonl",
         "capability_probe.json",
@@ -778,28 +900,184 @@ def test_bundle_root_is_staged_last_and_root_failure_leaves_no_destination(
 
 
 @pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+@pytest.mark.parametrize(
+    "name",
+    ["plugin_suite_0.json", "plugin_suite_1.json", "selected_suite.json", "attempt_chain.json"],
+)
+@pytest.mark.parametrize("mutation", ["missing", "tampered"])
+def test_opt_in_custody_artifact_damage_prevents_publication_and_cleans_staging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    mutation: str,
+) -> None:
+    real_write = local_bundle._write_file_at
+
+    def damage_artifact(directory_fd: int, staged_name: str, payload: bytes) -> None:
+        if staged_name == name:
+            if mutation == "tampered":
+                real_write(directory_fd, staged_name, payload + b" ")
+            return
+        real_write(directory_fd, staged_name, payload)
+
+    monkeypatch.setattr(local_bundle, "_write_file_at", damage_artifact)
+    output = tmp_path / "bundle"
+    with pytest.raises(ArtifactError):
+        local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
+
+    assert not output.exists()
+    assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+@pytest.mark.parametrize(
+    "control",
+    ["plugin_suite_custody", "attempt_journal_hash_chain", "attempt_reconciliation"],
+)
+def test_unchecked_required_control_prevents_atomic_publication(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    control: str,
+) -> None:
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
+
+    def remove_control(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        verified = real_verify(
+            directory_fd,
+            root_relative_path,
+            diagnostic_directory=diagnostic_directory,
+        )
+        return replace(
+            verified,
+            limitations=replace(verified.limitations, **{control: "not_checked"}),
+        )
+
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        remove_control,
+    )
+    output = tmp_path / "bundle"
+    with pytest.raises(ArtifactError, match="did not check required controls"):
+        local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
+
+    assert not output.exists()
+    assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
 def test_staged_verification_failure_leaves_no_final_destination(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output = tmp_path / "bundle"
-    real_verify = verify_bundle_v1
-    saw_anchored_root = False
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
+    saw_pinned_directory = False
 
-    def fail_verification(path: str | Path) -> VerifiedBundle:
-        nonlocal saw_anchored_root
-        root = Path(path)
-        assert str(root).startswith("/proc/self/fd/")
-        assert root.is_file()
+    def fail_verification(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        nonlocal saw_pinned_directory
+        os.stat(root_relative_path, dir_fd=directory_fd, follow_symlinks=False)
+        assert diagnostic_directory == output
         assert not output.exists()
-        real_verify(root)
-        saw_anchored_root = True
+        real_verify(
+            directory_fd,
+            root_relative_path,
+            diagnostic_directory=diagnostic_directory,
+        )
+        saw_pinned_directory = True
         raise ArtifactError("injected staged verification failure")
 
-    monkeypatch.setattr(local_bundle, "verify_bundle_v1", fail_verification)
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        fail_verification,
+    )
     with pytest.raises(ArtifactError, match="injected staged verification failure"):
         local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
 
-    assert saw_anchored_root
+    assert saw_pinned_directory
+    assert not output.exists()
+    assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+def test_staging_path_swap_cannot_redirect_pinned_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
+    swapped = tmp_path / "verified-staging"
+    calls = 0
+
+    def swap_path(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        nonlocal calls
+        calls += 1
+        if calls != 1:
+            return real_verify(
+                directory_fd,
+                root_relative_path,
+                diagnostic_directory=diagnostic_directory,
+            )
+        staging = next(
+            path for path in tmp_path.iterdir() if path.name.startswith(".heliostune-bundle-")
+        )
+        staging.rename(swapped)
+        staging.mkdir()
+        (staging / "bundle.json").write_bytes(b"unverified pathname bytes")
+        try:
+            return real_verify(
+                directory_fd,
+                root_relative_path,
+                diagnostic_directory=diagnostic_directory,
+            )
+        finally:
+            shutil.rmtree(staging)
+            swapped.rename(staging)
+
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        swap_path,
+    )
+    verified = _write(tmp_path)
+
+    assert calls == 2
+    assert verified.root_path.read_bytes() != b"unverified pathname bytes"
+    assert verify_bundle_v1(verified.root_path).root_sha256 == verified.root_sha256
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+def test_post_rename_tampering_is_reverified_and_removed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "bundle"
+    real_rename = local_bundle._rename_directory_noreplace
+
+    def tamper_after_rename(parent_fd: int, source: str, destination: str) -> None:
+        real_rename(parent_fd, source, destination)
+        capability = output / "capability_probe.json"
+        payload = capability.read_bytes()
+        capability.write_bytes(bytes([payload[0] ^ 1]) + payload[1:])
+
+    monkeypatch.setattr(local_bundle, "_rename_directory_noreplace", tamper_after_rename)
+    with pytest.raises(ArtifactError, match="SHA-256 mismatch"):
+        local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
+
     assert not output.exists()
     assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
 

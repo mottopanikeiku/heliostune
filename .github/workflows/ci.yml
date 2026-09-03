@@ -68,7 +68,15 @@ jobs:
             --output "${RUNNER_TEMP}/h100-final-summary.json"
           cmp "${RUNNER_TEMP}/h100-final-summary.json" benchmarks/results/parhelion-h100-final.json
       - run: uv run heliostune verify-catalog benchmarks/research-artifact-manifest.json
-      - run: uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check
+      - name: Replay immutable v0.5.0 H200 derivation
+        run: |
+          test "$(git rev-parse 'v0.5.0^{commit}')" = "53a0e22ea140ce841e874284827232a7e050ce1c"
+          replay_dir="${RUNNER_TEMP}/heliostune-v0.5.0"
+          git worktree add --detach "${replay_dir}" v0.5.0
+          (
+            cd "${replay_dir}"
+            uv run --python 3.11 python scripts/build_parhelion_v3_engineering_result.py --check
+          )
       - run: uv run python scripts/build_parhelion_v2_addendum.py --check
       - run: uv run python scripts/publish_hopper_engineering_result.py --check
       - run: uv run python scripts/publish_fusion_remote_results.py --check
