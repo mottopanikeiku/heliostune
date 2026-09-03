@@ -10,18 +10,19 @@
 
 ## Continuation boundaries
 
-Work proceeds in order. The active v0.6 milestone has implemented issue #31's
+Work proceeds in order. The active v0.6 milestone first implemented issue #31's
 additive transitive plugin → suite custody and canonical attempt chain for new
-local/native bundles. The next gates are:
+local/native bundles, then implemented issue #32's durable canonical CPU-only
+VerificationRecords. The next gates are:
 
-1. issue #32: emit durable canonical CPU-only VerificationRecords;
-2. issue #33: run deterministic network-disabled analyzer replay through an
+1. issue #33: run deterministic network-disabled analyzer replay through an
    audited registry;
-3. separate active execution dependencies from frozen reproduction pins; then
-4. run a no-cost feasibility/capability design gate for one new domain.
+2. separate active execution dependencies from frozen reproduction pins; then
+3. run a no-cost feasibility/capability design gate for one new domain.
 
 Each stage must stop until its own implementation and CPU evidence are complete.
-Issue #31 does not complete either of the next two gates. The final design gate
+Issue #32 records the results of issue #31 controls but does not perform
+issue #33's analyzer replay. The final design gate
 selects at most one domain and authorizes no GPU execution. Only after all gates
 pass may contributors propose a new predeclared paid protocol at new versioned
 paths; dispatch still requires separate explicit approval and a frozen cost
@@ -113,6 +114,63 @@ malformed, aliased, or digest-mismatched forms fail closed. Older valid
 v1 bundles with no descriptors remain parseable only with the applicable
 custody/chain status `not_checked`; never describe that as checked evidence.
 The chain provides internal consistency, not a signature or authentication.
+
+Verification records are additive and must never mutate the unchanged
+`heliostune.bundle/1` schema or frozen evidence. The exact closed
+`heliostune.verification-record/1` root fields are `schema`, `verifier`,
+`bundle`, `lifecycle`, `evidence_class`, `controls`, `claim_eligible`, and
+`publication_eligible`. Preserve the location-free identities: root
+`{bytes,sha256}`; protocol `{path,bytes,sha256,study_id,revision}`; attempts
+`{path,bytes,sha256,hash_chain_head}`; and artifact
+`{role,path,media_type,bytes,sha256}` entries sorted by `(role,path)`.
+`lifecycle` is exactly `{state,outcome}`. Do not add absolute bundle, runtime,
+or output paths, timestamps, hostnames, PIDs, executables, or random IDs.
+
+The descriptive verifier identity is package/version plus the fixed ordered
+source roster `heliostune/artifacts.py`, `heliostune/errors.py`,
+`heliostune/methodology.py`, `heliostune/scope.py`,
+`heliostune/validation.py`, and `heliostune/verification.py`. Aggregate those
+bytes with SHA-256 domain `b"heliostune.verification-sources/1\0"` and, for each
+entry, eight-byte big-endian UTF-8 path length, path bytes, eight-byte
+big-endian byte count, and raw 32-byte digest. Import-time and build-time
+captures must match; unreadable or changed installed sources fail. This is
+self-identification, not authentication.
+
+Preserve all twelve control names: `protocol_ancestry`,
+`evidence_nonpromotion`, `semantic_content_beyond_digests`,
+`plugin_suite_custody`, `attempt_journal_hash_chain`,
+`attempt_reconciliation`, `claim_eligibility`, `analyzer_replay`,
+`provenance_tier_derivation`, `signature_cryptography`,
+`catalog_membership`, and `offline_reproduction`. Their only statuses are
+`checked`, `not_checked`, `not_applicable`, and `failed`. Both eligibility
+booleans must equal whether every one of the twelve statuses is `checked`; any
+other status forces both false. Lifecycle, evidence, and provenance labels do
+not enter that formula. Never treat `VERIFIED`, `ANALYZED`, or `PUBLISHED` as
+conferring verification or eligibility.
+
+Canonical record bytes are two-space-indented, sorted-key strict JSON with one
+trailing LF; loaders require byte-identical re-encoding. File output requires
+an exact record/`VerifiedBundle` match, must finish building and encoding before
+touching output, requires an existing parent outside and not below the resolved
+bundle directory, and atomically refuses to replace an existing name. The
+writer pins the parent without following symlinks, uses an exclusive temporary
+file, fsyncs the payload, links atomically without replacement, cleans up, and
+fsyncs the directory. Preserve the agreed CLI:
+
+```bash
+uv run heliostune verify-bundle path/to/bundle.json
+uv run heliostune verify-bundle path/to/bundle.json --format json
+uv run heliostune verify-bundle path/to/bundle.json --output path/to/verification-record.json
+```
+
+No flags retain human text; `--format json` emits exact bytes to stdout without
+Rich; `--output PATH` implies JSON and is silent.
+Explicit `--format text --output PATH` must fail before verification.
+Structurally verified records with deferred controls exit zero and remain
+ineligible. Any `failed` control or
+verification/build/encoding/write error exits 2 with no success bytes and no
+new file. A record is not a signature, authentication, provider truth, semantic
+or statistical correctness, analyzer replay, or full reproduction.
 
 The two runtime-integrated reference templates permit only FP16/BF16
 input/storage, FP32 accumulation, FP16/BF16/FP32 output, null quantization, and
@@ -221,8 +279,8 @@ and is not publication eligible. Native gated MLP remains absent after an
 unfavorable feasibility audit. Attention/KV cache, quantized linear, MoE, and
 FP8 remain catalog/design inventory for the ordered no-cost domain gate, not
 executable suites or authorization for promotion. At most one may advance only
-after the VerificationRecord, analyzer-replay, and dependency-split stages are
-complete, through its own reviewed revision and no-cost feasibility/capability
+after the analyzer-replay and dependency-split stages are complete, through its
+own reviewed revision and no-cost feasibility/capability
 evidence. Any later paid proposal requires a new frozen protocol, approved
 bound, committed bytes, new versioned paths, and the full evidence controls
 above.
