@@ -200,7 +200,12 @@ Do not weaken descriptor-pinned publication. Arbitrary bundle verification must
 open the resolved bundle directory once, open normalized components
 descriptor-relatively without following symlinks, hash and parse each regular
 file from the same descriptor, and reject duplicate `(st_dev, st_ino)`
-identities. New local/native producers must emit both descriptors and the full
+identities. Staging producers must call
+`verify_bundle_v1_from_directory_fd` with their already-open staging directory;
+the verifier duplicates that descriptor, and both pre-rename and post-rename
+verification operate solely through the pinned fd. Any supplied path is a
+diagnostic label only, never path-resolution authority. New local/native
+producers must emit both descriptors and the full
 inventory, then require `plugin_suite_custody`,
 `attempt_journal_hash_chain`, and no-retry `attempt_reconciliation` to be
 `checked` before atomic no-replace rename. Provider physical retries/billing,

@@ -108,8 +108,12 @@ Arbitrary bundle verification opens the resolved bundle directory once, opens
 normalized relative components descriptor-relatively without following
 symlinks, and hashes and parses each regular file through the same descriptor.
 Duplicate `(st_dev, st_ino)` identities are rejected, so hard links cannot
-alias two declared roles. New local and native producers keep all dynamic files
-flat, emit the complete plugin-suite inventory and both descriptors, and require
+alias two declared roles. Staging producers pass their already-open directory
+to `verify_bundle_v1_from_directory_fd`, which duplicates the descriptor.
+Pre-rename and post-rename verification operate solely through that pinned fd;
+any supplied path is a diagnostic label, not path-resolution authority. New
+local and native producers keep all dynamic files flat, emit the complete
+inventory and both descriptors, and require
 plugin custody, attempt chaining, and no-retry reconciliation to be `checked`
 before atomic no-replace rename. Reconciliation is checked only when journal
 rows evidence all final logical states, retry policy is `none`,
