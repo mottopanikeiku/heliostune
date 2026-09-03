@@ -1192,6 +1192,7 @@ class VerifiedBundle:
     referenced_paths: tuple[Path, ...]
     attempts_bytes: int
     root_directory_identity: tuple[int, int]
+    root_parent_directory_identity: tuple[int, int]
     limitations: VerificationLimitations
 
     @property
@@ -1249,6 +1250,8 @@ class _BundleDirectoryReader:
             not hasattr(os, "O_DIRECTORY")
             or not hasattr(os, "O_NOFOLLOW")
             or os.open not in os.supports_dir_fd
+            or os.stat not in os.supports_dir_fd
+            or os.stat not in os.supports_follow_symlinks
         ):
             raise ArtifactError("descriptor-pinned bundle verification is unsupported")
 
@@ -1304,6 +1307,18 @@ class _BundleDirectoryReader:
     @property
     def directory_identity(self) -> tuple[int, int]:
         identity = os.fstat(self._directory_fd)
+        return identity.st_dev, identity.st_ino
+
+    @property
+    def parent_directory_identity(self) -> tuple[int, int]:
+        try:
+            identity = os.stat(
+                "..",
+                dir_fd=self._directory_fd,
+                follow_symlinks=False,
+            )
+        except OSError as exc:
+            raise ArtifactError(f"cannot identify bundle parent directory: {exc}") from exc
         return identity.st_dev, identity.st_ino
 
     def close(self) -> None:
@@ -1904,6 +1919,7 @@ def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle
             root_bytes=len(root_payload),
             attempts_bytes=len(attempts_payload),
             root_directory_identity=reader.directory_identity,
+            root_parent_directory_identity=reader.parent_directory_identity,
             referenced_paths=(protocol_path, attempts_path, *artifact_paths),
             limitations=VerificationLimitations(
                 plugin_suite_custody=custody,

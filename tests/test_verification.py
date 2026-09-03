@@ -383,11 +383,9 @@ def test_loader_rejects_malformed_recursive_or_non_strict_json(
         load_verification_record_v1(path)
 
 
-def test_write_requires_exact_match_and_external_noreplace_output(tmp_path: Path) -> None:
+def test_write_requires_exact_match_and_sibling_noreplace_output(tmp_path: Path) -> None:
     record, verified = _record(tmp_path)
-    output_directory = tmp_path / "records"
-    output_directory.mkdir()
-    output = output_directory / "record.json"
+    output = tmp_path / "record.json"
 
     write_verification_record_v1(output, record, verified=verified)
     assert output.read_bytes() == encode_verification_record_v1(record)
@@ -395,7 +393,7 @@ def test_write_requires_exact_match_and_external_noreplace_output(tmp_path: Path
         write_verification_record_v1(output, record, verified=verified)
 
     mismatch = replace(record, lifecycle=Lifecycle(state="VERIFIED", outcome="completed"))
-    other_output = output_directory / "other.json"
+    other_output = tmp_path / "other.json"
     with pytest.raises(ArtifactError, match="does not exactly match"):
         write_verification_record_v1(other_output, mismatch, verified=verified)
     assert not other_output.exists()
@@ -409,7 +407,7 @@ def test_write_rejects_bundle_directory_and_descendants_before_creation(
     destination = verified.root_path.parent / relative
     destination.parent.mkdir(exist_ok=True)
 
-    with pytest.raises(ArtifactError, match="outside"):
+    with pytest.raises(ArtifactError, match="sibling"):
         write_verification_record_v1(destination, record, verified=verified)
     assert not destination.exists()
 
@@ -421,7 +419,7 @@ def test_write_rejects_intermediate_symlink_alias_into_bundle(tmp_path: Path) ->
     (outside / "alias").symlink_to(verified.root_path.parent, target_is_directory=True)
     destination = outside / "alias/artifacts/record.json"
 
-    with pytest.raises(ArtifactError, match="outside"):
+    with pytest.raises(ArtifactError, match="sibling"):
         write_verification_record_v1(destination, record, verified=verified)
     assert not destination.exists()
 
@@ -432,12 +430,14 @@ def test_write_tracks_renamed_bundle_directory_by_identity(tmp_path: Path) -> No
     verified.root_path.parent.rename(moved)
     destination = moved / "record.json"
 
-    with pytest.raises(ArtifactError, match="outside"):
+    with pytest.raises(ArtifactError, match="sibling"):
         write_verification_record_v1(destination, record, verified=verified)
     assert not destination.exists()
 
 
-def test_write_uses_fd_backed_bundle_identity_not_diagnostic_path(tmp_path: Path) -> None:
+def test_write_rejects_fd_verified_bundle_with_untrusted_diagnostic_path(
+    tmp_path: Path,
+) -> None:
     root = _write_closed_bundle(tmp_path / "bundle")
     directory_fd = os.open(root.parent, os.O_RDONLY | os.O_DIRECTORY)
     try:
@@ -448,9 +448,20 @@ def test_write_uses_fd_backed_bundle_identity_not_diagnostic_path(tmp_path: Path
     finally:
         os.close(directory_fd)
     record = build_verification_record_v1(verified)
-    destination = root.parent / "record.json"
+    destination = root.parent.parent / "record.json"
 
-    with pytest.raises(ArtifactError, match="outside"):
+    with pytest.raises(ArtifactError, match="cannot write"):
+        write_verification_record_v1(destination, record, verified=verified)
+    assert not destination.exists()
+
+
+def test_write_rejects_arbitrary_non_sibling_directory(tmp_path: Path) -> None:
+    record, verified = _record(tmp_path)
+    arbitrary = tmp_path / "arbitrary"
+    arbitrary.mkdir()
+    destination = arbitrary / "record.json"
+
+    with pytest.raises(ArtifactError, match="sibling"):
         write_verification_record_v1(destination, record, verified=verified)
     assert not destination.exists()
 
@@ -458,12 +469,11 @@ def test_write_uses_fd_backed_bundle_identity_not_diagnostic_path(tmp_path: Path
 def test_write_rejects_rebound_checked_parent_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    record, verified = _record(tmp_path)
-    output_parent = tmp_path / "records"
-    output_parent.mkdir()
+    record, verified = _record(tmp_path / "container")
+    output_parent = tmp_path / "container"
     replacement = tmp_path / "replacement"
     replacement.mkdir()
-    moved_parent = tmp_path / "moved-records"
+    moved_parent = tmp_path / "moved-container"
     destination = output_parent / "record.json"
     original_writer = artifact_io.write_bytes_atomic_noreplace_at
 
@@ -473,6 +483,9 @@ def test_write_rejects_rebound_checked_parent_path(
         payload: bytes,
         *,
         expected_parent_path: str | Path | None = None,
+        bundle_directory_fd: int | None = None,
+        bundle_directory_name: str | None = None,
+        expected_bundle_identity: tuple[int, int] | None = None,
     ) -> None:
         output_parent.rename(moved_parent)
         replacement.rename(output_parent)
@@ -481,6 +494,9 @@ def test_write_rejects_rebound_checked_parent_path(
             name,
             payload,
             expected_parent_path=expected_parent_path,
+            bundle_directory_fd=bundle_directory_fd,
+            bundle_directory_name=bundle_directory_name,
+            expected_bundle_identity=expected_bundle_identity,
         )
 
     monkeypatch.setattr(artifact_io, "write_bytes_atomic_noreplace_at", swap_then_write)
@@ -491,12 +507,48 @@ def test_write_rejects_rebound_checked_parent_path(
     assert not (moved_parent / "record.json").exists()
 
 
+def test_bundle_path_rebind_before_write_creates_no_record(tmp_path: Path) -> None:
+    record, verified = _record(tmp_path)
+    moved_bundle = tmp_path / "original-bundle"
+    verified.root_path.parent.rename(moved_bundle)
+    verified.root_path.parent.mkdir()
+    destination = tmp_path / "record.json"
+
+    with pytest.raises(ArtifactError, match="changed after verification"):
+        write_verification_record_v1(destination, record, verified=verified)
+    assert not destination.exists()
+
+
+def test_bundle_reparent_after_link_reports_irreversible_commit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    record, verified = _record(tmp_path)
+    destination = tmp_path / "record.json"
+    moved_parent = tmp_path / "elsewhere"
+    moved_parent.mkdir()
+    moved_bundle = moved_parent / "bundle"
+    original_link = artifact_io._link_fd_noreplace
+
+    def link_then_reparent_bundle(
+        source_fd: int,
+        directory_fd: int,
+        name: str,
+    ) -> None:
+        original_link(source_fd, directory_fd, name)
+        verified.root_path.parent.rename(moved_bundle)
+
+    monkeypatch.setattr(artifact_io, "_link_fd_noreplace", link_then_reparent_bundle)
+    with pytest.raises(ArtifactError, match="committed"):
+        write_verification_record_v1(destination, record, verified=verified)
+
+    assert destination.read_bytes() == encode_verification_record_v1(record)
+
+
 def test_output_parent_close_failure_after_success_is_not_reported(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     record, verified = _record(tmp_path)
-    output_parent = tmp_path / "records"
-    output_parent.mkdir()
+    output_parent = tmp_path
     destination = output_parent / "record.json"
     original_open = os.open
     original_close = os.close
@@ -558,7 +610,7 @@ def test_output_parent_close_failure_does_not_mask_containment_error(
     monkeypatch.setattr(os, "open", capture_open)
     monkeypatch.setattr(os, "close", fail_parent_close)
     try:
-        with pytest.raises(ArtifactError, match="outside"):
+        with pytest.raises(ArtifactError, match="sibling"):
             write_verification_record_v1(destination, record, verified=verified)
         assert not destination.exists()
     finally:

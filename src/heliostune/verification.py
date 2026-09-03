@@ -618,36 +618,13 @@ def load_verification_record_v1(path: str | Path) -> VerificationRecordV1:
     return record
 
 
-def _directory_is_at_or_below(
-    directory_descriptor: int,
-    ancestor_identity: tuple[int, int],
-) -> bool:
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
-    current = os.dup(directory_descriptor)
-    try:
-        while True:
-            identity = os.fstat(current)
-            current_identity = (identity.st_dev, identity.st_ino)
-            if current_identity == ancestor_identity:
-                return True
-            parent = os.open("..", flags, dir_fd=current)
-            parent_identity = os.fstat(parent)
-            if (parent_identity.st_dev, parent_identity.st_ino) == current_identity:
-                os.close(parent)
-                return False
-            os.close(current)
-            current = parent
-    finally:
-        os.close(current)
-
-
 def write_verification_record_v1(
     path: str | Path,
     record: VerificationRecordV1,
     *,
     verified: VerifiedBundle,
 ) -> None:
-    """Safely write an exact record outside its verified bundle directory."""
+    """Write an exact record beside a path-origin verified bundle directory."""
 
     expected = build_verification_record_v1(verified)
     if type(record) is not VerificationRecordV1 or record != expected:
@@ -655,40 +632,61 @@ def write_verification_record_v1(
     payload = encode_verification_record_v1(record)
 
     destination = Path(path)
-    name = destination.name
-    if not name or name in {".", ".."}:
-        raise ArtifactError(f"invalid verification record output path {destination}")
     flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    output_parent_fd: int | None = None
+    bundle_directory_fd: int | None = None
     try:
-        output_parent_descriptor = os.open(destination.parent, flags)
-    except OSError as exc:
-        raise ArtifactError(
-            f"cannot open verification record output parent {destination.parent}: {exc}"
-        ) from exc
-    try:
-        if _directory_is_at_or_below(
-            output_parent_descriptor,
-            verified.root_directory_identity,
-        ):
+        output_parent_fd = os.open(destination.parent, flags)
+        output_parent = os.fstat(output_parent_fd)
+        output_parent_identity = (output_parent.st_dev, output_parent.st_ino)
+        if output_parent_identity != verified.root_parent_directory_identity:
             raise ArtifactError(
-                "verification record output must be outside the verified bundle directory"
+                "verification record output must be a sibling of the verified bundle directory"
+            )
+
+        bundle_directory_path = verified.root_path.parent
+        bundle_directory_fd = os.open(bundle_directory_path, flags)
+        bundle_directory = os.fstat(bundle_directory_fd)
+        if (
+            bundle_directory.st_dev,
+            bundle_directory.st_ino,
+        ) != verified.root_directory_identity:
+            raise ArtifactError(
+                "verified bundle directory path changed after verification; "
+                "use JSON stdout for diagnostic-only verification"
+            )
+        current_parent = os.stat(
+            "..",
+            dir_fd=bundle_directory_fd,
+            follow_symlinks=False,
+        )
+        if (current_parent.st_dev, current_parent.st_ino) != output_parent_identity:
+            raise ArtifactError(
+                "verification record output must be a sibling of the verified bundle directory"
             )
 
         from heliostune.artifacts import write_bytes_atomic_noreplace_at
 
         write_bytes_atomic_noreplace_at(
-            output_parent_descriptor,
-            name,
+            output_parent_fd,
+            destination.name,
             payload,
             expected_parent_path=destination.parent,
+            bundle_directory_fd=bundle_directory_fd,
+            bundle_directory_name=bundle_directory_path.name,
+            expected_bundle_identity=verified.root_directory_identity,
         )
+    except ArtifactError:
+        raise
     except OSError as exc:
-        raise ArtifactError(
-            f"cannot inspect verification record output parent {destination.parent}: {exc}"
-        ) from exc
+        raise ArtifactError(f"cannot write verification record {destination}: {exc}") from exc
     finally:
-        with suppress(OSError):
-            os.close(output_parent_descriptor)
+        if bundle_directory_fd is not None:
+            with suppress(OSError):
+                os.close(bundle_directory_fd)
+        if output_parent_fd is not None:
+            with suppress(OSError):
+                os.close(output_parent_fd)
 
 
 __all__ = [
