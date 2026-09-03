@@ -28,7 +28,7 @@ from heliostune.methodology import (
     plugin_suite_path,
     plugin_suite_role,
     selected_suite_descriptor_bytes,
-    verify_bundle_v1,
+    verify_bundle_v1_from_directory_fd,
 )
 from heliostune.scope import (
     ExpectedCell,
@@ -901,8 +901,6 @@ def _require_descriptor_publication() -> None:
         raise ArtifactError(
             "descriptor-relative bundle publication is unsupported on this platform"
         )
-    if not Path("/proc/self/fd").is_dir():
-        raise ArtifactError("descriptor-anchored bundle verification requires /proc/self/fd")
 
 
 def _same_identity(value: os.stat_result, expected: tuple[int, int]) -> bool:
@@ -973,6 +971,36 @@ def _rename_directory_noreplace(parent_fd: int, source: str, destination: str) -
         raise OSError(error, os.strerror(error), destination)
 
 
+def _require_publication_controls(verified: VerifiedBundle) -> None:
+    if verified.publication_eligible:
+        raise ArtifactError("exploratory local bundle unexpectedly became publication eligible")
+    required_controls = {
+        "plugin suite custody": verified.limitations.plugin_suite_custody,
+        "attempt journal hash chain": verified.limitations.attempt_journal_hash_chain,
+        "attempt reconciliation": verified.limitations.attempt_reconciliation,
+    }
+    unchecked = tuple(name for name, status in required_controls.items() if status != "checked")
+    if unchecked:
+        raise ArtifactError(
+            "staged bundle verification did not check required controls: " + ", ".join(unchecked)
+        )
+
+
+def _require_same_verified_content(before: VerifiedBundle, after: VerifiedBundle) -> None:
+    if (
+        before.bundle != after.bundle
+        or before.root_sha256 != after.root_sha256
+        or before.root_bytes != after.root_bytes
+        or before.protocol.protocol != after.protocol.protocol
+        or before.protocol.sha256 != after.protocol.sha256
+        or before.protocol.bytes != after.protocol.bytes
+        or tuple(path.name for path in before.referenced_paths)
+        != tuple(path.name for path in after.referenced_paths)
+        or before.limitations != after.limitations
+    ):
+        raise ArtifactError("published bundle content identity changed after staging verification")
+
+
 def _publish_staged_bundle(
     destination: Path,
     payloads: Sequence[tuple[str, bytes]],
@@ -1037,21 +1065,11 @@ def _publish_staged_bundle(
         os.fsync(staging_fd)
         _write_file_at(staging_fd, _ROOT_PATH, root_payload)
 
-        anchored_root = Path(f"/proc/self/fd/{staging_fd}") / _ROOT_PATH
-        verified = verify_bundle_v1(anchored_root)
-        if verified.publication_eligible:
-            raise ArtifactError("exploratory local bundle unexpectedly became publication eligible")
-        required_controls = {
-            "plugin suite custody": verified.limitations.plugin_suite_custody,
-            "attempt journal hash chain": verified.limitations.attempt_journal_hash_chain,
-            "attempt reconciliation": verified.limitations.attempt_reconciliation,
-        }
-        unchecked = tuple(name for name, status in required_controls.items() if status != "checked")
-        if unchecked:
-            raise ArtifactError(
-                "staged bundle verification did not check required controls: "
-                + ", ".join(unchecked)
-            )
+        verified = verify_bundle_v1_from_directory_fd(
+            staging_fd,
+            diagnostic_directory=destination,
+        )
+        _require_publication_controls(verified)
 
         if not _same_identity(os.fstat(parent_fd), parent_identity) or not _same_identity(
             os.stat(parent_path, follow_symlinks=False), parent_identity
@@ -1071,6 +1089,12 @@ def _publish_staged_bundle(
         _rename_directory_noreplace(parent_fd, staging_name, final_name)
         cleanup_name = final_name
         os.fsync(parent_fd)
+        published_verified = verify_bundle_v1_from_directory_fd(
+            staging_fd,
+            diagnostic_directory=destination,
+        )
+        _require_publication_controls(published_verified)
+        _require_same_verified_content(verified, published_verified)
         if not _same_identity(os.stat(parent_path, follow_symlinks=False), parent_identity):
             raise ArtifactError("bundle output parent identity changed during publication")
         if not _same_identity(
@@ -1078,7 +1102,7 @@ def _publish_staged_bundle(
             staging_identity,
         ):
             raise ArtifactError("published bundle identity changed during publication")
-        published_result = _published_verified_bundle(verified, destination)
+        published_result = _published_verified_bundle(published_verified, destination)
         published = True
         return published_result
     except OSError as exc:

@@ -35,11 +35,8 @@ _DESCRIPTOR_PUBLICATION = (
         function in os.supports_dir_fd
         for function in (os.open, os.mkdir, os.rename, os.stat, os.unlink, os.rmdir)
     )
-    and Path("/proc/self/fd").is_dir()
 )
-_DESCRIPTOR_REASON = (
-    "requires O_NOFOLLOW, O_DIRECTORY, dir_fd filesystem operations, and /proc/self/fd"
-)
+_DESCRIPTOR_REASON = "requires O_NOFOLLOW, O_DIRECTORY, and dir_fd filesystem operations"
 _MLP = _ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
 _RMS = _ROOT / "benchmarks/suites/residual-rmsnorm-v1.json"
 
@@ -942,16 +939,29 @@ def test_unchecked_required_control_prevents_atomic_publication(
     monkeypatch: pytest.MonkeyPatch,
     control: str,
 ) -> None:
-    real_verify = verify_bundle_v1
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
 
-    def remove_control(path: str | Path) -> VerifiedBundle:
-        verified = real_verify(path)
+    def remove_control(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        verified = real_verify(
+            directory_fd,
+            root_relative_path,
+            diagnostic_directory=diagnostic_directory,
+        )
         return replace(
             verified,
             limitations=replace(verified.limitations, **{control: "not_checked"}),
         )
 
-    monkeypatch.setattr(local_bundle, "verify_bundle_v1", remove_control)
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        remove_control,
+    )
     output = tmp_path / "bundle"
     with pytest.raises(ArtifactError, match="did not check required controls"):
         local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
@@ -965,24 +975,109 @@ def test_staged_verification_failure_leaves_no_final_destination(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     output = tmp_path / "bundle"
-    real_verify = verify_bundle_v1
-    saw_anchored_root = False
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
+    saw_pinned_directory = False
 
-    def fail_verification(path: str | Path) -> VerifiedBundle:
-        nonlocal saw_anchored_root
-        root = Path(path)
-        assert str(root).startswith("/proc/self/fd/")
-        assert root.is_file()
+    def fail_verification(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        nonlocal saw_pinned_directory
+        os.stat(root_relative_path, dir_fd=directory_fd, follow_symlinks=False)
+        assert diagnostic_directory == output
         assert not output.exists()
-        real_verify(root)
-        saw_anchored_root = True
+        real_verify(
+            directory_fd,
+            root_relative_path,
+            diagnostic_directory=diagnostic_directory,
+        )
+        saw_pinned_directory = True
         raise ArtifactError("injected staged verification failure")
 
-    monkeypatch.setattr(local_bundle, "verify_bundle_v1", fail_verification)
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        fail_verification,
+    )
     with pytest.raises(ArtifactError, match="injected staged verification failure"):
         local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
 
-    assert saw_anchored_root
+    assert saw_pinned_directory
+    assert not output.exists()
+    assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+def test_staging_path_swap_cannot_redirect_pinned_verification(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_verify = local_bundle.verify_bundle_v1_from_directory_fd
+    swapped = tmp_path / "verified-staging"
+    calls = 0
+
+    def swap_path(
+        directory_fd: int,
+        root_relative_path: str = "bundle.json",
+        *,
+        diagnostic_directory: str | Path | None = None,
+    ) -> VerifiedBundle:
+        nonlocal calls
+        calls += 1
+        if calls != 1:
+            return real_verify(
+                directory_fd,
+                root_relative_path,
+                diagnostic_directory=diagnostic_directory,
+            )
+        staging = next(
+            path for path in tmp_path.iterdir() if path.name.startswith(".heliostune-bundle-")
+        )
+        staging.rename(swapped)
+        staging.mkdir()
+        (staging / "bundle.json").write_bytes(b"unverified pathname bytes")
+        try:
+            return real_verify(
+                directory_fd,
+                root_relative_path,
+                diagnostic_directory=diagnostic_directory,
+            )
+        finally:
+            shutil.rmtree(staging)
+            swapped.rename(staging)
+
+    monkeypatch.setattr(
+        local_bundle,
+        "verify_bundle_v1_from_directory_fd",
+        swap_path,
+    )
+    verified = _write(tmp_path)
+
+    assert calls == 2
+    assert verified.root_path.read_bytes() != b"unverified pathname bytes"
+    assert verify_bundle_v1(verified.root_path).root_sha256 == verified.root_sha256
+
+
+@pytest.mark.skipif(not _DESCRIPTOR_PUBLICATION, reason=_DESCRIPTOR_REASON)
+def test_post_rename_tampering_is_reverified_and_removed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "bundle"
+    real_rename = local_bundle._rename_directory_noreplace
+
+    def tamper_after_rename(parent_fd: int, source: str, destination: str) -> None:
+        real_rename(parent_fd, source, destination)
+        capability = output / "capability_probe.json"
+        payload = capability.read_bytes()
+        capability.write_bytes(bytes([payload[0] ^ 1]) + payload[1:])
+
+    monkeypatch.setattr(local_bundle, "_rename_directory_noreplace", tamper_after_rename)
+    with pytest.raises(ArtifactError, match="SHA-256 mismatch"):
+        local_bundle.write_local_bundle(_result(), plugin_path=_PLUGIN, output_dir=output)
+
     assert not output.exists()
     assert not any(path.name.startswith(".heliostune-bundle-") for path in tmp_path.iterdir())
 
