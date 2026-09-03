@@ -2,18 +2,29 @@
 
 from __future__ import annotations
 
+import errno
 import io
 import json
 import os
+import stat
 import tempfile
 from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import TYPE_CHECKING, BinaryIO, TextIO
 
 import zstandard
 
 from heliostune.errors import ArtifactError, SchemaError
+
+_NOREPLACE_SUPPORTED = (
+    os.name == "posix"
+    and hasattr(os, "O_DIRECTORY")
+    and hasattr(os, "O_NOFOLLOW")
+    and all(function in os.supports_dir_fd for function in (os.open, os.link, os.stat, os.unlink))
+    and os.link in os.supports_follow_symlinks
+    and os.stat in os.supports_follow_symlinks
+)
 
 if TYPE_CHECKING:
     from heliostune.schema import Measurement
@@ -136,6 +147,187 @@ def write_bytes_atomic(path: str | Path, payload: bytes) -> None:
             stream.write(payload)
     except OSError as exc:
         raise ArtifactError(f"cannot commit artifact {destination}: {exc}") from exc
+
+
+def _require_noreplace_support() -> None:
+    if os.name != "posix" or not _NOREPLACE_SUPPORTED:
+        raise ArtifactError(
+            "atomic no-replace artifact publication is unsupported on this platform"
+        )
+
+
+def _same_file_identity(left: os.stat_result, right: os.stat_result) -> bool:
+    return left.st_dev == right.st_dev and left.st_ino == right.st_ino
+
+
+def _verify_open_directory(path: Path, opened: os.stat_result) -> None:
+    current = os.stat(path, follow_symlinks=False)
+    if not stat.S_ISDIR(current.st_mode) or not _same_file_identity(opened, current):
+        raise OSError(errno.ESTALE, "artifact parent directory changed", path)
+
+
+def _unlink_owned_entry(
+    name: str,
+    *,
+    directory_descriptor: int,
+    identity: os.stat_result,
+) -> None:
+    try:
+        current = os.stat(
+            name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError:
+        return
+    if _same_file_identity(identity, current):
+        os.unlink(name, dir_fd=directory_descriptor)
+
+
+def _validate_noreplace_inputs(name: str, payload: bytes) -> None:
+    if type(name) is not str:
+        raise TypeError("name must be a str")
+    if type(payload) is not bytes:
+        raise TypeError("payload must be bytes")
+    if (
+        not name
+        or name in {".", ".."}
+        or os.sep in name
+        or (os.altsep is not None and os.altsep in name)
+        or "\0" in name
+    ):
+        raise ArtifactError(f"artifact name must be a plain file name: {name!r}")
+
+
+def write_bytes_atomic_noreplace_at(
+    directory_fd: int,
+    name: str,
+    payload: bytes,
+    *,
+    expected_parent_path: str | Path | None = None,
+) -> None:
+    """Durably publish bytes relative to a caller-owned directory descriptor."""
+    _require_noreplace_support()
+    if type(directory_fd) is not int:
+        raise TypeError("directory_fd must be an int")
+    _validate_noreplace_inputs(name, payload)
+    expected_parent = None if expected_parent_path is None else Path(expected_parent_path)
+    destination = Path(name) if expected_parent is None else expected_parent / name
+
+    owned_directory_fd: int | None = None
+    temporary_descriptor: int | None = None
+    temporary_name: str | None = None
+    temporary_identity: os.stat_result | None = None
+    linked = False
+    try:
+        owned_directory_fd = os.dup(directory_fd)
+        opened_parent = os.fstat(owned_directory_fd)
+        if not stat.S_ISDIR(opened_parent.st_mode):
+            raise OSError(errno.ENOTDIR, "artifact descriptor is not a directory")
+        if expected_parent is not None:
+            _verify_open_directory(expected_parent, opened_parent)
+
+        temporary_flags = (
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+        )
+        for _ in range(128):
+            candidate = f".{name}.{os.urandom(16).hex()}.tmp"
+            try:
+                temporary_descriptor = os.open(
+                    candidate,
+                    temporary_flags,
+                    0o600,
+                    dir_fd=owned_directory_fd,
+                )
+            except FileExistsError:
+                continue
+            temporary_name = candidate
+            break
+        else:
+            raise OSError(errno.EEXIST, "cannot allocate temporary artifact")
+        assert temporary_descriptor is not None
+        assert temporary_name is not None
+
+        view = memoryview(payload)
+        offset = 0
+        while offset < len(view):
+            written = os.write(temporary_descriptor, view[offset:])
+            if written <= 0:
+                raise OSError(errno.EIO, "artifact write made no progress")
+            offset += written
+        os.fsync(temporary_descriptor)
+        temporary_identity = os.fstat(temporary_descriptor)
+
+        if expected_parent is not None:
+            _verify_open_directory(expected_parent, opened_parent)
+        os.link(
+            temporary_name,
+            name,
+            src_dir_fd=owned_directory_fd,
+            dst_dir_fd=owned_directory_fd,
+            follow_symlinks=False,
+        )
+        linked = True
+        if expected_parent is not None:
+            _verify_open_directory(expected_parent, opened_parent)
+        os.unlink(temporary_name, dir_fd=owned_directory_fd)
+        temporary_name = None
+        os.fsync(owned_directory_fd)
+    except BaseException as exc:
+        if linked and owned_directory_fd is not None and temporary_identity is not None:
+            with suppress(OSError):
+                _unlink_owned_entry(
+                    name,
+                    directory_descriptor=owned_directory_fd,
+                    identity=temporary_identity,
+                )
+        if temporary_name is not None and owned_directory_fd is not None:
+            with suppress(OSError):
+                os.unlink(temporary_name, dir_fd=owned_directory_fd)
+        if owned_directory_fd is not None:
+            with suppress(OSError):
+                os.fsync(owned_directory_fd)
+        if isinstance(exc, OSError):
+            raise ArtifactError(f"cannot commit artifact {destination}: {exc}") from exc
+        raise
+    finally:
+        if temporary_descriptor is not None:
+            with suppress(OSError):
+                os.close(temporary_descriptor)
+        if owned_directory_fd is not None:
+            with suppress(OSError):
+                os.close(owned_directory_fd)
+
+
+def write_bytes_atomic_noreplace(path: str | Path, payload: bytes) -> None:
+    """Durably publish bytes without replacing an existing directory entry."""
+    if type(payload) is not bytes:
+        raise TypeError("payload must be bytes")
+    _require_noreplace_support()
+
+    destination = Path(path)
+    parent = destination.parent
+    name = destination.name
+    _validate_noreplace_inputs(name, payload)
+
+    directory_fd: int | None = None
+    try:
+        directory_fd = os.open(
+            parent,
+            os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+        )
+        write_bytes_atomic_noreplace_at(
+            directory_fd,
+            name,
+            payload,
+            expected_parent_path=parent,
+        )
+    except OSError as exc:
+        raise ArtifactError(f"cannot commit artifact {destination}: {exc}") from exc
+    finally:
+        if directory_fd is not None:
+            with suppress(OSError):
+                os.close(directory_fd)
 
 
 def write_text_atomic(path: str | Path, payload: str) -> None:
