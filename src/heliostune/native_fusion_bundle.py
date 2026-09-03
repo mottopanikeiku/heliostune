@@ -11,13 +11,22 @@ from pathlib import Path
 from .artifacts import strict_json_dumps
 from .errors import ArtifactError, SchemaError
 from .local_bundle import _publish_staged_bundle
-from .methodology import EvidenceBundleV1, ProtocolV1, VerifiedBundle
+from .methodology import (
+    EvidenceBundleV1,
+    ProtocolV1,
+    VerifiedBundle,
+    attempt_chain_descriptor_bytes,
+    encode_attempt_journal,
+    plugin_suite_path,
+    plugin_suite_role,
+    selected_suite_descriptor_bytes,
+)
 from .native_fusion_executor import (
     NativeFusionExecutionResult,
     _bound_executor_sources,
     _validate_frozen_suite,
 )
-from .scope import Suite, VerifiedSuite, verify_plugin, verify_suite
+from .scope import Suite, VerifiedPlugin, VerifiedSuite, verify_plugin, verify_suite
 
 _PROTOCOL_ROLES = (
     "plugin",
@@ -33,7 +42,8 @@ _PROTOCOL_ROLES = (
     "failure_policy",
 )
 _NATIVE_EXTRA_ROLES = (
-    "suite",
+    "selected_suite",
+    "attempt_chain",
     "terminal_cells",
     "observations",
     "capability_probe",
@@ -48,6 +58,8 @@ _NATIVE_EXTRA_ROLES = (
 )
 _ROLE_PATHS = {role: f"{role}.json" for role in (*_PROTOCOL_ROLES, *_NATIVE_EXTRA_ROLES)}
 _ROLE_PATHS["observations"] = "observations.jsonl"
+_ROLE_PATHS["selected_suite"] = "selected_suite.json"
+_ROLE_PATHS["attempt_chain"] = "attempt_chain.json"
 _PROTOCOL_PATH = "protocol.json"
 _ATTEMPTS_PATH = "attempts.jsonl"
 
@@ -87,11 +99,11 @@ def _strict_result(
     return parsed, selected
 
 
-def _bind_plugin(plugin_path: str | Path, selected: VerifiedSuite) -> tuple[bytes, str, int]:
+def _bind_plugin(plugin_path: str | Path, selected: VerifiedSuite) -> tuple[VerifiedPlugin, int]:
     plugin = verify_plugin(plugin_path)
     matches = tuple(
-        item
-        for item in plugin.suites
+        index
+        for index, item in enumerate(plugin.suites)
         if item.sha256 == selected.sha256
         and item.suite.suite_id == selected.suite.suite_id
         and item.suite.revision == selected.suite.revision
@@ -103,7 +115,7 @@ def _bind_plugin(plugin_path: str | Path, selected: VerifiedSuite) -> tuple[byte
         plugin.plugin.version,
     ):
         raise ArtifactError("selected native suite does not belong to the supplied plugin")
-    return plugin.bytes, plugin.plugin.plugin_id, plugin.plugin.version
+    return plugin, matches[0]
 
 
 def _protocol_roles(suite: Suite) -> dict[str, object]:
@@ -207,6 +219,10 @@ def preflight_native_fusion_bundle(
 def _attempt_journal(
     result: NativeFusionExecutionResult,
 ) -> tuple[tuple[dict[str, str], ...], tuple[str, ...], int, int]:
+    if not result.capability.available:
+        if result.outcome != "aborted":
+            raise SchemaError("capability-unavailable native result must be aborted")
+        return (), (), 0, 0
     rows: list[dict[str, str]] = []
     terminal_ids: list[str] = []
     successes = 0
@@ -287,10 +303,10 @@ def _protocol_payload(
     return _canonical_json(protocol.to_dict())
 
 
-def _artifact_entry(role: str, payload: bytes) -> dict[str, object]:
+def _artifact_entry(role: str, path: str, payload: bytes) -> dict[str, object]:
     return {
         "role": role,
-        "path": _ROLE_PATHS[role],
+        "path": path,
         "media_type": "application/x-ndjson" if role == "observations" else "application/json",
         "bytes": len(payload),
         "sha256": _sha256(payload),
@@ -308,11 +324,15 @@ def write_native_fusion_bundle(
     parsed, selected = _strict_result(result)
     if _bound_executor_sources() != parsed.executor_sources:
         raise ArtifactError("native executor source inventory changed since execution")
-    plugin_bytes, plugin_id, plugin_version = _bind_plugin(plugin_path, selected)
+    plugin, selected_suite_index = _bind_plugin(plugin_path, selected)
+    plugin_id = plugin.plugin.plugin_id
+    plugin_version = plugin.plugin.version
     suite = selected.suite
     expected_ids = tuple(cell.id for cell in suite.expected_cells)
     attempts, terminal_ids, successes, failures = _attempt_journal(parsed)
-    if terminal_ids != tuple(item.cell_id for item in parsed.observations):
+    if parsed.capability.available and terminal_ids != tuple(
+        item.cell_id for item in parsed.observations
+    ):
         raise SchemaError("native terminal cells differ from strict observations")
 
     execution_summary: dict[str, object] = {
@@ -326,13 +346,14 @@ def write_native_fusion_bundle(
         "suite_sha256": selected.sha256,
         "suite_bytes": len(selected.bytes),
     }
-    role_payloads: dict[str, bytes] = {"plugin": plugin_bytes}
+    role_payloads: dict[str, bytes] = {"plugin": plugin.bytes}
     role_payloads.update(
         {role: _canonical_json(value) for role, value in _protocol_roles(suite).items()}
     )
     role_payloads.update(
         {
-            "suite": selected.bytes,
+            "selected_suite": selected_suite_descriptor_bytes(selected_suite_index),
+            "attempt_chain": attempt_chain_descriptor_bytes(),
             "terminal_cells": _canonical_json(terminal_ids),
             "observations": _canonical_jsonl([item.to_dict() for item in parsed.observations]),
             "capability_probe": _canonical_json(parsed.capability.to_dict()),
@@ -357,11 +378,16 @@ def write_native_fusion_bundle(
         role_payloads=role_payloads,
         created_at=created_at,
     )
-    attempts_payload = _canonical_jsonl(attempts)
-    artifacts = [
-        _artifact_entry(role, role_payloads[role])
+    attempts_payload, attempt_chain_head = encode_attempt_journal(attempts)
+    artifact_payloads = [
+        (role, _ROLE_PATHS[role], role_payloads[role])
         for role in (*_PROTOCOL_ROLES, *_NATIVE_EXTRA_ROLES)
     ]
+    artifact_payloads[1:1] = [
+        (plugin_suite_role(index), plugin_suite_path(index), verified_suite.bytes)
+        for index, verified_suite in enumerate(plugin.suites)
+    ]
+    artifacts = [_artifact_entry(role, path, payload) for role, path, payload in artifact_payloads]
     logical_attempts = len(terminal_ids)
     root = EvidenceBundleV1.from_dict(
         {
@@ -377,7 +403,7 @@ def write_native_fusion_bundle(
             "attempts": {
                 "path": _ATTEMPTS_PATH,
                 "sha256": _sha256(attempts_payload),
-                "hash_chain_head": _sha256(attempts_payload),
+                "hash_chain_head": attempt_chain_head,
                 "logical": logical_attempts,
                 "physical": logical_attempts,
                 "terminal": len(terminal_ids),
@@ -395,10 +421,7 @@ def write_native_fusion_bundle(
         }
     )
     root_payload = _canonical_json(root.to_dict())
-    payloads = [
-        (_ROLE_PATHS[role], role_payloads[role])
-        for role in (*_PROTOCOL_ROLES, *_NATIVE_EXTRA_ROLES)
-    ]
+    payloads = [(path, payload) for _, path, payload in artifact_payloads]
     payloads.extend(((_PROTOCOL_PATH, protocol_payload), (_ATTEMPTS_PATH, attempts_payload)))
     return _publish_staged_bundle(Path(output_dir), payloads, root_payload)
 

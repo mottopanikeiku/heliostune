@@ -12,25 +12,39 @@ An actively maintained retrieval-first GPU autotuning and evidence-control/repla
 > originally reported.
 >
 > HeliosTune continues as a retrieval-first GPU autotuning and
-> evidence-control/replay project. `v0.5.0` is the next hardened release.
-> Contributions and later releases may add work at new versioned paths, but
-> must never rewrite frozen evidence or strengthen its claims. The bounded
-> continuation is ordered: (1) complete generic protocol/bundle custody and an
-> offline verifier using CPU-only work; (2) separate active execution
-> dependencies from frozen reproduction pins; (3) pass a no-cost
-> feasibility/capability design gate for one new domain. Only after that gate
-> may a new, separately approved, predeclared paid protocol be proposed; no GPU
-> spending is implied or authorized by this roadmap.
+> evidence-control/replay project. `v0.5.0` is the current published immutable
+> release; `v0.6.0` is the active development milestone. Contributions may add
+> work at new versioned paths, but must never rewrite frozen evidence or
+> strengthen its claims. In v0.6, issue #31 implements additive transitive
+> plugin → suite custody and canonical attempt chaining for new local/native
+> bundles. CPU-only issue #32 (durable canonical VerificationRecords) and issue
+> #33 (deterministic network-disabled analyzer replay) remain the next gates,
+> followed by dependency separation and a no-cost one-domain design gate. Only
+> after those gates may a new, separately approved, predeclared paid protocol be
+> proposed. The maximum authorized spend remains **$0**; this roadmap authorizes
+> no GPU execution and never rewrites frozen evidence.
 
 **Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
 **Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
 
-**Native RMSNorm H100 stage gate:** the authenticated [report](site/native-rmsnorm-h100.html), strict [summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed [raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and [publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) retain the exact exploratory outcome and both remote attempts.
+**Native RMSNorm H100 stage gate:** the retained [report](site/native-rmsnorm-h100.html), strict [summary](benchmarks/results/native-rmsnorm-h100-summary.json), compressed [raw evidence](benchmarks/data/native-rmsnorm-h100.json.zst), and [publication manifest](benchmarks/native-rmsnorm-h100-manifest.json) preserve the exact exploratory outcome and both remote attempts without upgrading them to methodology-v1 authenticity or claim eligibility.
 
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the active, partially implemented evidence-control design target; it is non-retroactive and does not claim that legacy evidence conforms. [Experiment scope](EXPERIMENT_SCOPE.md) records the implemented declaration state and bounded continuation roadmap for the additive plugin/suite v1 surface while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the active, partially implemented evidence-control design target; it is non-retroactive and does not claim that legacy evidence conforms. [Experiment scope](EXPERIMENT_SCOPE.md) records the implemented declaration and additive bundle-custody state plus the bounded continuation roadmap while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
+
+**v0.6 custody status:** `heliostune verify-bundle` can check an additive,
+offline-only inventory of all suites referenced by the bound plugin, an exact
+selected-suite descriptor, and a canonical predecessor-linked attempt journal.
+The reserved flat roles are `plugin_suite_<index>`, `selected_suite`, and
+`attempt_chain`; partial opt-in fails closed. Older valid v1 bundles without the
+descriptors remain parseable with custody/chain `not_checked`, never promoted.
+New local/native producers require custody, chain, and no-retry reconciliation
+to be `checked` before atomic no-replace publication. These internal digest and
+filesystem-containment checks are not signatures, provider authentication,
+retry/billing reconciliation, analyzer replay, complete offline reproduction,
+or claim eligibility.
 
 ## Result
 
@@ -136,23 +150,23 @@ The additive [H200 derivation manifest](benchmarks/parhelion-v3-h200-engineering
 
 ### Hardened releases and preservation
 
-`v0.5.0` is the next release. A no-input manual action dispatched from protected
-`main`, gated by the `release` environment, checks out, builds, and
-smoke-checks the dispatch event's exact `GITHUB_SHA` before tagging that tested
-snapshot. `main` may advance after dispatch without changing the source selected
-for that immutable release.
+`v0.5.0` is the current published release. Its no-input manual action was
+dispatched from protected `main`, gated by the `release` environment, and
+checked out, built, and smoke-checked the dispatch event's exact `GITHUB_SHA`
+before tagging that tested snapshot. Later `main` development does not change
+the source selected for that immutable release.
 
 For every version, the release publishes a wheel, sdist, `SHA256SUMS`, and a
 workflow-verified Git bundle containing the semantic tag history; every release
 asset is attested. Preserve the Git bundle together with `SHA256SUMS`: the
 checksum file verifies the downloaded assets, while the bundle preserves the
 released source and tag history independently of mutable GitHub references.
-Published releases are immutable; later work uses a new version and new paths.
+Published releases are immutable; v0.6 work uses new code and paths.
 
 ## Run locally
 
-The next release, `v0.5.0`, records Python 3.11–3.13 and uv 0.12.5. To inspect
-or replay its published snapshot from a clean clone:
+The current release, `v0.5.0`, records Python 3.11–3.13 and uv 0.12.5. To
+inspect or replay its published snapshot from a clean clone:
 
 ```bash
 git clone https://github.com/mottopanikeiku/heliostune.git
@@ -165,16 +179,22 @@ uv run heliostune demo --output-dir /tmp/heliostune-demo --max-budget 2 --seeds 
 uv run heliostune inspect /tmp/heliostune-demo/measurements.jsonl
 ```
 
-Inspect the strict CPU-only plugin/suite declaration surface:
+After returning to an active v0.6 source checkout, inspect its strict CPU-only
+structural surface:
 
 ```bash
 uv run heliostune verify-plugin path/to/plugin.json
 uv run heliostune verify-suite path/to/suite.json
+uv run heliostune verify-bundle path/to/bundle.json
 uv run heliostune list-scope
 ```
 
-These commands validate declarations; they do not execute a backend or establish
-correctness/performance. The generic local and Modal branches for the two frozen
+These v0.6 commands do not execute a backend or establish correctness,
+performance, authenticity, provider retry/billing truth, analyzer replay,
+complete offline reproduction, or claim eligibility. `verify-bundle` reports
+custody, attempt-chain, and reconciliation limitation explicitly; it does not
+yet emit the VerificationRecord planned by issue #32.
+The generic local and Modal branches for the two frozen
 reference templates, and their existing
 [exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json),
 are unchanged. Both legacy suites completed correctness and timing, but no
@@ -185,7 +205,7 @@ The exact
 [`residual_rmsnorm_triton.v1` suite](benchmarks/suites/residual-rmsnorm-triton-v1.json)
 and
 [`fusion-triton-rmsnorm-plugin` plugin](benchmarks/plugins/fusion-triton-rmsnorm-plugin-v1.json)
-have a digest-dispatched native executor and a retained authenticated H100 SM90
+have a digest-dispatched native executor and a retained H100 SM90
 observation. The observation does not change the declarations: all six arms'
 local and remote capability states remain `unprobed` with null evidence digests,
 and nothing here says that the current host can execute the suite. On an exact
@@ -338,9 +358,9 @@ an interrupted retrieval with `--resume-attempts PATH`; it reconstructs recorded
 ## Repository map
 
 - `src/heliostune/artifacts.py` — strict JSON/JSONL decoding and atomic zstandard persistence
-- `src/heliostune/scope.py` — strict plugin/suite v1 declarations and standalone transitive verification
+- `src/heliostune/methodology.py` — strict methodology roots, descriptor-contained bundle verification, transitive plugin/suite custody, and canonical attempt chaining
+- `src/heliostune/scope.py` — strict plugin/suite v1 declarations and shared transitive inventory verification
 - `src/heliostune/collection.py` — paid-call planning, fsynced attempt journals, resume, and commit
-- `src/heliostune/hardware.py` — pure fleet identity and memory gates
 - `src/heliostune/retrieval.py` — shape index and four action-conditioned archive statistics
 - `src/heliostune/multisource.py` — public multi-source replay facade
 - `src/heliostune/multisource_engine.py` — prepared folds and method-local evaluators
@@ -378,9 +398,10 @@ The `heliostune.plugin/1` and `heliostune.suite/1` declarations broaden the
 templates, constrained to FP16/BF16 input/storage, FP32 accumulation,
 FP16/BF16/FP32 output, null quantization, and disabled TF32. Attention and KV
 cache, quantized linear, MoE, and FP8 remain catalog/design inventory governed
-by the ordered CPU-custody, dependency-split, and one-domain no-cost design
-gates above. Inventory is not capability, implementation, correctness, or
-performance evidence, and the roadmap authorizes no paid campaign. See
+by the ordered VerificationRecord, analyzer-replay, dependency-split, and
+one-domain no-cost design gates above. Inventory is not capability,
+implementation, correctness, or performance evidence, and the roadmap
+authorizes no paid campaign. See
 [Experiment scope](EXPERIMENT_SCOPE.md) for the active state matrix, exact
 contracts, hashes, continuation gates, and evidence-preservation requirements.
 

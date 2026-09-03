@@ -171,9 +171,11 @@ requirement under §3.4. The schemas do not alter the exact
 through `plugin.artifact_sha256`; the plugin root, in turn, binds normalized
 relative suite paths and their exact SHA-256 values.
 
-Standalone plugin validation resolves plugin → suite references. The current
-generic EvidenceBundle verifier does not yet traverse this new edge, so its
-existing plugin byte binding must not be described as transitive suite custody.
+Standalone plugin validation resolves plugin → suite references from the
+filesystem. Generic bundle verification now traverses the same edge exclusively
+through the additive inventoried bytes described in §7.1. Only a complete,
+descriptor-selected inventory earns `plugin_suite_custody: checked`; bundles
+without the reserved roles remain explicitly `not_checked`.
 
 Declaration status is multi-axis:
 
@@ -182,6 +184,7 @@ Declaration status is multi-axis:
 | Vocabulary | A closed domain/dtype/case token may appear in a declaration. |
 | Schema | Exact fields, types, cross-rules, references, and hashes validate. |
 | Template | A named suite has frozen cases, arms, contracts, and expected cells. |
+| Bundle custody | Opted-in inventoried plugin and suite bytes close their ordered identities and digests internally; this does not establish authorship or execution. |
 | Backend capability | Local and remote probes separately record `unprobed`, `available`, or `unavailable`. |
 | Correctness observation | Retained output evidence passed the frozen contract for an exact cell key. |
 | Performance observation | Retained timing evidence was collected after that passing gate. |
@@ -407,7 +410,9 @@ Forbidden claim language includes “no difference,” “the same,” “equiva
 
 A paid plan freezes currency and tariff snapshot; maximum logical and physical calls, GPU-seconds, wall time and spend; approval identity; per-call timeout; idempotency namespace; retry classification; abort threshold; cancellation behavior; and treatment of unavailable billing. The cost estimand says whether compilation, search, source collection, failed attempts, storage, and amortization are included.
 
-Before provider action, the collector durably records an intent containing a logical-call ID and idempotency key. Physical attempts record spawn, provider call ID, start, retrieval, terminal state, cancellation/reconciliation, and billing. The journal is append-only and hash-chained. Restart recovery queries or retrieves the recorded call; it does not spawn a replacement logical call.
+Before provider action, the collector durably records an intent containing a logical-call ID and idempotency key. Physical attempts record spawn, provider call ID, start, retrieval, terminal state, cancellation/reconciliation, and billing. Restart recovery queries or retrieves the recorded call; it does not spawn a replacement logical call.
+
+The generic bundle attempt journal has an additive, canonical chain mode. Let $H_0$ be the lowercase SHA-256 of the empty byte string, `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. For transition $i$, serialize exactly the closed fields `cell_id`, `predecessor_sha256`, and `status`, in that order, as compact strict JSON followed by one LF; `predecessor_sha256` is $H_{i-1}$, and $H_i$ is the lowercase SHA-256 of those exact row bytes. The empty journal therefore has head $H_0$. Reordering, truncation relative to the root head, predecessor discontinuity, noncanonical JSON, CRLF, a missing final LF, blank lines, unknown fields, unknown cells, or a duplicate/invalid transition fails verification. This internal hash chain detects inconsistency within inventoried bytes; it is not a signature, provider attestation, or authentication.
 
 The v1 default is one physical attempt. An optional retry policy permits only a frozen provider-classified pre-measurement infrastructure failure, with identical protocol bytes and resources. Every physical attempt and cost remains present and contributes according to the frozen policy. A benchmark error, numerical failure, timeout after measurement begins, OOM, unfavorable result, unresolved call, or identity mismatch is not retryable.
 
@@ -455,13 +460,21 @@ signatures: [{scheme: string, signer: string,
               subject_sha256: digest, signature: string}]
 ```
 
-Protocol, attempts, and artifact paths are mutually unique; artifact roles and signatures are unique. Before `SEALED`, lifecycle outcome is exactly `pending`; at `SEALED` and later it is exactly one of `completed`, `failed`, or `aborted`. Count invariants include `terminal <= logical`, `orphaned <= physical`, `terminal_cells <= expected_cells`, and `successes + failures == terminal_cells`. An incomplete bundle remains representable so failed or aborted exploratory prefixes can seal truthfully; completed bundles and both strict evidence tiers require exact expected/terminal cell-set equality.
+Protocol, attempts, and artifact paths are mutually unique; artifact roles and signatures are unique. Before `SEALED`, lifecycle outcome is exactly `pending`; at `SEALED` and later it is exactly one of `completed`, `failed`, or `aborted`. Count invariants include `terminal <= logical`, `orphaned <= physical`, `terminal_cells <= expected_cells`, and `successes + failures == terminal_cells`. An incomplete bundle remains representable so failed or aborted exploratory prefixes can seal truthfully; completed bundles and both strict evidence tiers require exact expected/terminal cell-set equality. The root field maps above remain unchanged: the controls below are additive artifacts, not new bundle-root fields.
 
 Every bundle binds the protocol digest roles `plugin`, `workloads`, `candidates`, `comparators`, `splits`, `numerics`, `timing`, `analyzer`, `expected_cells`, `environment_predicate`, and `failure_policy`. It also binds `paid_plan` and `parent_protocol` exactly when the corresponding protocol digest is non-null. Missing, duplicate, unexpected optional, or digest-mismatched bindings fail. `expected_cells` and `terminal_cells` are strict JSON arrays of unique nonblank cell-ID strings. Their parsed lengths must equal every self-declared protocol, coverage, and attempts count that they govern. A failed or aborted exploratory terminal list may only be a prefix of its expected list.
 
-The required attempts path is strict JSONL. Each line is exactly `{cell_id, status}`, with status `pending | running | success | failure`; each cell begins at `pending`, may proceed to `running`, and terminates once at `success` or `failure`. The structural verifier binds journal terminal IDs and success/failure counts to `terminal_cells` and coverage. It does not parse domain-specific raw measurement rows and therefore does not infer cell identity from arbitrary raw roles.
+Full plugin → suite custody uses reserved flat artifact roles and paths. In the plugin's `suite_refs` order, index $i$ is role `plugin_suite_<i>` at path `plugin_suite_<i>.json`; indices are contiguous from zero. Role `selected_suite` at `selected_suite.json` is an exact closed descriptor with only schema literal `heliostune.selected-suite/1` and nonnegative integer `plugin_suite_index: i`. The selected index binds the inventoried suite the bundle declares selected; it is not a mutable path, an independently asserted identity, or proof of backend execution. For every reference, verification uses only the inventoried bytes and checks its digest, suite ID and revision, its plugin ID and canonical decimal plugin version back-reference, and the suite's strict schema. The protocol plugin ID, version, and digest must match that inventory, while the plugin's ordered domains and arm IDs must equal the first-seen aggregation across the suites in reference order.
 
-`verify_bundle_v1` establishes structural closure only, not publication eligibility. It validates strict root/protocol schemas, non-escaping unique paths and roles, byte counts and digests, protocol digest-role closure, lifecycle phase/outcome compatibility, strict cell identities, coverage sets/counts, and the strict attempt transitions described above. Its result explicitly reports `not_checked` for protocol ancestry, exploratory nonpromotion, semantic-content validation beyond digest identity, attempt hash-chain integrity, claim eligibility, analyzer replay, provenance-tier derivation, signature cryptography, catalog membership, and offline reproduction. Attempt reconciliation alone is `checked`. `publication_eligible` remains false while any mandatory publication control is not checked; CLI consumers enumerate the limitation dataclass fields rather than maintaining a second hard-coded list.
+Every plugin-suite inventory entry and descriptor uses media type `application/json`. The selected-suite descriptor payload uses canonical strict JSON: two-space indentation, lexicographically sorted keys, and exactly one trailing LF.
+
+These roles are an explicit opt-in. If no plugin-suite reserved role is present, a structurally valid legacy v1 bundle remains parseable and reports `plugin_suite_custody: not_checked`; it gains no custody claim. Presence of any role beginning `plugin_suite` or `selected_suite` selects strict mode, so a malformed prefix, missing descriptor or index, gap, extra suite, wrong path, malformed descriptor, identity/back-reference mismatch, or incomplete aggregate fails closed rather than falling back to legacy behavior.
+
+The required attempts path is strict JSONL. Chained mode is selected by role `attempt_chain` at `attempt_chain.json`, whose exact closed descriptor value is `{"schema":"heliostune.attempt-chain/1"}`. Its payload uses the same two-space-indented, sorted-key strict JSON with one trailing LF. Presence of any `attempt_chain`-prefixed role selects strict handling, and every form except that one exact role, path, media type, and payload fails closed. In chained mode every row uses the three-field canonical predecessor algorithm in §6 and the root `hash_chain_head` must equal the computed final head, including $H_0$ for an empty journal. With no such prefix, only the legacy exact two-field `{cell_id,status}` rows are accepted and `attempt_journal_hash_chain` is `not_checked`; mixed or partially opted-in forms fail. In either mode, each cell begins at `pending`, may proceed to `running`, and terminates once at `success` or `failure`, and journal terminal IDs and success/failure counts are bound to `terminal_cells` and coverage.
+
+Verification of an arbitrary bundle opens the resolved bundle directory once and then opens every normalized relative path component descriptor-relatively with symlink following disabled. It requires each opened target to be a regular file, hashes and parses the bytes read from that same descriptor, and rejects repeated `(st_dev, st_ino)` identities, including hard-link aliases between declared roles. Producers call `verify_bundle_v1_from_directory_fd` with their already-open staging directory descriptor; the verifier duplicates it, and both pre-rename and post-rename verification operate solely through that pinned descriptor. Any supplied directory path is diagnostic text only, never path-resolution authority. These containment checks prevent path substitution and aliasing; they do not authenticate the bytes' author.
+
+`verify_bundle_v1` establishes structural closure only, not publication eligibility. It validates strict root/protocol schemas, descriptor-contained non-escaping unique paths and roles, byte counts and digests, protocol digest-role closure, lifecycle phase/outcome compatibility, strict cell identities, coverage sets/counts, the selected strict or legacy attempt transitions, and—when opted in—the complete transitive plugin inventory and canonical predecessor chain. A control is `checked` only after its applicable verification succeeds. No reserved plugin-suite roles and no attempt-chain descriptor retain their respective `not_checked` legacy statuses. Attempt reconciliation is `checked` only when rows evidence every final logical state, retry policy is `none`, `max_physical_attempts` is one, physical equals logical, and orphaned is zero; retry/orphan/provider cases remain `not_checked`. A chained, sealed, nonempty journal cannot end in a live state; an empty aborted pre-dispatch journal remains valid. Protocol ancestry, exploratory nonpromotion, semantic-content validation beyond digest identity, claim eligibility, analyzer replay, provenance-tier derivation, signature cryptography, catalog membership, provider retry/billing truth, and complete offline reproduction remain `not_checked`. `publication_eligible` remains false.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
@@ -502,20 +515,24 @@ Each publication declares a retention policy ID, expiry or indefinite retention,
 
 ## 8. CLI lifecycle: local exploration to strict evidence
 
-The currently implemented CPU-only declaration inspection surface is:
+The currently implemented CPU-only inspection surface is:
 
 ```bash
 heliostune verify-plugin PATH
 heliostune verify-suite PATH
+heliostune verify-bundle PATH
 heliostune list-scope
 ```
 
 `verify-plugin` validates the strict plugin root and resolves its relative suite
 paths and SHA-256 values. `verify-suite` validates one strict standalone suite.
-`list-scope` reports the closed vocabularies, initial suite template IDs, and
-the fact that generic runtime backends are unimplemented. These commands make
-no execution, correctness, performance, generic bundle-custody, or
-claim-eligibility assertion.
+`verify-bundle` validates structural closure and the additive plugin-suite and
+attempt-chain controls described in §7.1 when their descriptors opt in; its
+per-control limitations remain explicit and it does not emit a durable
+VerificationRecord. `list-scope` reports the closed vocabularies and initial
+suite template IDs. These commands make no backend-execution, correctness,
+performance, signature/authenticity, provider retry/billing, analyzer-replay,
+full-offline-reproduction, or claim-eligibility assertion.
 
 The intended full evidence lifecycle is explicit rather than a mode flag that silently changes benchmark semantics:
 
@@ -577,6 +594,7 @@ A conforming implementation demonstrates at least these observable tests:
 10. **Atomic complete publication:** fault injection exposes only the prior or next valid root; removing a registered negative/failed study, changing replay provenance, or elevating legacy evidence fails publication.
 11. **Strict schemas:** duplicate/unknown keys, boolean-as-integer, nonfinite number, uppercase/short digest, escaping path, dangling reference, and invalid lifecycle transition are rejected.
 12. **Claim language:** an inverted unnamed ratio, “no difference” after unsupported superiority, universal wording from a fixed census, and deployable wording for an evaluation oracle are rejected.
+13. **Opt-in custody and attempt chain:** complete inventoried plugin-suite closure, selected-suite identity, canonical predecessor bytes, empty $H_0$, truncation/reorder rejection, legacy `not_checked`, descriptor/inode containment, and producer pre-rename postconditions are verified for new local/native bundles.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
@@ -589,16 +607,16 @@ This table separates the active, partially implemented design target from reposi
 | Surface | Current repository status | Consequence |
 |---|---|---|
 | Strict JSON and exact-type validation primitives | Implemented for existing artifact families; coverage varies by historical schema. | Useful building block, not proof of protocol/bundle closure. |
-| `heliostune.protocol/1` and `heliostune.bundle/1` exact schemas | Strict frozen/slotted value objects and file loaders parse the field maps above with exact validators. They do not resolve referenced bytes or verify custody. | Parsing a v1 root is not bundle closure, and no historical artifact is automatically a v1 artifact. |
-| `heliostune.plugin/1` and `heliostune.suite/1` declarations | Strict structural loaders and standalone verification are implemented for the closed initial scope. Plugin verification resolves relative suite paths and hashes. | Declaration validation establishes vocabulary/schema/template identity only. Generic bundle transitive plugin → suite custody is not implemented. |
+| `heliostune.protocol/1` and `heliostune.bundle/1` exact schemas | Strict frozen/slotted value objects and file loaders parse the unchanged field maps above. Generic bundle verification resolves bound bytes and structural custody controls. | Parsing a v1 root alone is not bundle closure, and no historical artifact is automatically a v1 artifact. |
+| `heliostune.plugin/1` and `heliostune.suite/1` declarations | Strict structural loaders and standalone verification are implemented for the closed initial scope. Plugin verification and opted-in bundle verification share one in-memory transitive inventory check. | Checked plugin → suite closure establishes internal inventoried identity, not execution, authorship, or claim eligibility. |
 | Generic study-plugin resolver and runtime contracts | Not implemented end to end. Existing studies use study-specific modules and manifests. | The full lifecycle plugin commands and interfaces remain unimplemented design surfaces; no generic local or remote backend exists. |
 | Eight-state immutable lifecycle and revision registry | Not implemented end to end. | Existing manifests retain their own state models and legacy interpretation. |
 | Local/remote canonical semantic envelope | Partial in study-specific collectors; no generic v1 executor contract. | Executor parity is not yet generally established. |
 | GPU raw randomized paired blocks and full telemetry | Not implemented for published Parhelion/Hopper timing artifacts, which retain aggregate quantiles and limited state. | Those timings remain legacy, fixed-protocol evidence and do not support new timing-population inference. |
 | Numerical gate for candidates and comparators | Partial and study-specific; published collectors do not establish the generic two-reference v1 contract for every arm. | Existing correctness statements keep their frozen historical scope. |
-| Paid attempt journal, resume, hardware gate, and cost closure | Partial: durable call-ID recovery and study-specific manifests exist; generic hash-chain, retry adjudication, and complete cost reconciliation are not universal. | Provenance/cost tier is reported truthfully per artifact. |
+| Attempt chain and reconciliation | The generic canonical predecessor chain is implemented as an opt-in control. New local/native bundles emit it and no-retry reconciliation can be `checked`; legacy two-field journals remain parseable with chain `not_checked`. Provider retry adjudication, provider physical-attempt truth, billing, and complete cost reconciliation remain unimplemented generically. | A checked internal chain/reconciliation result is neither a provider receipt nor proof of cost, retries, authorship, or authenticity. |
 | Typed claim taxonomy and fail-closed generic analyzer | `ClaimSpec` parsing and class-level eligibility checks are implemented; analyzer output decisions, statistical replay, and generic report rendering are not implemented end to end. Historical reports still use study-specific models and prose. | A valid ClaimSpec is not a supported result, and historical claims are not silently rewritten. |
-| EvidenceBundle closure, offline replay, complete registry/catalog, and atomic root publication | Partial building blocks exist; the full v1 verifier/publication transaction is not implemented end to end. | Publication under existing workflows is legacy rather than a v1 conformance claim. |
+| EvidenceBundle custody and publication | Generic structural closure, descriptor-contained file reads, opted-in plugin → suite custody, and opted-in attempt chaining are implemented. New local/native producers emit the complete reserved inventory and descriptors, require custody, chain, and no-retry reconciliation to be `checked`, and verify staging before atomic no-replace rename. Durable canonical VerificationRecords, signature/authenticity checks, analyzer replay, complete offline reproduction, full registry/catalog closure, and the complete v1 publication transaction remain unchecked or unimplemented. | Internal closure is not claim eligibility, provider truth, authenticity, analyzer replay, or full reproduction; existing publication workflows remain legacy rather than a v1 conformance claim. |
 | Existing Parhelion and Hopper evidence | Immutable legacy evidence. Hopper is a one-instance same-bank engineering STOP; Parhelion uncertainty is conditional policy-seed Monte Carlo evidence. | No retroactive promotion, stronger provenance, population scope, or inference is assigned. |
 
-Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility. Implementation proceeds in bounded order: first complete generic protocol/bundle custody and an offline verifier with CPU-only evidence; second separate active execution dependencies from frozen reproduction pins; third run a no-cost feasibility/capability design gate for exactly one new domain. Each stage stops until its prerequisites pass. Only after the third gate may a separately approved, predeclared paid protocol be proposed at new versioned paths. This roadmap authorizes no GPU spending and never permits rewriting frozen evidence.
+Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation or a schema literal alone never confers claim eligibility. For the active v0.6 milestone, issue #31 completes the additive plugin → suite custody and generic predecessor-chain slice for new local/native bundles; it does not complete a durable VerificationRecord or analyzer replay. CPU-only issue #32 (canonical VerificationRecords) and issue #33 (deterministic network-disabled analyzer replay) remain the next ordered gates before dependency separation and the one-domain no-cost feasibility/capability design gate. Each stage stops until its prerequisites pass. Only after those gates may a separately approved, predeclared paid protocol be proposed at new versioned paths. The maximum authorized spend remains **$0**, and frozen evidence is never rewritten.

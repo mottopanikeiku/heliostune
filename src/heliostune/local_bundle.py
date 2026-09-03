@@ -19,8 +19,25 @@ from typing import TYPE_CHECKING, cast
 
 from heliostune.artifacts import strict_json_dumps
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import EvidenceBundleV1, ProtocolV1, VerifiedBundle, verify_bundle_v1
-from heliostune.scope import ExpectedCell, Suite, VerifiedSuite, verify_plugin, verify_suite
+from heliostune.methodology import (
+    EvidenceBundleV1,
+    ProtocolV1,
+    VerifiedBundle,
+    attempt_chain_descriptor_bytes,
+    encode_attempt_journal,
+    plugin_suite_path,
+    plugin_suite_role,
+    selected_suite_descriptor_bytes,
+    verify_bundle_v1_from_directory_fd,
+)
+from heliostune.scope import (
+    ExpectedCell,
+    Suite,
+    VerifiedPlugin,
+    VerifiedSuite,
+    verify_plugin,
+    verify_suite,
+)
 
 if TYPE_CHECKING:
     from heliostune.local_executor import CellObservation, LocalExecutionResult
@@ -41,7 +58,8 @@ _PROTOCOL_ROLES = (
     "failure_policy",
 )
 _EXTRA_ROLES = (
-    "suite",
+    "selected_suite",
+    "attempt_chain",
     "terminal_cells",
     "observations",
     "capability_probe",
@@ -137,11 +155,13 @@ def _verified_result_suite(result: object) -> VerifiedSuite:
     return verified
 
 
-def _bind_plugin_suite(plugin_path: str | Path, selected: VerifiedSuite) -> tuple[bytes, str, int]:
+def _bind_plugin_suite(
+    plugin_path: str | Path, selected: VerifiedSuite
+) -> tuple[VerifiedPlugin, int]:
     plugin = verify_plugin(plugin_path)
     matches = tuple(
-        suite
-        for suite in plugin.suites
+        index
+        for index, suite in enumerate(plugin.suites)
         if suite.sha256 == selected.sha256
         and suite.suite.suite_id == selected.suite.suite_id
         and suite.suite.revision == selected.suite.revision
@@ -153,7 +173,7 @@ def _bind_plugin_suite(plugin_path: str | Path, selected: VerifiedSuite) -> tupl
         plugin.plugin.version,
     ):
         raise ArtifactError("selected suite does not belong to the supplied plugin")
-    return plugin.bytes, plugin.plugin.plugin_id, plugin.plugin.version
+    return plugin, matches[0]
 
 
 def _role_values(suite: Suite) -> dict[str, object]:
@@ -861,11 +881,11 @@ def _protocol_payload(
     return _canonical_json(protocol.to_dict())
 
 
-def _artifact_entry(role: str, payload: bytes) -> dict[str, object]:
+def _artifact_entry(role: str, path: str, payload: bytes) -> dict[str, object]:
     media_type = "application/x-ndjson" if role == "observations" else "application/json"
     return {
         "role": role,
-        "path": _ROLE_PATHS[role],
+        "path": path,
         "media_type": media_type,
         "bytes": len(payload),
         "sha256": _sha256(payload),
@@ -881,8 +901,6 @@ def _require_descriptor_publication() -> None:
         raise ArtifactError(
             "descriptor-relative bundle publication is unsupported on this platform"
         )
-    if not Path("/proc/self/fd").is_dir():
-        raise ArtifactError("descriptor-anchored bundle verification requires /proc/self/fd")
 
 
 def _same_identity(value: os.stat_result, expected: tuple[int, int]) -> bool:
@@ -953,6 +971,36 @@ def _rename_directory_noreplace(parent_fd: int, source: str, destination: str) -
         raise OSError(error, os.strerror(error), destination)
 
 
+def _require_publication_controls(verified: VerifiedBundle) -> None:
+    if verified.publication_eligible:
+        raise ArtifactError("exploratory local bundle unexpectedly became publication eligible")
+    required_controls = {
+        "plugin suite custody": verified.limitations.plugin_suite_custody,
+        "attempt journal hash chain": verified.limitations.attempt_journal_hash_chain,
+        "attempt reconciliation": verified.limitations.attempt_reconciliation,
+    }
+    unchecked = tuple(name for name, status in required_controls.items() if status != "checked")
+    if unchecked:
+        raise ArtifactError(
+            "staged bundle verification did not check required controls: " + ", ".join(unchecked)
+        )
+
+
+def _require_same_verified_content(before: VerifiedBundle, after: VerifiedBundle) -> None:
+    if (
+        before.bundle != after.bundle
+        or before.root_sha256 != after.root_sha256
+        or before.root_bytes != after.root_bytes
+        or before.protocol.protocol != after.protocol.protocol
+        or before.protocol.sha256 != after.protocol.sha256
+        or before.protocol.bytes != after.protocol.bytes
+        or tuple(path.name for path in before.referenced_paths)
+        != tuple(path.name for path in after.referenced_paths)
+        or before.limitations != after.limitations
+    ):
+        raise ArtifactError("published bundle content identity changed after staging verification")
+
+
 def _publish_staged_bundle(
     destination: Path,
     payloads: Sequence[tuple[str, bytes]],
@@ -1017,10 +1065,11 @@ def _publish_staged_bundle(
         os.fsync(staging_fd)
         _write_file_at(staging_fd, _ROOT_PATH, root_payload)
 
-        anchored_root = Path(f"/proc/self/fd/{staging_fd}") / _ROOT_PATH
-        verified = verify_bundle_v1(anchored_root)
-        if verified.publication_eligible:
-            raise ArtifactError("exploratory local bundle unexpectedly became publication eligible")
+        verified = verify_bundle_v1_from_directory_fd(
+            staging_fd,
+            diagnostic_directory=destination,
+        )
+        _require_publication_controls(verified)
 
         if not _same_identity(os.fstat(parent_fd), parent_identity) or not _same_identity(
             os.stat(parent_path, follow_symlinks=False), parent_identity
@@ -1040,6 +1089,12 @@ def _publish_staged_bundle(
         _rename_directory_noreplace(parent_fd, staging_name, final_name)
         cleanup_name = final_name
         os.fsync(parent_fd)
+        published_verified = verify_bundle_v1_from_directory_fd(
+            staging_fd,
+            diagnostic_directory=destination,
+        )
+        _require_publication_controls(published_verified)
+        _require_same_verified_content(verified, published_verified)
         if not _same_identity(os.stat(parent_path, follow_symlinks=False), parent_identity):
             raise ArtifactError("bundle output parent identity changed during publication")
         if not _same_identity(
@@ -1047,7 +1102,7 @@ def _publish_staged_bundle(
             staging_identity,
         ):
             raise ArtifactError("published bundle identity changed during publication")
-        published_result = _published_verified_bundle(verified, destination)
+        published_result = _published_verified_bundle(published_verified, destination)
         published = True
         return published_result
     except OSError as exc:
@@ -1083,7 +1138,7 @@ def write_local_bundle(
     """
 
     selected = _verified_result_suite(result)
-    plugin_bytes, plugin_id, plugin_version = _bind_plugin_suite(plugin_path, selected)
+    plugin, selected_suite_index = _bind_plugin_suite(plugin_path, selected)
     suite = selected.suite
 
     expected_ids = tuple(cell.id for cell in suite.expected_cells)
@@ -1150,13 +1205,14 @@ def write_local_bundle(
         observations=observations,
         compile_outcomes=compile_outcomes,
     )
-    role_payloads: dict[str, bytes] = {"plugin": plugin_bytes}
+    role_payloads: dict[str, bytes] = {"plugin": plugin.bytes}
     role_payloads.update(
         {role: _canonical_json(value) for role, value in _role_values(suite).items()}
     )
     role_payloads.update(
         {
-            "suite": selected.bytes,
+            "selected_suite": selected_suite_descriptor_bytes(selected_suite_index),
+            "attempt_chain": attempt_chain_descriptor_bytes(),
             "terminal_cells": _canonical_json(terminal_ids),
             "observations": _canonical_jsonl(observations),
             "capability_probe": _canonical_json(capability),
@@ -1168,16 +1224,21 @@ def write_local_bundle(
     created_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
     protocol_payload = _protocol_payload(
         suite=suite,
-        plugin_id=plugin_id,
-        plugin_version=plugin_version,
+        plugin_id=plugin.plugin.plugin_id,
+        plugin_version=plugin.plugin.version,
         role_payloads=role_payloads,
         created_at=created_at,
     )
-    attempts_payload = _canonical_jsonl(attempts)
+    attempts_payload, attempt_chain_head = encode_attempt_journal(attempts)
 
-    artifacts = [
-        _artifact_entry(role, role_payloads[role]) for role in (*_PROTOCOL_ROLES, *_EXTRA_ROLES)
+    artifact_payloads = [
+        (role, _ROLE_PATHS[role], role_payloads[role]) for role in (*_PROTOCOL_ROLES, *_EXTRA_ROLES)
     ]
+    artifact_payloads[1:1] = [
+        (plugin_suite_role(index), plugin_suite_path(index), verified_suite.bytes)
+        for index, verified_suite in enumerate(plugin.suites)
+    ]
+    artifacts = [_artifact_entry(role, path, payload) for role, path, payload in artifact_payloads]
     root = EvidenceBundleV1.from_dict(
         {
             "schema": "heliostune.bundle/1",
@@ -1192,7 +1253,7 @@ def write_local_bundle(
             "attempts": {
                 "path": _ATTEMPTS_PATH,
                 "sha256": _sha256(attempts_payload),
-                "hash_chain_head": _sha256(attempts_payload),
+                "hash_chain_head": attempt_chain_head,
                 "logical": logical_attempts,
                 "physical": logical_attempts,
                 "terminal": len(terminal_ids),
@@ -1211,9 +1272,7 @@ def write_local_bundle(
     )
     root_payload = _canonical_json(root.to_dict())
 
-    payloads = [
-        (_ROLE_PATHS[role], role_payloads[role]) for role in (*_PROTOCOL_ROLES, *_EXTRA_ROLES)
-    ]
+    payloads = [(path, payload) for _, path, payload in artifact_payloads]
     payloads.extend(
         (
             (_PROTOCOL_PATH, protocol_payload),
