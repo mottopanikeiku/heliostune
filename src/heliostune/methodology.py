@@ -1448,17 +1448,17 @@ def _parse_attempt_transitions(
             raise ArtifactError(
                 f"attempts journal {source} must use LF-terminated rows without carriage returns"
             )
-        for line_number, encoded_line in enumerate(
+        for line_number, encoded in enumerate(
             payload[:-1].split(b"\n") if payload else [],
             start=1,
         ):
             try:
-                line = encoded_line.decode("utf-8")
+                line = encoded.decode("utf-8")
             except UnicodeError as exc:
                 raise ArtifactError(
                     f"cannot decode attempts journal {source}:{line_number} as UTF-8: {exc}"
                 ) from exc
-            rows.append((line, encoded_line))
+            rows.append((line, encoded))
     else:
         try:
             text = payload.decode("utf-8")
