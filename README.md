@@ -198,21 +198,32 @@ structural surface:
 ```bash
 uv run heliostune verify-plugin path/to/plugin.json
 uv run heliostune verify-suite path/to/suite.json
-uv run heliostune verify-bundle path/to/bundle.json
-uv run heliostune verify-bundle path/to/bundle.json --format json
-uv run heliostune verify-bundle path/to/bundle.json --output path/to/verification-record.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --format json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
 uv run heliostune list-scope
 ```
 
 With no output flags, `verify-bundle` retains its human-readable text.
 `--format json` writes the exact canonical record bytes to standard output
-without Rich rendering. `--output PATH` implies JSON, writes the same bytes
-silently, requires an already-existing destination parent outside the resolved
-bundle directory, and atomically refuses to replace any existing name.
-Explicit `--format text --output PATH` is rejected before bundle verification.
-A structurally valid record with deferred `not_checked` controls still exits
-zero, but remains ineligible. A verification/build/encoding/write error or any
-`failed` control exits 2 and emits no success bytes or new output file.
+without Rich rendering. `--output PATH` implies JSON and writes silently to a
+new sibling of the verified bundle directory; its existing parent must be that
+directory's immediate parent and match the device/inode identity captured
+through the pinned bundle descriptor.
+Arbitrary destinations use `--format json` with external shell redirection,
+which has no HeliosTune-controlled atomicity guarantee. Explicit `--format text
+--output PATH` is rejected before verification. A structurally valid record
+with deferred `not_checked` controls still exits zero, but remains ineligible.
+A `failed` control or verification/build/encoding error exits 2 and emits no
+success bytes. A pre-link write failure also exits 2 and creates no destination.
+The bundle-parent relationship is checked
+immediately before and after the irreversible no-replace link. A hostile rename
+can make the requested pathname stale or unrecoverable. A post-link error
+reports committed/ambiguous state: the complete linked destination is not
+rolled back, but directory durability may be ambiguous. The writer uses unnamed
+`O_TMPFILE` storage and an unprivileged procfd source for atomic no-replace
+`linkat`; it fails closed if either capability is unavailable. Closing the
+unnamed fd performs cleanup.
 
 These v0.6 commands do not execute a backend or establish correctness,
 performance, authenticity, provider retry/billing truth, analyzer replay,

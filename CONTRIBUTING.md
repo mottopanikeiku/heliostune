@@ -150,27 +150,40 @@ conferring verification or eligibility.
 
 Canonical record bytes are two-space-indented, sorted-key strict JSON with one
 trailing LF; loaders require byte-identical re-encoding. File output requires
-an exact record/`VerifiedBundle` match, must finish building and encoding before
-touching output, requires an existing parent outside and not below the resolved
-bundle directory, and atomically refuses to replace an existing name. The
-writer pins the parent without following symlinks, uses an exclusive temporary
-file, fsyncs the payload, links atomically without replacement, cleans up, and
-fsyncs the directory. Preserve the agreed CLI:
+an exact record/`VerifiedBundle` match and must finish building and encoding
+before touching output. The destination must be a new sibling of the bundle
+directory: its existing parent must be that directory's immediate parent and
+match the device/inode captured through the pinned bundle descriptor. This
+runtime parent identity is non-wire; arbitrary destinations use JSON stdout
+redirection. The writer pins the exact parent without following symlinks, opens
+unnamed `O_TMPFILE` storage there, fsyncs the payload, and uses an unprivileged
+procfd source for atomic no-replace `linkat`. Lack of either capability fails
+closed. Closing the unnamed fd performs cleanup. Recheck the
+bundle-parent relationship immediately before and after linking. A successful
+link is irreversible, but no topology immutability is promised against hostile
+renames: the requested pathname may become stale or unrecoverable. Pre-link
+failure creates no destination. Post-link failure reports committed/ambiguous
+state: the complete linked destination is not rolled back, but directory
+durability may be ambiguous.
+Preserve the agreed CLI:
 
 ```bash
-uv run heliostune verify-bundle path/to/bundle.json
-uv run heliostune verify-bundle path/to/bundle.json --format json
-uv run heliostune verify-bundle path/to/bundle.json --output path/to/verification-record.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --format json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
 ```
 
 No flags retain human text; `--format json` emits exact bytes to stdout without
-Rich; `--output PATH` implies JSON and is silent.
-Explicit `--format text --output PATH` must fail before verification.
-Structurally verified records with deferred controls exit zero and remain
-ineligible. Any `failed` control or
-verification/build/encoding/write error exits 2 with no success bytes and no
-new file. A record is not a signature, authentication, provider truth, semantic
-or statistical correctness, analyzer replay, or full reproduction.
+Rich; `--output PATH` implies JSON and is silent. Explicit `--format text
+--output PATH` must fail before verification. Structurally verified records
+with deferred controls exit zero and remain ineligible. Any `failed` control or
+verification/build/encoding/pre-link write error exits 2 with no success bytes
+or destination. A post-link failure also exits 2 and reports
+committed/ambiguous state; hostile rebinding can make the requested pathname
+stale or unrecoverable. The complete linked destination is not rolled back, but
+directory durability may be ambiguous. A
+record is not a signature, authentication, provider truth, semantic or
+statistical correctness, analyzer replay, or full reproduction.
 
 The two runtime-integrated reference templates permit only FP16/BF16
 input/storage, FP32 accumulation, FP16/BF16/FP32 output, null quantization, and
