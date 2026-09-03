@@ -181,10 +181,11 @@ jobs:
           cd "${release_dir}/dist"
           sha256sum -- *.whl *.tar.gz *.git.bundle > SHA256SUMS
           sha256sum --check SHA256SUMS
+          sha256sum -- *.whl *.tar.gz *.git.bundle SHA256SUMS > "${release_dir}/attestation-subjects.sha256"
       - name: Attest every release asset
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
         with:
-          subject-path: "${{ runner.temp }}/heliostune-release/dist/*"
+          subject-checksums: "${{ runner.temp }}/heliostune-release/attestation-subjects.sha256"
       - name: Converge and publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -238,13 +239,25 @@ jobs:
           find_matching_release
           release_count="$(jq 'length' "${matching_releases}")"
           if [[ "${release_count}" -eq 0 ]]; then
-            gh release create "${RELEASE_TAG}" \
-              --draft \
-              --verify-tag \
-              --fail-on-no-commits \
-              --title "${release_title}" \
-              --notes "${release_notes}"
-            find_matching_release
+            set +e
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/releases" \
+              -f tag_name="${RELEASE_TAG}" \
+              -f target_commitish="${GITHUB_SHA}" \
+              -f name="${release_title}" \
+              -f body="${release_notes}" \
+              -F draft=true \
+              -F prerelease=false > "${release_json}"
+            create_status=$?
+            set -e
+
+            if [[ "${create_status}" -eq 0 ]]; then
+              jq --arg tag "${RELEASE_TAG}" \
+                '[select(.tag_name == $tag)]' \
+                "${release_json}" > "${matching_releases}"
+            else
+              find_matching_release
+            fi
             release_count="$(jq 'length' "${matching_releases}")"
           fi
           if [[ "${release_count}" -ne 1 ]]; then
