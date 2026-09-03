@@ -893,6 +893,22 @@ def test_verify_bundle_output_file_matches_stdout_and_is_silent(
     assert output.read_bytes() == stdout_bytes
 
 
+def test_verify_bundle_output_rejects_non_sibling_parent(
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    unrelated_parent = tmp_path / "elsewhere"
+    unrelated_parent.mkdir()
+    output = unrelated_parent / "verification-record.json"
+
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert captured.err
+    assert not output.exists()
+
+
 def test_verify_bundle_deferred_controls_exit_zero_without_lifecycle_promotion(
     tmp_path: Path,
     capfdbinary: pytest.CaptureFixture[bytes],
@@ -985,6 +1001,44 @@ def test_verify_bundle_record_failure_emits_no_success_output(
     assert captured.out == b""
     assert f"{stage} failed".encode() in captured.err
     assert not output.exists()
+
+
+def test_verify_bundle_post_commit_error_preserves_record_and_reports_ambiguous_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.verification as verification
+
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    output = tmp_path / "verification-record.json"
+    committed: bytes | None = None
+
+    def fail_after_commit(
+        path: Path,
+        record: Any,
+        *,
+        verified: Any,
+    ) -> None:
+        del verified
+        nonlocal committed
+        committed = verification.encode_verification_record_v1(record)
+        path.write_bytes(committed)
+        raise ArtifactError(
+            "record committed through pinned parent; requested pathname may be stale; "
+            "inspect the ambiguous state before retrying"
+        )
+
+    monkeypatch.setattr(verification, "write_verification_record_v1", fail_after_commit)
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+
+    assert captured.out == b""
+    assert b"committed through pinned parent" in captured.err
+    assert b"requested pathname may be stale" in captured.err
+    assert b"ambiguous state" in captured.err
+    assert committed is not None
+    assert output.read_bytes() == committed
 
 
 @pytest.mark.parametrize(
@@ -1142,6 +1196,8 @@ def test_verification_help_states_non_retroactive_strict_scope(
     output = capsys.readouterr().out
     assert "non-retroactive" in output.lower()
     assert "legacy manifests are rejected" in output.lower()
+    if command == "verify-bundle":
+        assert "new file beside the bundle directory" in " ".join(output.split())
 
 
 @pytest.mark.parametrize(

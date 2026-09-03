@@ -1286,7 +1286,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output",
         type=Path,
         metavar="PATH",
-        help="write the canonical JSON verification record to a new file",
+        help="write canonical JSON to a new file beside the bundle directory",
     )
     verify_bundle.set_defaults(handler=_verify_bundle)
 
