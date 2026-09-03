@@ -4,6 +4,7 @@ import argparse
 import builtins
 import hashlib
 import json
+import shutil
 from collections.abc import Callable
 from importlib.metadata import version
 from io import BytesIO, StringIO
@@ -740,8 +741,305 @@ def test_verify_bundle_prints_verified_inventory_and_all_limitations(
         assert f"limitation.{limitation}: not_checked" in output
     assert "limitation.attempt_reconciliation: checked" in output
     assert output.count(": not_checked") == 11
+    assert "verification_record_schema: heliostune.verification-record/1" in output
+    assert "verifier_source_sha256: " in output
+    assert "claim_eligible: false" in output
+    assert "publication_eligible: false" in output
     assert "publication eligible" not in output.lower()
     assert "authenticated" not in output.lower()
+
+
+@pytest.mark.parametrize(
+    ("arguments", "output_format", "output"),
+    [
+        (["verify-bundle", "bundle.json"], None, None),
+        (["verify-bundle", "bundle.json", "--format", "text"], "text", None),
+        (["verify-bundle", "bundle.json", "--format", "json"], "json", None),
+        (
+            ["verify-bundle", "bundle.json", "--output", "record.json"],
+            None,
+            Path("record.json"),
+        ),
+        (
+            [
+                "verify-bundle",
+                "bundle.json",
+                "--format",
+                "json",
+                "--output",
+                "record.json",
+            ],
+            "json",
+            Path("record.json"),
+        ),
+        (
+            [
+                "verify-bundle",
+                "bundle.json",
+                "--format",
+                "text",
+                "--output",
+                "record.json",
+            ],
+            "text",
+            Path("record.json"),
+        ),
+    ],
+)
+def test_verify_bundle_parser_preserves_omitted_format(
+    arguments: list[str],
+    output_format: str | None,
+    output: Path | None,
+) -> None:
+    parsed = cli.build_parser().parse_args(arguments)
+    assert parsed.output_format == output_format
+    assert parsed.output == output
+
+
+def test_verify_bundle_rejects_explicit_text_file_before_verification(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import heliostune.methodology as methodology
+
+    def forbidden_verify(_path: Path) -> object:
+        raise AssertionError("verification must not run")
+
+    monkeypatch.setattr(methodology, "verify_bundle_v1", forbidden_verify)
+    output = tmp_path / "record.json"
+
+    assert (
+        cli.main(
+            [
+                "verify-bundle",
+                str(tmp_path / "missing.json"),
+                "--format",
+                "text",
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    captured = capsys.readouterr()
+    assert "--format text cannot be combined with --output" in captured.err
+    assert captured.out == ""
+    assert not output.exists()
+
+
+def test_verify_bundle_json_stdout_is_exact_canonical_bytes_and_bypasses_rich(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    from heliostune.methodology import verify_bundle_v1
+    from heliostune.verification import (
+        build_verification_record_v1,
+        encode_verification_record_v1,
+    )
+
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    expected = encode_verification_record_v1(build_verification_record_v1(verify_bundle_v1(root)))
+
+    def forbidden_rich(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("JSON output must bypass Rich")
+
+    monkeypatch.setattr(cli._CONSOLE, "print", forbidden_rich)
+    assert cli.main(["verify-bundle", str(root), "--format", "json"]) == 0
+    captured = capfdbinary.readouterr()
+    assert captured.out == expected
+    assert captured.err == b""
+    assert captured.out.endswith(b"\n")
+    assert not captured.out.endswith(b"\n\n")
+
+
+def test_verify_bundle_record_is_repeatable_and_location_independent(
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    first_parent = tmp_path / "first"
+    first_parent.mkdir()
+    first, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(first_parent)
+    second_directory = tmp_path / "second" / first.parent.name
+    second_directory.parent.mkdir()
+    shutil.copytree(first.parent, second_directory)
+    second = second_directory / first.name
+
+    assert cli.main(["verify-bundle", str(first), "--format", "json"]) == 0
+    first_bytes = capfdbinary.readouterr().out
+    assert cli.main(["verify-bundle", str(first), "--format", "json"]) == 0
+    repeated_bytes = capfdbinary.readouterr().out
+    assert cli.main(["verify-bundle", str(second), "--format", "json"]) == 0
+    relocated_bytes = capfdbinary.readouterr().out
+
+    assert first_bytes == repeated_bytes == relocated_bytes
+
+
+def test_verify_bundle_output_file_matches_stdout_and_is_silent(
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    output = tmp_path / "verification-record.json"
+
+    assert cli.main(["verify-bundle", str(root), "--format", "json"]) == 0
+    stdout_bytes = capfdbinary.readouterr().out
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 0
+    captured = capfdbinary.readouterr()
+
+    assert captured.out == b""
+    assert captured.err == b""
+    assert output.read_bytes() == stdout_bytes
+
+
+def test_verify_bundle_deferred_controls_exit_zero_without_lifecycle_promotion(
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    root, _protocol, _attempts, _artifact, bundle = _methodology_bundle_fixture(tmp_path)
+    lifecycle = cast(dict[str, object], bundle["lifecycle"])
+    lifecycle["state"] = "PUBLISHED"
+    write_json_atomic(root, bundle)
+
+    assert cli.main(["verify-bundle", str(root), "--format", "json"]) == 0
+    captured = capfdbinary.readouterr()
+    record = json.loads(captured.out)
+
+    assert captured.err == b""
+    assert record["lifecycle"] == {"state": "PUBLISHED", "outcome": "completed"}
+    assert "not_checked" in record["controls"].values()
+    assert record["claim_eligible"] is False
+    assert record["publication_eligible"] is False
+
+
+def test_verify_bundle_failed_control_suppresses_stdout_and_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.verification as verification
+
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    output = tmp_path / "verification-record.json"
+    monkeypatch.setattr(
+        verification,
+        "build_verification_record_v1",
+        lambda _verified: SimpleNamespace(has_failed_controls=True),
+    )
+
+    assert cli.main(["verify-bundle", str(root), "--format", "json"]) == 2
+    stdout_failure = capfdbinary.readouterr()
+    assert stdout_failure.out == b""
+    assert b"failed controls" in stdout_failure.err
+
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 2
+    file_failure = capfdbinary.readouterr()
+    assert file_failure.out == b""
+    assert b"failed controls" in file_failure.err
+    assert not output.exists()
+
+
+def test_verify_bundle_malformed_bundle_creates_no_record(
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    root.write_bytes(b"{\n")
+    output = tmp_path / "verification-record.json"
+
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert captured.err
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("stage", ["build", "encode", "write"])
+def test_verify_bundle_record_failure_emits_no_success_output(
+    stage: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.verification as verification
+
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    output = tmp_path / "verification-record.json"
+
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise ArtifactError(f"{stage} failed")
+
+    if stage == "build":
+        monkeypatch.setattr(verification, "build_verification_record_v1", fail)
+        arguments = ["verify-bundle", str(root), "--format", "json"]
+    elif stage == "encode":
+        monkeypatch.setattr(verification, "encode_verification_record_v1", fail)
+        arguments = ["verify-bundle", str(root), "--format", "json"]
+    else:
+        monkeypatch.setattr(verification, "write_verification_record_v1", fail)
+        arguments = ["verify-bundle", str(root), "--output", str(output)]
+
+    assert cli.main(arguments) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert f"{stage} failed".encode() in captured.err
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    "collision",
+    [
+        "existing",
+        "bundle",
+        "protocol",
+        "attempts",
+        "artifact",
+        "symlink",
+        "hardlink",
+        "dangling_symlink",
+    ],
+)
+def test_verify_bundle_output_collision_preserves_existing_objects(
+    collision: str,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    root, protocol, attempts, artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    if collision == "existing":
+        output = tmp_path / "existing.json"
+        output.write_bytes(b"keep existing\n")
+    elif collision == "bundle":
+        output = root
+    elif collision == "protocol":
+        output = protocol
+    elif collision == "attempts":
+        output = attempts
+    elif collision == "artifact":
+        output = artifact
+    elif collision == "symlink":
+        output = tmp_path / "record-link.json"
+        output.symlink_to(root)
+    elif collision == "hardlink":
+        output = tmp_path / "record-hardlink.json"
+        output.hardlink_to(root)
+    else:
+        output = tmp_path / "dangling-record-link.json"
+        output.symlink_to(tmp_path / "missing-target.json")
+
+    before = output.lstat()
+    before_payload = None if collision == "dangling_symlink" else output.read_bytes()
+    before_link = output.readlink() if output.is_symlink() else None
+
+    assert cli.main(["verify-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert captured.err
+    assert output.lstat().st_ino == before.st_ino
+    if output.is_symlink():
+        assert output.readlink() == before_link
+    if before_payload is not None:
+        assert output.read_bytes() == before_payload
 
 
 def test_verification_output_escapes_content_and_handles_unusual_paths(
