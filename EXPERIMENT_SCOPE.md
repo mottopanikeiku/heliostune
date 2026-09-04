@@ -4,11 +4,12 @@
 
 This active scope record describes the implemented `heliostune.plugin/1` and
 `heliostune.suite/1` declaration surface, the additive structural custody
-controls for new `heliostune.bundle/1` outputs, and the bounded roadmap for
-surfaces not yet implemented. It is narrower than the normative evidence
-lifecycle in [METHODOLOGY.md](METHODOLOGY.md): checked internal custody is not
-execution validation, correctness, provider truth, authenticity, analyzer
-replay, full offline reproduction, or a claim.
+controls for new `heliostune.bundle/1` outputs, the canonical CPU-only
+`heliostune.verification-record/1`, and the bounded roadmap for surfaces not
+yet implemented. It is narrower than the normative evidence lifecycle in
+[METHODOLOGY.md](METHODOLOGY.md): checked internal custody and a durable record
+are not execution validation, semantic or statistical correctness, provider
+truth, authenticity, analyzer replay, full offline reproduction, or a claim.
 
 The schemas are additive and non-retroactive. The published Parhelion and
 Hopper studies remain immutable legacy plugins and evidence. They have not been
@@ -27,6 +28,7 @@ one "supported" label.
 | Schema | A `heliostune.plugin/1` or `heliostune.suite/1` document has exact JSON types, no unknown or duplicate fields, and satisfies its cross-field rules. | `verify-plugin` and `verify-suite`. | That referenced code imports, a GPU is present, or a case is correct or fast. |
 | Template | A suite ID has frozen cases, arms, numeric contracts, fusion semantics, expected cells, and exact artifact bytes. | The two generic reference templates and the separately integrated native Triton template, with their SHA-256 values below. | That a local or remote capability probe passed, or that the template is correct or fast. |
 | Bundle inventory custody | A new bundle's opted-in plugin and all transitive suites are internally closed by exact inventoried bytes, identities, order, and digests. | Reserved flat artifacts plus `heliostune verify-bundle`. | Who authored or executed the bytes, provider attempts/billing, semantic correctness, analyzer replay, full reproduction, or claim eligibility. |
+| Verification record | A canonical location-free record binds the exact structurally verified bundle, twelve explicit control statuses, and a descriptive six-file verifier identity. | `heliostune verify-bundle PATH --format json` or sibling-only `--output SIBLING_PATH`. | A signature, authentication, provider truth, semantic or statistical correctness, analyzer replay, full reproduction, or eligibility when any control is not `checked`. |
 | Backend capability | A particular arm was not probed, or a retained probe found it available or unavailable. Local and remote are separate. | Suite arm `local_capability` and `remote_capability`: `unprobed`, `available`, or `unavailable`. | Correctness, performance, portability to another target, or claim eligibility. |
 | Correctness observation | A retained execution observation passed the frozen numerical and semantic checks for one case, arm, input seed, and environment. | A narrow local executor/bundle observation, not a plugin or suite declaration. | That timing passed, that another case passed, or that an arm is faster. |
 | Performance observation | Retained timing samples were collected under a frozen timing policy after a passing correctness observation. | A narrow local executor/bundle observation, not a plugin or suite declaration. | A win, generalization, or statistical claim without the rest of the protocol and evidence checks. |
@@ -119,6 +121,68 @@ before atomic no-replace rename. Reconciliation is checked only when journal
 rows evidence all final logical states, retry policy is `none`,
 `max_physical_attempts` is one, physical equals logical, and orphaned is zero.
 Provider retry/billing reconciliation remains unchecked.
+
+## Canonical verification record
+
+Issue #32, implemented only after issue #31's custody and attempt-chain
+controls, adds a durable CPU-only `VerificationRecordV1` without changing the
+`heliostune.bundle/1` root. The exact closed record has top-level fields
+`schema`, `verifier`, `bundle`, `lifecycle`, `evidence_class`, `controls`,
+`claim_eligible`, and `publication_eligible`, with schema literal
+`heliostune.verification-record/1`.
+
+`verifier` contains `package`, `version`, `source_sha256`, and ordered `sources`
+whose entries contain `path`, `bytes`, and `sha256`. `bundle` contains the
+unchanged bundle `schema` and `bundle_id`; location-free root `bytes` and
+`sha256`; protocol `path`, `bytes`, `sha256`, `study_id`, and `revision`;
+attempts `path`, `bytes`, `sha256`, and `hash_chain_head`; and artifact entries
+with `role`, `path`, `media_type`, `bytes`, and `sha256`, sorted by `(role,
+path)`. `lifecycle` is the exact bundle `state` and `outcome`; `evidence_class`
+is copied from the bound protocol.
+
+The twelve exact control names are `protocol_ancestry`,
+`evidence_nonpromotion`, `semantic_content_beyond_digests`,
+`plugin_suite_custody`, `attempt_journal_hash_chain`,
+`attempt_reconciliation`, `claim_eligibility`, `analyzer_replay`,
+`provenance_tier_derivation`, `signature_cryptography`,
+`catalog_membership`, and `offline_reproduction`. Each status is exactly
+`checked | not_checked | not_applicable | failed`. Both eligibility booleans
+equal `all_checked`, meaning every one of the twelve statuses is `checked`; any
+`not_checked`, `not_applicable`, or `failed` status forces both false.
+Lifecycle state, evidence class, and provenance never alter that formula, so
+even `VERIFIED`, `ANALYZED`, or `PUBLISHED` labels do not confer verification
+or eligibility. The current deferred controls remain `not_checked`, and
+current records therefore remain ineligible.
+
+Verifier source identity is a descriptive self-identity over the fixed ordered
+roster `heliostune/artifacts.py`, `heliostune/errors.py`,
+`heliostune/methodology.py`, `heliostune/scope.py`,
+`heliostune/validation.py`, and `heliostune/verification.py`. The aggregate
+SHA-256 uses domain `b"heliostune.verification-sources/1\0"` followed, for each
+entry, by its UTF-8 path length as eight-byte big-endian, path bytes, byte count
+as eight-byte big-endian, and raw 32-byte digest. Import-time and build-time
+captures must match. This identifies installed source bytes; it does not
+authenticate them.
+
+Canonical output is two-space-indented, sorted-key strict JSON with one
+trailing LF and excludes absolute bundle, runtime, and output paths, timestamps,
+hostnames, PIDs, executables, and random IDs. Canonical loading rejects any byte
+representation that does not re-encode identically. Safe file output first
+builds and encodes a record that exactly matches its `VerifiedBundle`, then
+requires a new sibling file whose existing parent is the verified bundle
+directory's immediate parent with the exact device/inode captured through the
+pinned descriptor. That runtime identity is non-wire; arbitrary destinations
+use JSON stdout redirection. The relationship is rechecked immediately before
+and after the irreversible no-replace link. This does not promise topology
+immutability against hostile renames: the requested pathname may become stale
+or unrecoverable. Pre-link failure creates no destination; post-link failure
+reports committed/ambiguous state: the complete linked destination is not
+rolled back, but directory durability may be ambiguous. The writer uses unnamed
+`O_TMPFILE` storage and an unprivileged procfd source for atomic no-replace
+`linkat`; it fails closed if either capability is unavailable. Closing the
+unnamed fd performs cleanup. The record is not a signature,
+authentication, provider truth, semantic or statistical correctness, analyzer
+replay, or full reproduction.
 
 ## Domain and dtype scope
 
@@ -518,18 +582,18 @@ The active v0.6 roadmap is ordered and fail-closed:
 
 | Stage | Current state and required work | Stop boundary |
 |---|---|---|
-| 1a. Issue #31: custody and attempt chain | Implemented for new local/native bundles: unchanged v1 roots gain additive full plugin → suite inventory, selected-suite identity, canonical predecessor chaining, descriptor-contained reads, and truthful no-retry reconciliation. CPU fixtures cover completed, failed, aborted, legacy-unchecked, and tampered bundles. | This closes internal custody and chaining only. **STOP** on any missing/mismatched inventoried byte, reserved descriptor, predecessor, lifecycle/accounting fact, or unsafe path. No signature, provider-truth, analyzer, or full-reproduction claim follows. |
-| 1b. Issue #32: VerificationRecord | Next: emit a durable canonical CPU-only VerificationRecord that binds inputs, verifier identity, and every applicable control without upgrading deferred controls. | **STOP** while records are absent, nondeterministic, incomplete, or treat `not_checked` as success. Issue #31 does not complete this record. |
-| 1c. Issue #33: analyzer replay | After #32, add deterministic network-disabled replay through an audited analyzer registry and compare declared outputs. | **STOP** on undeclared access, network use, unavailable isolation, nondeterminism, or byte mismatch. Custody and a VerificationRecord do not themselves replay analysis. |
+| 1a. Issue #31: custody and attempt chain | Implemented first for new local/native bundles: unchanged v1 roots gain additive full plugin → suite inventory, selected-suite identity, canonical predecessor chaining, descriptor-contained reads, and truthful no-retry reconciliation. CPU fixtures cover completed, failed, aborted, legacy-unchecked, and tampered bundles. | This closes internal custody and chaining only. **STOP** on any missing/mismatched inventoried byte, reserved descriptor, predecessor, lifecycle/accounting fact, or unsafe path. No signature, provider-truth, analyzer, or full-reproduction claim follows. |
+| 1b. Issue #32: VerificationRecord | Implemented after #31: durable canonical CPU-only records bind exact inputs, descriptive six-file verifier identity, and every control without upgrading deferred controls. | **STOP** on nondeterministic, noncanonical, incomplete, mismatched, failed-control, overwrite, or non-sibling file output. A record is not eligibility or analyzer replay. |
+| 1c. Issue #33: analyzer replay | Next: add deterministic network-disabled replay through an audited analyzer registry and compare declared outputs. | **STOP** on undeclared access, network use, unavailable isolation, nondeterminism, or byte mismatch. Custody and a VerificationRecord do not themselves replay analysis. |
 | 2. Dependency split | Separate actively maintained execution dependencies from frozen reproduction pins, and verify that each historical environment remains reproducible without constraining the active environment. | **STOP** if an active dependency update changes frozen reproduction identity or if a reproduction pin silently governs new execution. |
 | 3. One-domain no-cost design gate | Select at most one inventory domain below and freeze a reviewed feasibility/capability design: semantics, numerics, applicability, baseline hierarchy, backend requirements, custody, expected cells, and explicit infeasibility criteria. The gate performs no paid execution and makes no correctness or performance claim. | **STOP** on missing semantics, baseline, feasible backend design, custody plan, or bounded execution design. Other inventory domains remain inventory. |
 | 4. Optional paid-protocol proposal | Only after the preceding stages pass may a new, predeclared protocol with new versioned paths and its own frozen paid plan be proposed for separate approval. | A passed design gate permits review of a proposal, not dispatch. Without explicit approval and a cost bound, **STOP** before any paid call. |
 
 This roadmap authorizes no GPU spending; its maximum authorized spend is
 **$0**. Stage evidence and decisions must be retained even when they stop
-continuation. Issue #31 does not check signatures or authenticity, provider
-physical retries or billing, analyzer replay, or complete offline reproduction;
-those statuses remain `not_checked`.
+continuation. Issues #31 and #32 do not check signatures or authenticity,
+provider physical retries or billing, analyzer replay, or complete offline
+reproduction; those statuses remain `not_checked` in current records.
 
 The stage-3 inventory contains no frozen executable suite ID:
 
@@ -614,34 +678,51 @@ Separate focused tests in `tests/test_methodology.py`,
 issue-#31 bundle surface: strict/legacy opt-in selection, complete in-memory
 plugin-suite inventory, selected-suite identity, canonical predecessor bytes and
 empty head, sealed-state reconciliation, descriptor/inode containment, and
-producer pre-rename postconditions. Passing these tests checks only those
-controls; it does not supply the VerificationRecord or analyzer replay planned
-by issues #32 and #33.
+producer pre-rename postconditions. Issue-#32 verification and CLI tests defend
+deterministic source and bundle identity, all four statuses, eligibility
+nonpromotion, canonical round trips, and descriptor-identified sibling-only
+atomic no-replace output. They cover bundle-parent rechecks, pre-link absence,
+and retained complete records with committed/ambiguous state after post-link
+failure or hostile rebinding. Passing these CPU tests checks only those
+controls; it does not supply the analyzer replay planned by issue #33.
 
 ## Inspect and verify
 
-The CPU-only structural commands are:
+The CPU-only structural and record commands are:
 
 ```bash
 uv run heliostune verify-plugin path/to/plugin.json
 uv run heliostune verify-suite path/to/suite.json
-uv run heliostune verify-bundle path/to/bundle.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --format json
+uv run heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
 uv run heliostune list-scope
 ```
 
 `verify-plugin` checks the strict plugin root and resolves every relative suite
-path and digest. `verify-suite` checks one strict standalone suite.
-`verify-bundle` reports structural closure plus the custody, chain, and
-reconciliation status actually established; absence of the additive descriptors
-is reported as legacy `not_checked`, never promoted. It emits no durable
-VerificationRecord yet. These commands make no execution, correctness,
-performance, provider, billing, signature, analyzer-replay,
-full-offline-reproduction, or claim-eligibility assertion. `list-scope` prints
-the closed domain and dtype vocabularies and all three structurally executable
-template IDs in `EXECUTABLE_TEMPLATE_IDS`, then reports native implementation
-status separately. Membership in that tuple records structural executability,
-not retained runtime capability; the separately published H100 observation does
-not promote any declaration's `unprobed` capability state.
+path and digest. `verify-suite` checks one strict standalone suite. With no
+output flags, `verify-bundle` retains human-readable text. `--format json`
+writes exact canonical record bytes to stdout without Rich. `--output PATH`
+implies JSON and silently creates a new sibling file only when its existing
+parent is the descriptor-identified immediate parent of the verified bundle
+directory; arbitrary paths use external JSON stdout redirection. Explicit
+`--format text --output PATH` fails before verification. Structurally verified
+deferred records exit zero but remain ineligible. A failed control or
+verification/build/encoding/pre-link write error exits 2 without success bytes
+or a destination. The relationship is rechecked immediately before and after
+the irreversible no-replace link. A hostile rename or rebinding can make the
+requested pathname stale or unrecoverable. A post-link error exits 2 and
+reports committed/ambiguous state: the complete linked destination is not
+rolled back, but directory durability may be ambiguous.
+
+These commands make no execution, semantic or statistical correctness,
+performance, provider, billing, signature/authentication, analyzer-replay, or
+full-offline-reproduction assertion. `list-scope` prints the closed domain and
+dtype vocabularies and all three structurally executable template IDs in
+`EXECUTABLE_TEMPLATE_IDS`, then reports native implementation status
+separately. Membership in that tuple records structural executability, not
+retained runtime capability; the separately published H100 observation does not
+promote any declaration's `unprobed` capability state.
 
 The generic local and Modal executor branches remain implemented for the two
 frozen reference templates, whose existing

@@ -942,6 +942,17 @@ def test_verify_closed_bundle_for_each_evidence_class(tmp_path: Path, evidence_c
     assert verified.root_path == root.resolve()
     assert verified.root_bytes == len(root.read_bytes())
     assert verified.root_sha256 == _file_digest(root.read_bytes())
+    assert verified.attempts_bytes == len((tmp_path / "attempts/journal.jsonl").read_bytes())
+    root_directory = root.parent.stat()
+    assert verified.root_directory_identity == (
+        root_directory.st_dev,
+        root_directory.st_ino,
+    )
+    root_parent_directory = root.parent.parent.stat()
+    assert verified.root_parent_directory_identity == (
+        root_parent_directory.st_dev,
+        root_parent_directory.st_ino,
+    )
     assert verified.referenced_paths[:2] == (
         (tmp_path / "protocol.json").resolve(),
         (tmp_path / "attempts/journal.jsonl").resolve(),
@@ -1944,6 +1955,38 @@ def test_pinned_directory_fd_ignores_substituted_diagnostic_path(tmp_path: Path)
 
     assert verified.bundle.bundle_id == "methodology-bundle-test"
     assert verified.root_path == original / "bundle.json"
+
+
+def test_parent_identity_capture_needs_search_but_not_read_permission(tmp_path: Path) -> None:
+    searchable_parent = tmp_path / "searchable-only"
+    root = _write_closed_bundle(searchable_parent / "bundle")
+    searchable_parent.chmod(0o111)
+    try:
+        verified = verify_bundle_v1(root)
+        identity = searchable_parent.stat()
+    finally:
+        searchable_parent.chmod(0o755)
+
+    assert verified.root_parent_directory_identity == (
+        identity.st_dev,
+        identity.st_ino,
+    )
+
+
+@pytest.mark.parametrize("capability", ["dir_fd", "follow_symlinks"])
+def test_parent_identity_capture_requires_descriptor_relative_stat_support(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capability: str,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    support_name = f"supports_{capability}"
+    supported = set(getattr(os, support_name))
+    supported.discard(os.stat)
+    monkeypatch.setattr(os, support_name, supported)
+
+    with pytest.raises(ArtifactError, match="descriptor-pinned bundle verification is unsupported"):
+        verify_bundle_v1(root)
 
 
 def test_directory_fd_entrypoint_rejects_file_fd_without_closing_caller(tmp_path: Path) -> None:

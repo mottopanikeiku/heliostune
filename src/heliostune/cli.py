@@ -703,13 +703,15 @@ def _verify_catalog(args: argparse.Namespace) -> int:
     return 0
 
 
-def _display_value(value: str | int | Path) -> str:
+def _display_value(value: str | int | bool | Path) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
     if isinstance(value, int):
         return str(value)
     return json.dumps(str(value), ensure_ascii=True)[1:-1]
 
 
-def _print_facts(heading: str, facts: Sequence[tuple[str, str | int | Path]]) -> None:
+def _print_facts(heading: str, facts: Sequence[tuple[str, str | int | bool | Path]]) -> None:
     lines = [heading]
     lines.extend(f"{name}: {_display_value(value)}" for name, value in facts)
     _CONSOLE.print(
@@ -721,7 +723,7 @@ def _print_facts(heading: str, facts: Sequence[tuple[str, str | int | Path]]) ->
 
 
 def _print_structural_verification(
-    kind: str, facts: Sequence[tuple[str, str | int | Path]]
+    kind: str, facts: Sequence[tuple[str, str | int | bool | Path]]
 ) -> None:
     _print_facts(f"{kind} structurally verified", facts)
 
@@ -883,11 +885,33 @@ def _verify_protocol(args: argparse.Namespace) -> int:
 
 
 def _verify_bundle(args: argparse.Namespace) -> int:
+    if args.output is not None and args.output_format == "text":
+        raise ProtocolError("--format text cannot be combined with --output")
+
     from heliostune.methodology import verify_bundle_v1
+    from heliostune.verification import (
+        build_verification_record_v1,
+        encode_verification_record_v1,
+        write_verification_record_v1,
+    )
 
     verified = verify_bundle_v1(args.path)
+    record = build_verification_record_v1(verified)
+    if record.has_failed_controls:
+        raise ProtocolError("verification record has failed controls; refusing output")
+
+    output_format = args.output_format or ("json" if args.output is not None else "text")
+    if args.output is not None:
+        write_verification_record_v1(args.output, record, verified=verified)
+        return 0
+    if output_format == "json":
+        payload = encode_verification_record_v1(record)
+        sys.stdout.buffer.write(payload)
+        sys.stdout.buffer.flush()
+        return 0
+
     bundle = verified.bundle
-    facts: list[tuple[str, str | int | Path]] = [
+    facts: list[tuple[str, str | int | bool | Path]] = [
         ("path", verified.root_path),
         ("lifecycle", bundle.lifecycle.state),
         ("outcome", bundle.lifecycle.outcome),
@@ -924,6 +948,14 @@ def _verify_bundle(args: argparse.Namespace) -> int:
                 getattr(verified.limitations, limitation.name),
             )
         )
+    facts.extend(
+        (
+            ("verification_record_schema", record.schema),
+            ("verifier_source_sha256", record.verifier.source_sha256),
+            ("claim_eligible", record.claim_eligible),
+            ("publication_eligible", record.publication_eligible),
+        )
+    )
     _print_structural_verification("Bundle", facts)
     return 0
 
@@ -1243,6 +1275,19 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     verify_bundle.add_argument("path", type=Path, metavar="PATH")
+    verify_bundle.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default=None,
+        help="render human-readable text or the canonical verification record as JSON",
+    )
+    verify_bundle.add_argument(
+        "--output",
+        type=Path,
+        metavar="PATH",
+        help="write canonical JSON to a new file beside the bundle directory",
+    )
     verify_bundle.set_defaults(handler=_verify_bundle)
 
     verify_plugin = subparsers.add_parser(
