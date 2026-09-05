@@ -10,19 +10,19 @@
 
 ## Continuation boundaries
 
-Work proceeds in order. The active v0.6 milestone first implemented issue #31's
+Work proceeds in order. The active v0.6 milestone implemented issue #31's
 additive transitive plugin → suite custody and canonical attempt chain for new
-local/native bundles, then implemented issue #32's durable canonical CPU-only
-VerificationRecords. The next gates are:
+local/native bundles, issue #32's durable canonical CPU-only
+VerificationRecords, and issue #33's audited deterministic offline CPU analyzer
+replay. The next gates are:
 
-1. issue #33: run deterministic network-disabled analyzer replay through an
-   audited registry;
-2. separate active execution dependencies from frozen reproduction pins; then
-3. run a no-cost feasibility/capability design gate for one new domain.
+1. issue #34: separate active execution dependencies from frozen reproduction
+   pins; then
+2. run a no-cost feasibility/capability design gate for one new domain.
 
 Each stage must stop until its own implementation and CPU evidence are complete.
-Issue #32 records the results of issue #31 controls but does not perform
-issue #33's analyzer replay. The final design gate
+Issue #33 changes exactly the replay controls only after an actual isolated
+two-run drill; it does not confer claim eligibility. The final design gate
 selects at most one domain and authorizes no GPU execution. Only after all gates
 pass may contributors propose a new predeclared paid protocol at new versioned
 paths; dispatch still requires separate explicit approval and a frozen cost
@@ -30,10 +30,12 @@ bound. The maximum authorized spend for this roadmap remains **$0**.
 
 ## CPU changes
 
-Use the locked environment and run the focused behavioral test first, then the complete quality gates:
+Use the locked environment and run the focused behavioral test first, then the
+complete quality gates:
 
 ```bash
 uv sync --locked --extra dev
+uv run pytest tests/test_offline_replay.py
 uv run pytest
 uv run ruff check .
 uv run ruff format --check .
@@ -126,9 +128,11 @@ Verification records are additive and must never mutate the unchanged
 `lifecycle` is exactly `{state,outcome}`. Do not add absolute bundle, runtime,
 or output paths, timestamps, hostnames, PIDs, executables, or random IDs.
 
-The descriptive verifier identity is package/version plus the fixed ordered
-source roster `heliostune/artifacts.py`, `heliostune/errors.py`,
-`heliostune/methodology.py`, `heliostune/scope.py`,
+The descriptive verifier identity is package/version plus the fixed
+lexicographically ordered source roster `heliostune/_offline_worker.py`,
+`heliostune/_reference_analyzer.py`, `heliostune/artifacts.py`,
+`heliostune/errors.py`, `heliostune/methodology.py`,
+`heliostune/offline_replay.py`, `heliostune/scope.py`,
 `heliostune/validation.py`, and `heliostune/verification.py`. Aggregate those
 bytes with SHA-256 domain `b"heliostune.verification-sources/1\0"` and, for each
 entry, eight-byte big-endian UTF-8 path length, path bytes, eight-byte
@@ -147,6 +151,83 @@ booleans must equal whether every one of the twelve statuses is `checked`; any
 other status forces both false. Lifecycle, evidence, and provenance labels do
 not enter that formula. Never treat `VERIFIED`, `ANALYZED`, or `PUBLISHED` as
 conferring verification or eligibility.
+
+Offline analyzer replay is registry-only. A bundle supplies role `analyzer`
+with media type `application/json`; `protocol.analysis.analyzer_sha256` binds
+those bytes. Its canonical `AnalyzerManifestV1` has exactly `schema`,
+`analyzer_id`, `runner_api`, `implementation`, `inputs`, `outputs`, and
+`representation`. Preserve literals `heliostune.analyzer-manifest/1`,
+`heliostune.offline-replay/1`, and `byte_exact`.
+`AnalyzerImplementationV1` contains only `source_sha256` and ordered `sources`;
+each source, input, and output `AnalyzerArtifactBindingV1` contains only `role`,
+`media_type`, `bytes`, and `sha256`. All three lists are nonempty and ordered;
+roles are nonempty, unique, and disjoint across the lists. Never add a path,
+command, import/module name, entrypoint, dependency-fetch hook, or
+artifact-controlled executable choice.
+
+Any registry addition must be audited source committed in the package and must
+declare an exact static implementation source roster plus ordered
+input/output role/media-type contracts. Manifest values and captured bundle
+bytes/digests must equal that registry specification. The initial reference ID
+is exactly `heliostune.reference.integer-summary/1`; its implementation binding
+is `analyzer_source` / `text/x-python`, privately mapped by the registry to
+installed `heliostune/_reference_analyzer.py` while captured source bytes are
+compared but never executed. Its input is `analysis_input` /
+`application/json`, and its output is `analysis_summary` /
+`application/json`. Preserve its exact canonical 1–4096 signed-integer input
+domain and canonical input-SHA-256/count/min/max/sum output. Registry callables
+accept and return ordered `(role, bytes)` tuples and must use only already
+loaded pure functions during invocation.
+
+Do not weaken the replay boundary. The parent must require the base record's
+custody, attempt-chain, and reconciliation controls to be checked; open and
+retain the bundle directory no-follow; capture declared manifest/source/input/
+committed-output bytes with the shared bounded descriptor reader; and reverify
+the same fd after capture and replay. Preserve the 2 MiB root, 32 MiB component,
+and 64 MiB aggregate read limits; declared/descriptor sizes must fail before
+bulk reads.
+
+Run the fixed worker twice in distinct empty workspaces through
+`/usr/bin/setpriv --no-new-privs /usr/bin/unshare --user --map-root-user --net
+--mount --pid --fork --kill-child=SIGKILL --mount-proc`, then the absolute
+current Python executable with
+`-B -P -s -m heliostune._offline_worker`. Preserve the exact environment
+`HOME=/`, `LC_ALL=C`, `LANG=C`, `TZ=UTC`, `PYTHONHASHSEED=0`,
+`PYTHONDONTWRITEBYTECODE=1`; bounded canonical base64 request; regular-file
+stdout/stderr capture; whole-process-group timeout and communication-failure
+handling; worker resource/process bounds; and non-stdio-fd closure. The request
+must bind both the exact manifest implementation and the parent's complete
+`VerifierIdentityV1`; the child must independently recapture and match its
+installed package version and source closure before replay.
+
+Before chroot, require PID 1, effective UID/GID 0, one-ID user/group mappings,
+and `NoNewPrivs: 1`; mount a fresh empty mode-0555 tmpfs with
+`nosuid,nodev,noexec`; bind-remount it read-only; re-enter the mounted path; and
+verify both `ST_RDONLY` and an `EROFS` write probe. The deny-and-latch audit hook
+must make attempted open/import/socket/DNS/subprocess/fork/exec/`os.system`/
+`ctypes`/audit-hook actions fail even when an analyzer catches the immediate
+exception. It is a tripwire, not the primary sandbox; user/network namespaces,
+the read-only empty tmpfs chroot, and resource/process limits provide the
+primary isolation. Never add a fallback when any required executable,
+namespace, mount, chroot, or other isolation setup is unavailable.
+Reject nonzero status, timeout, communication failure, any stderr, malformed,
+trailing, or oversized output, role/count/order mismatch, nondeterministic
+runs, or output differing from pre-captured committed bytes.
+
+`build_replay_verification_record_v1` must accept only a success-only
+`OfflineReplayResult`, never a caller-supplied record or status map. It
+reconstructs the base record and changes exactly `analyzer_replay` and
+`offline_reproduction` to `checked`, preserving every other control and
+bundle/lifecycle/evidence fact and recomputing eligibility.
+`write_offline_replay_record_v1(path, result)` must validate that same
+runner-minted result before using the safe record publisher. Neither may
+replace the original `VerifiedBundle` limitations. Success means only same-host
+reproduction of declared committed
+bytes by the registered CPU analyzer—not authenticity, cross-host bit
+reproducibility, provider truth, semantic/statistical truth, GPU recollection,
+claim eligibility/promotion, or full dependency/campaign reproduction. Replay
+must download nothing, invoke no backend/GPU, and make no paid call; its spend
+boundary is **$0**.
 
 Canonical record bytes are two-space-indented, sorted-key strict JSON with one
 trailing LF; loaders require byte-identical re-encoding. File output requires
@@ -171,19 +252,27 @@ Preserve the agreed CLI:
 uv run heliostune verify-bundle path/to/bundle/bundle.json
 uv run heliostune verify-bundle path/to/bundle/bundle.json --format json
 uv run heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
+uv run heliostune replay-bundle path/to/bundle/bundle.json
+uv run heliostune replay-bundle path/to/bundle/bundle.json --format json
+uv run heliostune replay-bundle path/to/bundle/bundle.json --output path/to/bundle.replay-verification.json
 ```
 
-No flags retain human text; `--format json` emits exact bytes to stdout without
-Rich; `--output PATH` implies JSON and is silent. Explicit `--format text
---output PATH` must fail before verification. Structurally verified records
-with deferred controls exit zero and remain ineligible. Any `failed` control or
-verification/build/encoding/pre-link write error exits 2 with no success bytes
-or destination. A post-link failure also exits 2 and reports
-committed/ambiguous state; hostile rebinding can make the requested pathname
-stale or unrecoverable. The complete linked destination is not rolled back, but
-directory durability may be ambiguous. A
-record is not a signature, authentication, provider truth, semantic or
-statistical correctness, analyzer replay, or full reproduction.
+No flags retain human text; successful replay text is headed `Bundle offline
+replay verified` and names the path, analyzer ID, runner API, sandbox, two
+runs, each output role/byte count/SHA-256, every original limitation, every
+upgraded control, and both eligibility booleans. `--format json` emits exact
+record bytes to stdout without Rich; `--output PATH` implies JSON and is
+silent. Explicit `--format text --output PATH` must fail before verification
+or replay. Structurally verified base records with deferred controls exit zero
+and remain ineligible. Replay emits only after the complete drill succeeds.
+Any failed control or verification/manifest/isolation/audit/replay/build/
+encoding/pre-link write error exits 2 with no success bytes or destination. A
+post-link failure also exits 2 and reports committed/ambiguous state; hostile
+rebinding can make the requested pathname stale or unrecoverable. The complete
+linked destination is not rolled back, but directory durability may be
+ambiguous. Neither record is a signature, authentication, provider truth,
+semantic/statistical correctness, claim promotion, or full
+dependency/campaign reproduction.
 
 The two runtime-integrated reference templates permit only FP16/BF16
 input/storage, FP32 accumulation, FP16/BF16/FP32 output, null quantization, and

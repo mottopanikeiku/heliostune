@@ -17,13 +17,14 @@ An actively maintained retrieval-first GPU autotuning and evidence-control/repla
 > work at new versioned paths, but must never rewrite frozen evidence or
 > strengthen its claims. In v0.6, issue #31 implemented additive transitive
 > plugin → suite custody and canonical attempt chaining for new local/native
-> bundles, and issue #32 subsequently implemented durable canonical CPU-only
-> VerificationRecords. Issue #33, deterministic network-disabled analyzer
-> replay, is the next gate, followed by dependency separation and a no-cost
-> one-domain design gate. Only
-> after those gates may a new, separately approved, predeclared paid protocol be
-> proposed. The maximum authorized spend remains **$0**; this roadmap authorizes
-> no GPU execution and never rewrites frozen evidence.
+> bundles, issue #32 implemented durable canonical CPU-only
+> VerificationRecords, and issue #33 implemented audited registry-only CPU
+> analyzer replay in an unprivileged network/user namespace. Issue #34,
+> separating active dependencies from frozen reproduction pins, is the next
+> gate, followed by a no-cost one-domain design gate. Only after those gates may
+> a new, separately approved, predeclared paid protocol be proposed. The maximum
+> authorized spend remains **$0**; this roadmap authorizes no GPU execution and
+> never rewrites frozen evidence.
 
 **Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
@@ -33,7 +34,7 @@ An actively maintained retrieval-first GPU autotuning and evidence-control/repla
 
 **Fusion remote exploratory receipts:** the deterministic [report](site/fusion-remote-exploratory.html), strict [summary](benchmarks/results/fusion-remote-exploratory-summary.json), compressed [raw evidence](benchmarks/data/fusion-remote-exploratory.json.zst), and [manifest](benchmarks/fusion-remote-exploratory-manifest.json) preserve four client-authorized H100 attempts: two gated-MLP calls unresolved after 401 errors and cancellation requests, plus one completed gated-MLP and one completed residual-RMSNorm call. App IDs are operator-recorded with no artifact binding; FunctionCall IDs are bound by retained remote journals. Completed correctness, compile, and timing values are measured facts only; `candidate / reference` is candidate median divided by reference median, values below 1 indicate the lower returned candidate median, and the reciprocal direction is also reported. The evidence makes no fusion or superiority claim, every completed receipt records `publication_eligible=false`, and provider physical starts or restarts, provider attempt count, total GPU time, and actual cost are unknown; no attestation is present. The attempts are bound to different historical HEAD commits and wheel digests and must not be treated as one interchangeable build.
 
-**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the active, partially implemented evidence-control design target; it is non-retroactive and does not claim that legacy evidence conforms. [Experiment scope](EXPERIMENT_SCOPE.md) records the implemented declaration and additive bundle-custody state plus the bounded continuation roadmap while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, and performance observations.
+**Methodology:** [HeliosTune methodology v1](METHODOLOGY.md) is the active, partially implemented evidence-control design target; it is non-retroactive and does not claim that legacy evidence conforms. [Experiment scope](EXPERIMENT_SCOPE.md) records the implemented declaration, additive bundle custody, VerificationRecord, and bounded registered-analyzer replay surfaces plus the continuation roadmap while separating vocabulary, schema/template identity, structural source availability, backend capability, correctness observations, performance observations, and replay from claims.
 
 **v0.6 verification status:** `heliostune verify-bundle` checks the additive,
 offline-only inventory, selected-suite descriptor, and predecessor-linked
@@ -42,22 +43,37 @@ attempt journal described below, then builds a deterministic
 and ID; location-free root bytes/digest; protocol and attempts identities;
 artifact roles, relative paths, media types, byte counts, and digests; lifecycle
 and evidence class; and all twelve verification controls. It also records a
-descriptive self-identity for the installed `heliostune` package version and the exact
-source bytes of `heliostune/artifacts.py`, `heliostune/errors.py`,
-`heliostune/methodology.py`, `heliostune/scope.py`,
-`heliostune/validation.py`, and `heliostune/verification.py`. That six-file
-digest is self-identification, not authentication.
+descriptive self-identity for the installed `heliostune` package version and
+this exact lexicographically ordered source roster:
+`heliostune/_offline_worker.py`, `heliostune/_reference_analyzer.py`,
+`heliostune/artifacts.py`, `heliostune/errors.py`,
+`heliostune/methodology.py`, `heliostune/offline_replay.py`,
+`heliostune/scope.py`, `heliostune/validation.py`, and
+`heliostune/verification.py`. That nine-file digest is self-identification, not
+authentication.
+New records emit that nine-file roster. The historical loader also accepts the
+exact six-file roster emitted by issue #32 before replay support; it accepts no
+arbitrary roster and does not rewrite historical bytes.
 
 Every control status is exactly `checked`, `not_checked`, `not_applicable`, or
 `failed`. Both `claim_eligible` and `publication_eligible` are true only when
 all twelve statuses are `checked`; any other status forces both false.
 Lifecycle labels such as `VERIFIED`, `ANALYZED`, or `PUBLISHED` do not confer
-verification or eligibility and never override that formula. Current records
-retain deferred controls as `not_checked` and therefore remain ineligible. The
-canonical bytes contain no absolute bundle, runtime, or output path and no
-timestamp, hostname, PID, executable, or random identifier. They are not
-signatures, authentication, provider truth, semantic or statistical
-correctness, analyzer replay, or full reproduction.
+verification or eligibility and never override that formula. A base
+`verify-bundle` record retains replay controls as `not_checked`.
+`heliostune replay-bundle` requires the bundle's
+`plugin_suite_custody`, `attempt_journal_hash_chain`, and
+`attempt_reconciliation` controls to be `checked`, performs the bounded replay
+described below, and reconstructs the record with exactly `analyzer_replay` and
+`offline_reproduction` changed to `checked`. Every other status and every bound
+bundle fact remain identical, so deferred controls still keep both eligibility
+booleans false.
+
+Canonical records contain no absolute bundle, runtime, or output path and no
+timestamp, hostname, PID, executable, or random identifier. Neither a base nor
+an upgraded record is a signature, authentication, provider truth, semantic or
+statistical correctness, a claim promotion, or full dependency/campaign
+reproduction.
 
 ## Result
 
@@ -192,8 +208,8 @@ uv run heliostune demo --output-dir /tmp/heliostune-demo --max-budget 2 --seeds 
 uv run heliostune inspect /tmp/heliostune-demo/measurements.jsonl
 ```
 
-After returning to an active v0.6 source checkout, inspect its strict CPU-only
-structural surface:
+After returning to an active v0.6 source checkout, use its strict CPU-only
+verification and replay surface:
 
 ```bash
 uv run heliostune verify-plugin path/to/plugin.json
@@ -201,35 +217,92 @@ uv run heliostune verify-suite path/to/suite.json
 uv run heliostune verify-bundle path/to/bundle/bundle.json
 uv run heliostune verify-bundle path/to/bundle/bundle.json --format json
 uv run heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
+uv run heliostune replay-bundle path/to/bundle/bundle.json
+uv run heliostune replay-bundle path/to/bundle/bundle.json --format json
+uv run heliostune replay-bundle path/to/bundle/bundle.json --output path/to/bundle.replay-verification.json
 uv run heliostune list-scope
 ```
 
-With no output flags, `verify-bundle` retains its human-readable text.
-`--format json` writes the exact canonical record bytes to standard output
-without Rich rendering. `--output PATH` implies JSON and writes silently to a
-new sibling of the verified bundle directory; its existing parent must be that
-directory's immediate parent and match the device/inode identity captured
-through the pinned bundle descriptor.
-Arbitrary destinations use `--format json` with external shell redirection,
-which has no HeliosTune-controlled atomicity guarantee. Explicit `--format text
---output PATH` is rejected before verification. A structurally valid record
-with deferred `not_checked` controls still exits zero, but remains ineligible.
-A `failed` control or verification/build/encoding error exits 2 and emits no
-success bytes. A pre-link write failure also exits 2 and creates no destination.
-The bundle-parent relationship is checked
-immediately before and after the irreversible no-replace link. A hostile rename
-can make the requested pathname stale or unrecoverable. A post-link error
-reports committed/ambiguous state: the complete linked destination is not
-rolled back, but directory durability may be ambiguous. The writer uses unnamed
-`O_TMPFILE` storage and an unprivileged procfd source for atomic no-replace
-`linkat`; it fails closed if either capability is unavailable. Closing the
-unnamed fd performs cleanup.
+The replay bundle must inventory an `analyzer` artifact with media type
+`application/json`, digest-bound by `protocol.analysis.analyzer_sha256`. Its
+canonical strict `AnalyzerManifestV1` names only an
+audited registry ID, the digest-bound implementation source roster, ordered
+input and output bindings, the fixed runner API, and `byte_exact`
+representation—never an artifact path, command, module, or entrypoint. The
+built-in `heliostune.reference.integer-summary/1` has implementation binding
+`analyzer_source` (`text/x-python`), privately mapped by the registry to audited
+installed `heliostune/_reference_analyzer.py`; the captured source bytes are
+compared but never executed. It consumes canonical JSON role `analysis_input`
+(`application/json`) containing 1–4096 signed exact integers and emits canonical
+JSON role `analysis_summary` (`application/json`) with the input SHA-256, count,
+minimum, maximum, and sum.
 
-These v0.6 commands do not execute a backend or establish correctness,
-performance, authenticity, provider retry/billing truth, analyzer replay,
-complete offline reproduction, or claim eligibility. The generic local and
-Modal branches for the two frozen
-reference templates, and their existing
+Replay captures the manifest, implementation source, declared inputs, declared
+committed outputs, and retained bundle identity through one descriptor-pinned,
+no-follow methodology reader. Bundle verification rejects roots above 2 MiB,
+individual components above 32 MiB, or more than 64 MiB across one
+verification/capture before bulk reads.
+
+The parent runs the fixed preloaded registry callable twice in distinct empty
+chroot workspaces backed by a read-only `nosuid,nodev,noexec` tmpfs. Each worker
+uses the fixed absolute `/usr/bin/setpriv --no-new-privs /usr/bin/unshare`
+prefix with user, network, mount, and PID namespaces, then the absolute current
+Python executable. Before chroot, the worker requires inner PID 1, UID/GID 0,
+one-ID user/group mappings, and `NoNewPrivs: 1`; mounts an empty mode-0555
+tmpfs; bind-remounts it read-only; re-enters the mounted path; and verifies both
+`ST_RDONLY` and an `EROFS` write probe. Locale, timezone, hash seed,
+environment, resource bounds, and non-stdio descriptor closure are fixed.
+
+The canonical worker request binds the manifest implementation and the parent's
+complete verifier source identity; the child independently recaptures its
+installed source closure and rejects any parent/worker package mismatch. A
+deny-and-latch Python audit hook rejects attempted open/import/socket/DNS/
+subprocess/fork/exec/`os.system`/`ctypes`/audit-hook actions even if analyzer
+code catches the immediate exception. The namespaces and read-only empty chroot
+are the isolation boundary; the audit hook is only an additional tripwire.
+There is no weaker fallback: if any required namespace, mount, chroot, or other
+isolation setup is unavailable, replay fails closed.
+
+The parent rejects timeouts, nonzero status, any stderr, malformed, trailing, or
+oversized worker output, role/count/order disagreement, a difference between
+the two runs, or a difference from the pre-captured committed output bytes. It
+reverifies the same open bundle descriptor after capture and after replay. A
+success proves only same-host reproduction of the declared committed derived
+bytes by that registered CPU analyzer.
+
+With no output flags, both bundle commands retain human-readable text.
+Successful replay text names the analyzer and runner API, namespace/chroot
+isolation and audit-tripwire boundary, two runs, every output role, byte count,
+and SHA-256, the original `VerifiedBundle` limitations, every upgraded control,
+and both eligibility booleans.
+`--format json` writes exact canonical VerificationRecord bytes to standard
+output without Rich rendering. `--output PATH` implies JSON and writes silently
+to a new sibling of the verified bundle directory; its existing parent must be
+that directory's immediate parent and match the device/inode identity captured
+through the pinned bundle descriptor. Arbitrary destinations use `--format
+json` with external shell redirection, which has no HeliosTune-controlled
+atomicity guarantee. Explicit `--format text --output PATH` is rejected before
+verification or replay. `verify-bundle` exits zero for a structurally valid
+deferred record. `replay-bundle` emits only after the entire two-run drill and
+record upgrade succeed. Any failed control, replay/isolation/audit/byte error,
+record build/encoding error, or pre-link write error exits 2 with no success
+bytes and no new destination.
+
+For either file mode, the bundle-parent relationship is checked immediately
+before and after the irreversible no-replace link. A hostile rename can make
+the requested pathname stale or unrecoverable. A post-link error reports
+committed/ambiguous state: the complete linked destination is not rolled back,
+but directory durability may be ambiguous. The writer uses unnamed `O_TMPFILE`
+storage and an unprivileged procfd source for atomic no-replace `linkat`; it
+fails closed if either capability is unavailable. Closing the unnamed fd
+performs cleanup.
+
+Offline replay executes no backend or GPU and performs no dependency download
+or paid call; the authorized cost remains **$0**. It does not establish
+authenticity, provider retry/billing truth, cross-host bit reproducibility,
+semantic or statistical correctness, GPU recollection, claim eligibility,
+claim promotion, or full dependency/campaign reproduction. The generic local
+and Modal branches for the two frozen reference templates, and their existing
 [exploratory receipts](benchmarks/results/fusion-remote-exploratory-summary.json),
 are unchanged. Both legacy suites completed correctness and timing, but no
 fusion, superiority, provider attempt-count, cost, attestation, or

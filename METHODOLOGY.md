@@ -2,7 +2,7 @@
 
 ## Status and normative language
 
-This is HeliosTune's active, partially implemented evidence-control design target. The document is normative only for artifacts whose exact schema literal is `heliostune.protocol/1`, `heliostune.bundle/1`, or `heliostune.verification-record/1`. It does not upgrade older artifacts or claim that the current CLI or every study implements the contract; see [Implementation status](#11-implementation-status). Frozen protocols, bundles, records, and published evidence remain immutable, while new implementation work may land at new versioned paths without rewriting those bytes or claims.
+This is HeliosTune's active, partially implemented evidence-control design target. The document is normative only for artifacts whose exact schema literal is `heliostune.protocol/1`, `heliostune.bundle/1`, `heliostune.analyzer-manifest/1`, or `heliostune.verification-record/1`. It does not upgrade older artifacts or claim that the current CLI or every study implements the contract; see [Implementation status](#11-implementation-status). Frozen protocols, bundles, records, and published evidence remain immutable, while new implementation work may land at new versioned paths without rewriting those bytes or claims.
 
 The key words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as described by RFC 2119. Each mandatory rule below states both the failure it prevents and the machine check that enforces it. A verifier has no warning-only path for a failed mandatory rule.
 
@@ -12,8 +12,8 @@ HeliosTune is an evidence control plane between candidate generation and a publi
 
 ```text
 Study plugin → resolved protocol → immutable freeze → executor
-             → sealed EvidenceBundle → VerificationRecord → analyzer
-             → typed claim → publication
+             → sealed EvidenceBundle → VerificationRecord
+             → registered analyzer replay → typed claim → publication
 ```
 
 It controls study identity, semantic closure, role separation, execution accounting, evidence custody, claim eligibility, and reproducible analysis. A plugin supplies domain choices such as workloads, candidate space, comparator applicability, numerical tolerances, timing strata, practical margins, estimators, and sampling counts.
@@ -474,6 +474,13 @@ These roles are an explicit opt-in. If no plugin-suite reserved role is present,
 The required attempts path is strict JSONL. Chained mode is selected by role `attempt_chain` at `attempt_chain.json`, whose exact closed descriptor value is `{"schema":"heliostune.attempt-chain/1"}`. Its payload uses the same two-space-indented, sorted-key strict JSON with one trailing LF. Presence of any `attempt_chain`-prefixed role selects strict handling, and every form except that one exact role, path, media type, and payload fails closed. In chained mode every row uses the three-field canonical predecessor algorithm in §6 and the root `hash_chain_head` must equal the computed final head, including $H_0$ for an empty journal. With no such prefix, only the legacy exact two-field `{cell_id,status}` rows are accepted and `attempt_journal_hash_chain` is `not_checked`; mixed or partially opted-in forms fail. In either mode, each cell begins at `pending`, may proceed to `running`, and terminates once at `success` or `failure`, and journal terminal IDs and success/failure counts are bound to `terminal_cells` and coverage.
 
 Verification of an arbitrary bundle opens the resolved bundle directory once and then opens every normalized relative path component descriptor-relatively with symlink following disabled. It requires each opened target to be a regular file, hashes and parses the bytes read from that same descriptor, and rejects repeated `(st_dev, st_ino)` identities, including hard-link aliases between declared roles. Producers call `verify_bundle_v1_from_directory_fd` with their already-open staging directory descriptor; the verifier duplicates it, and both pre-rename and post-rename verification operate solely through that pinned descriptor. Any supplied directory path is diagnostic text only, never path-resolution authority. These containment checks prevent path substitution and aliasing; they do not authenticate the bytes' author.
+Reads are finite before allocation: a bundle root is limited to 2 MiB, every
+protocol/attempt/artifact component to 32 MiB, and one verification or selected
+artifact capture to 64 MiB in aggregate. Declared and descriptor-reported sizes
+are checked before payload reads, growth past the bound fails during the read,
+and descriptor size/timestamp identity must remain stable across it. Larger
+evidence must be compressed or split into a separately specified format rather
+than weakening the verifier.
 
 `verify_bundle_v1` establishes structural closure only, not publication eligibility. It validates strict root/protocol schemas, descriptor-contained non-escaping unique paths and roles, byte counts and digests, protocol digest-role closure, lifecycle phase/outcome compatibility, strict cell identities, coverage sets/counts, the selected strict or legacy attempt transitions, and—when opted in—the complete transitive plugin inventory and canonical predecessor chain. A control is `checked` only after its applicable verification succeeds. No reserved plugin-suite roles and no attempt-chain descriptor retain their respective `not_checked` legacy statuses. Attempt reconciliation is `checked` only when rows evidence every final logical state, retry policy is `none`, `max_physical_attempts` is one, physical equals logical, and orphaned is zero; retry/orphan/provider cases remain `not_checked`. A chained, sealed, nonempty journal cannot end in a live state; an empty aborted pre-dispatch journal remains valid. Protocol ancestry, exploratory nonpromotion, semantic-content validation beyond digest identity, claim eligibility, analyzer replay, provenance-tier derivation, signature cryptography, catalog membership, provider retry/billing truth, and complete offline reproduction remain `not_checked`. `publication_eligible` remains false.
 
@@ -541,10 +548,12 @@ convenience only and is not a wire field.
 
 Canonical encoding is two-space-indented, lexicographically sorted-key strict
 JSON with exactly one trailing LF. Artifact entries are sorted by `(role,
-path)`. The verifier source roster and order are fixed to
+path)`. The verifier source roster and order are fixed and lexicographic:
+`heliostune/_offline_worker.py`, `heliostune/_reference_analyzer.py`,
 `heliostune/artifacts.py`, `heliostune/errors.py`,
-`heliostune/methodology.py`, `heliostune/scope.py`,
-`heliostune/validation.py`, and `heliostune/verification.py`. For the aggregate
+`heliostune/methodology.py`, `heliostune/offline_replay.py`,
+`heliostune/scope.py`, `heliostune/validation.py`, and
+`heliostune/verification.py`. For the aggregate
 SHA-256, initialize the hash with
 `b"heliostune.verification-sources/1\0"`; for each source in that order append
 the UTF-8 path length as an eight-byte big-endian integer, the path bytes, the
@@ -553,20 +562,142 @@ digest. The installed resources, package version, and aggregate are captured
 at module import and recaptured when a record is built; any mismatch or
 unreadable source fails. This is descriptive self-identification, not
 authentication.
+New records emit this nine-file roster. To preserve the schema's historical
+loader contract, decoding also accepts exactly issue #32's earlier six-file
+roster (`artifacts.py`, `errors.py`, `methodology.py`, `scope.py`,
+`validation.py`, and `verification.py`, with their full package-relative
+paths). No other roster or order is accepted, and historical bytes are never
+rewritten into the current identity.
 
 The canonical record is location-free: it includes only bundle-relative
 protocol, attempts, and artifact paths and excludes the absolute bundle path,
 runtime path, output path, timestamp, hostname, PID, executable, and random
-identifier. Loading requires byte-for-byte canonical re-encoding. A record is
-not a signature, authentication, provider truth, a semantic or statistical
-correctness result, analyzer replay, or full reproduction.
+identifier. Loading requires byte-for-byte canonical re-encoding. Building a
+base record does not perform replay. Neither a base record nor the successfully
+upgraded replay record is a signature, authentication, provider truth, a
+semantic or statistical correctness result, a claim promotion, or full
+dependency/campaign reproduction.
+
+#### 7.2.1 Audited CPU offline analyzer replay
+
+An opted-in replay bundle inventories exactly one `analyzer` artifact with
+media type `application/json`, whose digest is bound by
+`protocol.analysis.analyzer_sha256`. Its bytes load canonically as the closed
+`AnalyzerManifestV1` shape:
+
+```text
+schema: literal "heliostune.analyzer-manifest/1"
+analyzer_id: string
+runner_api: literal "heliostune.offline-replay/1"
+implementation: {
+  source_sha256: digest,
+  sources: [{role: string, media_type: string, bytes: integer >= 0, sha256: digest}]
+}
+inputs: [{role: string, media_type: string, bytes: integer >= 0, sha256: digest}]
+outputs: [{role: string, media_type: string, bytes: integer >= 0, sha256: digest}]
+representation: literal "byte_exact"
+```
+
+The binding entries above are `AnalyzerArtifactBindingV1`; the implementation
+object is `AnalyzerImplementationV1`. Objects have exact fields and JSON scalar
+types. Source, input, and output bindings are nonempty ordered lists with
+nonempty roles; roles are unique and disjoint across all three lists. Encoding
+is two-space-indented, sorted-key strict JSON with exactly one trailing LF, and
+the loader requires byte-identical canonical re-encoding. The manifest contains
+no path, command, import/module name, or entrypoint. Its analyzer ID must name a
+built-in audited registry
+entry, and the manifest's implementation source roster, role/media-type
+contracts, bytes, and digests must exactly match that static registry entry and
+the inventoried bundle artifacts. Artifact bytes never select executable code.
+
+The initial registry contains only
+`heliostune.reference.integer-summary/1`. Its implementation has sole binding
+role `analyzer_source` with media type `text/x-python`; the registry privately
+maps that identity to the audited installed
+`heliostune/_reference_analyzer.py`, while captured bundle source bytes are
+compared but never executed. The callable accepts ordered `(role, bytes)`
+tuples with sole input role `analysis_input` and media type `application/json`;
+it emits sole output role `analysis_summary` with the same media type. Input is
+exact canonical JSON whose sole field `values` is an array of 1–4096 signed,
+exact JSON integers.
+Output is canonical JSON binding the input SHA-256, count, minimum, maximum,
+and sum. The callable uses only already-loaded pure functions: it imports
+nothing and performs no external action during invocation.
+
+The parent runner first requires the base record's `plugin_suite_custody`,
+`attempt_journal_hash_chain`, and `attempt_reconciliation` statuses to be
+`checked`; caller-supplied statuses are never trusted. It opens the resolved
+bundle directory without following symlinks, requires its retained
+device/inode identity to match, and captures the manifest, implementation
+sources, declared inputs, and committed outputs through the same bounded,
+descriptor-relative methodology reader with byte-count and SHA-256 checks. It
+reverifies the same open bundle directory descriptor after capture and again
+after both replay runs.
+
+Each run receives a distinct empty workspace. The fixed absolute launch prefix
+is `/usr/bin/setpriv --no-new-privs /usr/bin/unshare --user --map-root-user
+--net --mount --pid --fork --kill-child=SIGKILL --mount-proc`, followed by the
+absolute current Python executable and
+`-B -P -s -m heliostune._offline_worker`. The child receives only `HOME=/`,
+`LC_ALL=C`, `LANG=C`, `TZ=UTC`, `PYTHONHASHSEED=0`, and
+`PYTHONDONTWRITEBYTECODE=1`. There is no fallback when user/network/mount/PID
+namespace creation, the tmpfs remount, chroot, or another isolation
+precondition is unavailable.
+
+The parent sends one bounded canonical base64 request on standard input and
+captures bounded stdout/stderr in regular files. Timeout and communication
+failure handling kills and reaps the whole process group. The request binds the
+exact manifest implementation plus the parent's complete
+`VerifierIdentityV1`. Before replay, the child independently captures its
+installed package version and nine-file verifier source identity and requires
+exact equality, preventing a different package resolved by the child
+interpreter from silently performing the run.
+
+The worker preloads only the fixed registry and reads the request, then requires
+PID 1, effective UID/GID 0, one-ID user/group mappings, and `NoNewPrivs: 1`. It
+mounts a fresh empty mode-0555 tmpfs with `nosuid,nodev,noexec`, bind-remounts
+it read-only, re-enters that mount, and requires both `ST_RDONLY` and an `EROFS`
+write probe before chrooting and changing to `/`. It closes every non-stdio
+descriptor, applies bounds to request/output size, CPU, address space, file
+size, open descriptors, and process count, and installs a deny-and-latch Python
+audit hook before invoking the selected fixed callable. Attempts to open or
+import, create sockets or resolve DNS, launch subprocesses, fork, exec, call
+`os.system`, use `ctypes`, or add an audit hook fail the run even if analyzer
+code catches the immediate exception. User/network namespaces plus the
+read-only empty tmpfs chroot and resource/process bounds are the primary
+sandbox; the audit hook is a tripwire, never the sandbox claim.
+
+The parent rejects timeout, nonzero exit, any stderr, malformed, trailing, or
+oversized result bytes, output role/count/order disagreement, unequal run
+outputs, or output bytes that differ from the pre-captured committed artifacts.
+Only two successful runs in distinct workspaces whose outputs are pairwise
+byte-identical and equal the committed bytes produce `OfflineReplayResult`.
+That result retains the original `VerifiedBundle`, manifest, identities for
+both runs, and an upgraded record.
+
+The replay-specific
+`build_replay_verification_record_v1(result: OfflineReplayResult)` accepts only
+the success-only runner result—never a caller-supplied record or statuses. It
+reconstructs the base record and changes exactly `analyzer_replay` and
+`offline_reproduction` to `checked`; every other control, bundle identity,
+lifecycle value, and evidence-class value is identical, and eligibility is
+recomputed from all twelve controls. The file writer likewise accepts
+`(path, result)` and validates that exact replay result before calling the safe
+record publisher. Neither path changes the `VerifiedBundle` limitations. This
+`offline_reproduction` control means only a
+successful same-host drill of the registered analyzer and declared committed
+derived bytes. It does not establish authenticity, cross-host bit
+reproducibility, provider truth, semantic or statistical correctness, GPU
+recollection, claim eligibility or promotion, or complete software dependency
+or campaign reproduction. Replay downloads nothing, invokes no GPU or backend,
+and authorizes no paid call; the maximum spend is **$0**.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
 | E1 | A bundle **MUST** close its protocol, attempts, expected cells, raw and failed observations, provenance, costs, analyzer, claims, reports, and required attachments by path, byte count, role, media type, and digest. | Selective omission, dangling inputs, and mixed evidence generations. | Recursive inventory/reference traversal, digest/size recomputation, and required-role set equality. |
 | E2 | Sealing **MUST** permanently close attempts and account for exactly one terminal outcome per planned cell or a protocol-permitted incomplete exploratory prefix. | Late appended retries and favorable partial datasets. | Seal event fixes journal head; expected/terminal set equality and evidence-class coverage rules reject later records. |
 | E3 | Verification **MUST** fail closed on any schema, reference, lifecycle, custody, coverage, semantic, replay, claim, or policy error. | Warning-only publication of invalid evidence. | VerificationRecord contains one of the four closed statuses for every control and sets both eligibility booleans true only when all twelve controls are `checked`. |
-| E4 | Derived summaries, claims, and reports **MUST** regenerate offline from bound inputs and the frozen analyzer. | Hand-edited results and network-dependent analysis. | Network-disabled replay compares canonical outputs byte-for-byte or by a protocol-declared deterministic representation. |
+| E4 | Derived summaries, claims, and reports **MUST** regenerate offline from bound inputs and the frozen analyzer. | Hand-edited results and network-dependent analysis. | Registry-only network-disabled replay runs twice and compares every declared `byte_exact` output pair and committed artifact byte-for-byte. |
 
 ### 7.3 Provenance tiers
 
@@ -576,7 +707,7 @@ Execution provenance is one of:
 - `self_attested_backend`: an operator/backend assertion is bound, but no independently verifiable provider receipt exists;
 - `provider_signed`: the configured trust policy verifies a provider or independent receipt over the envelope, function/image, hardware, call ID, timestamps, nonce/idempotency key, and output digest.
 
-Offline reproduction is separately `not_checked`, `partial`, or `complete`. `complete` means a verifier can work without network access, validate the retained software closure, install it, replay analysis/report generation, and reproduce derived evidence bytes. It does not mean GPU measurements can be recollected without equivalent hardware. Missing redistributable dependencies, base image closure, build inputs, or byte-identical analysis replay yields `partial` or failure, never an inferred `complete`.
+Offline reproduction provenance is separately `not_checked`, `partial`, or `complete`. `complete` means a verifier can work without network access, validate the retained software closure, install it, replay analysis/report generation, and reproduce derived evidence bytes. It does not mean GPU measurements can be recollected without equivalent hardware. Missing redistributable dependencies, base image closure, build inputs, or byte-identical analysis replay yields `partial` or failure, never an inferred `complete`. The issue-#33 record control named `offline_reproduction: checked` reports only its bounded same-host registered-analyzer drill; it does not infer this broader complete provenance tier.
 
 Provider signatures, a seven-year retention period, and two independently administered replicas are policy-profile controls rather than universal v1 requirements. A strict publication profile may require them. Lower truthful tiers remain representable but cannot support authentication, durability, or full-offline-reproduction wording.
 
@@ -600,7 +731,7 @@ Each publication declares a retention policy ID, expiry or indefinite retention,
 
 ## 8. CLI lifecycle: local exploration to strict evidence
 
-The currently implemented CPU-only inspection and record surface is:
+The currently implemented CPU-only inspection, record, and replay surface is:
 
 ```bash
 heliostune verify-plugin PATH
@@ -608,36 +739,48 @@ heliostune verify-suite PATH
 heliostune verify-bundle path/to/bundle/bundle.json
 heliostune verify-bundle path/to/bundle/bundle.json --format json
 heliostune verify-bundle path/to/bundle/bundle.json --output path/to/bundle.verification.json
+heliostune replay-bundle path/to/bundle/bundle.json
+heliostune replay-bundle path/to/bundle/bundle.json --format json
+heliostune replay-bundle path/to/bundle/bundle.json --output path/to/bundle.replay-verification.json
 heliostune list-scope
 ```
 
 `verify-plugin` validates the strict plugin root and resolves its relative suite
 paths and SHA-256 values. `verify-suite` validates one strict standalone suite.
-With no output flags, `verify-bundle` retains human-readable text after
-structural verification. `--format json` writes exact canonical
+With no output flags, both bundle commands retain human-readable text.
+`verify-bundle` stops after structural verification and emits the base record;
+`replay-bundle` emits only after the complete isolated two-run drill and exact
+record upgrade succeed. `--format json` writes exact canonical
 VerificationRecord bytes to standard output without Rich rendering. `--output
-PATH` implies JSON and writes silently to a new sibling file. Its existing
-parent must be the bundle directory's immediate parent and match the device/inode
-identity captured through the pinned bundle descriptor; arbitrary destinations
-use external JSON stdout redirection. The record must exactly match the
-`VerifiedBundle`, and encoding completes before output is touched. Explicit
-`--format text --output PATH` is rejected before verification. A structurally
-verified record with deferred controls exits zero even though its eligibility
-booleans are false. Any `failed` control or
-verification/build/encode/pre-link write error exits 2 with no success bytes or
-destination. The bundle-parent relationship is rechecked immediately before
-and after the irreversible no-replace link. No topology immutability is
-claimed: a hostile rename can make the requested pathname stale or
-unrecoverable after linking. A post-link error reports committed/ambiguous
-state: the complete linked destination is not rolled back, but directory
-durability may be ambiguous. Publication uses unnamed `O_TMPFILE` storage and
-an unprivileged procfd source for atomic no-replace `linkat`; it fails closed
-if either capability is unavailable. Closing the unnamed fd performs cleanup.
+PATH` implies JSON and writes silently to a new sibling file through the
+replay-specific exact-result validator when replaying. Its existing parent must
+be the bundle directory's immediate parent and match the device/inode identity
+captured through the pinned bundle descriptor; arbitrary destinations use
+external JSON stdout redirection. The record/result must exactly match the
+original `VerifiedBundle`, and encoding completes before output is touched.
+Explicit `--format text --output PATH` is rejected before verification or
+replay.
+
+A structurally verified base record with deferred controls exits zero even
+though its eligibility booleans are false. Replay exits zero only after both
+runs equal one another and the committed output bytes. Any `failed` control or
+verification, manifest, isolation, audit, replay, build, encode, or pre-link
+write error exits 2 with no success bytes or destination. The bundle-parent
+relationship is rechecked immediately before and after the irreversible
+no-replace link. No topology immutability is claimed: a hostile rename can make
+the requested pathname stale or unrecoverable after linking. A post-link error
+reports committed/ambiguous state: the complete linked destination is not
+rolled back, but directory durability may be ambiguous. Publication uses
+unnamed `O_TMPFILE` storage and an unprivileged procfd source for atomic
+no-replace `linkat`; it fails closed if either capability is unavailable.
+Closing the unnamed fd performs cleanup.
 
 `list-scope` reports the closed vocabularies and initial suite template IDs.
-These commands make no backend-execution, correctness, performance,
-signature/authenticity, provider retry/billing, analyzer-replay,
-full-offline-reproduction, or claim-eligibility assertion.
+Replay establishes only same-host registered-analyzer reproduction of declared
+committed derived bytes. These commands make no backend/GPU execution,
+correctness, performance, signature/authenticity, provider retry/billing,
+cross-host bit-reproducibility, semantic/statistical-truth, claim-promotion, or
+full dependency/campaign-reproduction assertion.
 
 The intended full evidence lifecycle is explicit rather than a mode flag that silently changes benchmark semantics:
 
@@ -701,6 +844,7 @@ A conforming implementation demonstrates at least these observable tests:
 12. **Claim language:** an inverted unnamed ratio, “no difference” after unsupported superiority, universal wording from a fixed census, and deployable wording for an evaluation oracle are rejected.
 13. **Opt-in custody and attempt chain:** complete inventoried plugin-suite closure, selected-suite identity, canonical predecessor bytes, empty $H_0$, truncation/reorder rejection, legacy `not_checked`, descriptor/inode containment, and producer pre-rename postconditions are verified for new local/native bundles.
 14. **Canonical verification record:** identical verified bundle bytes produce identical location-free record bytes; all four control statuses round-trip strictly, deferred or failed controls force both eligibility booleans false, lifecycle labels cannot promote them, and noncanonical input fails loading. Default output stays human-readable, canonical JSON uses exact stdout bytes, and sibling-only no-replace output rechecks the descriptor-identified bundle parent before and after linking. Pre-link failure creates no destination; a post-link failure reports committed/ambiguous state, does not roll back the complete linked entry, and acknowledges that hostile rebinding can make the requested pathname stale or unrecoverable.
+15. **Audited offline analyzer replay:** strict canonical manifests reject unknown fields/types, paths, commands, entrypoints, registry/static-roster mismatch, and bound-byte/digest mismatch; the fixed integer-summary analyzer validates its exact canonical domain; namespace/chroot/audit attempts and unavailable isolation fail closed; two distinct read-only workspaces produce identical ordered bytes that also equal committed outputs; and the upgraded record changes only the two replay controls without promoting eligibility. CLI text/JSON/file modes emit only after success, and file failures retain the no-replace/committed-ambiguous semantics.
 
 | ID | Normative requirement | Failure prevented | Machine enforcement |
 |---|---|---|---|
@@ -722,7 +866,8 @@ This table separates the active, partially implemented design target from reposi
 | Numerical gate for candidates and comparators | Partial and study-specific; published collectors do not establish the generic two-reference v1 contract for every arm. | Existing correctness statements keep their frozen historical scope. |
 | Attempt chain and reconciliation | The generic canonical predecessor chain is implemented as an opt-in control. New local/native bundles emit it and no-retry reconciliation can be `checked`; legacy two-field journals remain parseable with chain `not_checked`. Provider retry adjudication, provider physical-attempt truth, billing, and complete cost reconciliation remain unimplemented generically. | A checked internal chain/reconciliation result is neither a provider receipt nor proof of cost, retries, authorship, or authenticity. |
 | Typed claim taxonomy and fail-closed generic analyzer | `ClaimSpec` parsing and class-level eligibility checks are implemented; analyzer output decisions, statistical replay, and generic report rendering are not implemented end to end. Historical reports still use study-specific models and prose. | A valid ClaimSpec is not a supported result, and historical claims are not silently rewritten. |
-| EvidenceBundle custody, verification record, and publication | Generic structural closure, descriptor-contained file reads, opted-in plugin → suite custody, and opted-in attempt chaining are implemented. New local/native producers emit the complete reserved inventory and descriptors, require custody, chain, and no-retry reconciliation to be `checked`, and verify staging before atomic no-replace rename. Issue #32 adds a deterministic, location-free `heliostune.verification-record/1` with six-file descriptive verifier identity, exact bundle identities, all twelve control statuses, strict eligibility booleans, canonical loading, exact JSON stdout, and descriptor-pinned sibling-only no-replace output with explicit committed/ambiguous post-link reporting. Signature/authenticity checks, analyzer replay, complete offline reproduction, full registry/catalog closure, and the complete v1 publication transaction remain unchecked or unimplemented. | Current records retain deferred controls and are therefore not claim- or publication-eligible. Internal closure and a record are not provider truth, authenticity, semantic or statistical correctness, analyzer replay, or full reproduction; existing publication workflows remain legacy rather than a v1 conformance claim. |
+| EvidenceBundle custody, verification record, and publication | Generic structural closure, descriptor-contained file reads, opted-in plugin → suite custody, and opted-in attempt chaining are implemented. New local/native producers emit the complete reserved inventory and descriptors, require custody, chain, and no-retry reconciliation to be `checked`, and verify staging before atomic no-replace rename. Issue #32 adds a deterministic, location-free `heliostune.verification-record/1` with nine-file descriptive verifier identity, exact bundle identities, all twelve control statuses, strict eligibility booleans, canonical loading, exact JSON stdout, and descriptor-pinned sibling-only no-replace output with explicit committed/ambiguous post-link reporting. Signature/authenticity checks, complete dependency/campaign reproduction, full registry/catalog closure, and the complete v1 publication transaction remain unchecked or unimplemented. | Base records retain deferred controls and are not claim- or publication-eligible. Internal closure and a record are not provider truth, authenticity, semantic or statistical correctness, or full reproduction; existing publication workflows remain legacy rather than a v1 conformance claim. |
+| Audited CPU analyzer replay | Issue #33 implements strict `heliostune.analyzer-manifest/1`, a fixed built-in registry and reference integer-summary analyzer, descriptor-pinned input/source/output capture, fixed user/network/mount/PID namespaces plus an empty read-only `nosuid,nodev,noexec` tmpfs chroot, namespace/no-new-privileges self-checks, an audit tripwire, two-run byte comparison, replay-only record upgrade, and `replay-bundle` text/JSON/sibling output. | A successful drill proves only same-host registered-analyzer reproduction of declared committed derived bytes. It does not authenticate evidence, validate semantics/statistics, reproduce across hosts or GPUs, promote claims, or close software dependencies/campaigns. |
 | Existing Parhelion and Hopper evidence | Immutable legacy evidence. Hopper is a one-instance same-bank engineering STOP; Parhelion uncertainty is conditional policy-seed Monte Carlo evidence. | No retroactive promotion, stronger provenance, population scope, or inference is assigned. |
 
-Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation, a schema literal, or a lifecycle label alone never confers claim eligibility. For the active v0.6 milestone, issue #31 completed the additive plugin → suite custody and generic predecessor-chain slice for new local/native bundles; issue #32 subsequently implemented canonical CPU-only VerificationRecords without promoting deferred controls. Issue #33, deterministic network-disabled analyzer replay, is the next ordered gate before dependency separation and the one-domain no-cost feasibility/capability design gate. Each stage stops until its prerequisites pass. Only after those gates may a separately approved, predeclared paid protocol be proposed at new versioned paths. The maximum authorized spend remains **$0**, and frozen evidence is never rewritten.
+Conformance is surface-specific until every required protocol, execution, verification, analysis, and publication control for a study passes. Documentation, a schema literal, or a lifecycle label alone never confers claim eligibility. For the active v0.6 milestone, issue #31 completed the additive plugin → suite custody and generic predecessor-chain slice for new local/native bundles; issue #32 subsequently implemented canonical CPU-only VerificationRecords without promoting deferred controls; and issue #33 implemented audited deterministic offline CPU analyzer replay without promoting claims. Issue #34, active-versus-frozen dependency separation, is the next ordered gate before the one-domain no-cost feasibility/capability design gate. Each stage stops until its prerequisites pass. Only after those gates may a separately approved, predeclared paid protocol be proposed at new versioned paths. The maximum authorized spend remains **$0**, and frozen evidence is never rewritten.
