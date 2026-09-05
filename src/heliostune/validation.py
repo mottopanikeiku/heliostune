@@ -113,6 +113,10 @@ def nonblank_string(value: object, *, context: str) -> str:
     result = value
     if not result or result != result.strip():
         raise SchemaError(f"{context} must be nonblank with no surrounding whitespace")
+    try:
+        result.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise SchemaError(f"{context} must be valid Unicode") from exc
     return result
 
 

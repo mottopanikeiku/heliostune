@@ -297,6 +297,17 @@ def test_build_does_not_reread_verified_bundle_inputs(
 def test_source_roster_aggregate_and_historical_identity(tmp_path: Path) -> None:
     record, _ = _record(tmp_path)
     assert tuple(source.path for source in record.verifier.sources) == VERIFIER_SOURCE_PATHS_V1
+    assert VERIFIER_SOURCE_PATHS_V1 == (
+        "heliostune/_offline_worker.py",
+        "heliostune/_reference_analyzer.py",
+        "heliostune/artifacts.py",
+        "heliostune/errors.py",
+        "heliostune/methodology.py",
+        "heliostune/offline_replay.py",
+        "heliostune/scope.py",
+        "heliostune/validation.py",
+        "heliostune/verification.py",
+    )
 
     historical_sources = list(record.verifier.sources)
     first = historical_sources[0]
@@ -313,6 +324,30 @@ def test_source_roster_aggregate_and_historical_identity(tmp_path: Path) -> None
     )
     historical = replace(record, verifier=historical_verifier)
     path = tmp_path / "historical.json"
+    path.write_bytes(encode_verification_record_v1(historical))
+
+    assert load_verification_record_v1(path) == historical
+
+
+def test_loader_accepts_issue_32_six_source_roster(tmp_path: Path) -> None:
+    record, _ = _record(tmp_path)
+    legacy_paths = (
+        "heliostune/artifacts.py",
+        "heliostune/errors.py",
+        "heliostune/methodology.py",
+        "heliostune/scope.py",
+        "heliostune/validation.py",
+        "heliostune/verification.py",
+    )
+    sources = tuple(source for source in record.verifier.sources if source.path in legacy_paths)
+    assert tuple(source.path for source in sources) == legacy_paths
+    verifier = replace(
+        record.verifier,
+        source_sha256=verification._source_aggregate_sha256(sources),
+        sources=sources,
+    )
+    historical = replace(record, verifier=verifier)
+    path = tmp_path / "issue-32-record.json"
     path.write_bytes(encode_verification_record_v1(historical))
 
     assert load_verification_record_v1(path) == historical
@@ -615,3 +650,18 @@ def test_output_parent_close_failure_does_not_mask_containment_error(
         assert not destination.exists()
     finally:
         original_close(opened_parent[0])
+
+
+def test_base_writer_rejects_caller_upgraded_replay_controls(tmp_path: Path) -> None:
+    record, verified = _record(tmp_path)
+    forged_controls = replace(
+        record.controls,
+        analyzer_replay="checked",
+        offline_reproduction="checked",
+    )
+    forged = replace(record, controls=forged_controls)
+    destination = tmp_path / "forged.json"
+
+    with pytest.raises(ArtifactError, match="exactly match"):
+        write_verification_record_v1(destination, forged, verified=verified)
+    assert not destination.exists()

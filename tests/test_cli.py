@@ -1096,6 +1096,355 @@ def test_verify_bundle_output_collision_preserves_existing_objects(
         assert output.read_bytes() == before_payload
 
 
+def _fake_offline_replay_cli_result(tmp_path: Path) -> tuple[Path, SimpleNamespace]:
+    from dataclasses import replace
+
+    from heliostune.methodology import verify_bundle_v1
+    from heliostune.verification import build_verification_record_v1
+
+    root, _protocol, _attempts, _artifact, _bundle = _methodology_bundle_fixture(tmp_path)
+    verified = verify_bundle_v1(root)
+    base_record = build_verification_record_v1(verified)
+    controls = replace(
+        base_record.controls,
+        analyzer_replay="checked",
+        offline_reproduction="checked",
+    )
+    record = replace(
+        base_record,
+        controls=controls,
+        claim_eligible=controls.all_checked,
+        publication_eligible=controls.all_checked,
+    )
+    output = SimpleNamespace(
+        role="analysis_summary",
+        media_type="application/json",
+        bytes=37,
+        sha256="ab" * 32,
+    )
+    return root, SimpleNamespace(
+        verified=verified,
+        manifest=SimpleNamespace(
+            analyzer_id="heliostune.reference.integer-summary/1",
+            runner_api="heliostune.offline-replay/1",
+        ),
+        first_run_outputs=(output,),
+        second_run_outputs=(output,),
+        record=record,
+    )
+
+
+@pytest.mark.parametrize(
+    ("arguments", "output_format", "output"),
+    [
+        (["replay-bundle", "bundle.json"], None, None),
+        (["replay-bundle", "bundle.json", "--format", "text"], "text", None),
+        (["replay-bundle", "bundle.json", "--format", "json"], "json", None),
+        (
+            ["replay-bundle", "bundle.json", "--output", "record.json"],
+            None,
+            Path("record.json"),
+        ),
+        (
+            [
+                "replay-bundle",
+                "bundle.json",
+                "--format",
+                "json",
+                "--output",
+                "record.json",
+            ],
+            "json",
+            Path("record.json"),
+        ),
+        (
+            [
+                "replay-bundle",
+                "bundle.json",
+                "--format",
+                "text",
+                "--output",
+                "record.json",
+            ],
+            "text",
+            Path("record.json"),
+        ),
+    ],
+)
+def test_replay_bundle_parser_preserves_omitted_format(
+    arguments: list[str],
+    output_format: str | None,
+    output: Path | None,
+) -> None:
+    parsed = cli.build_parser().parse_args(arguments)
+    assert parsed.handler is cli._replay_bundle
+    assert parsed.path == Path("bundle.json")
+    assert parsed.output_format == output_format
+    assert parsed.output == output
+
+
+def test_replay_bundle_rejects_explicit_text_file_before_replay(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+
+    def forbidden_replay(_path: Path) -> object:
+        raise AssertionError("replay must not run")
+
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", forbidden_replay)
+    output = tmp_path / "record.json"
+
+    assert (
+        cli.main(
+            [
+                "replay-bundle",
+                str(tmp_path / "missing.json"),
+                "--format",
+                "text",
+                "--output",
+                str(output),
+            ]
+        )
+        == 2
+    )
+    captured = capsys.readouterr()
+    assert "--format text cannot be combined with --output" in captured.err
+    assert captured.out == ""
+    assert not output.exists()
+
+
+def test_replay_bundle_routes_path_only_through_replay_runner(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import heliostune.methodology as methodology
+    import heliostune.offline_replay as offline_replay
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    calls: list[Path] = []
+
+    def replay(path: Path) -> SimpleNamespace:
+        calls.append(path)
+        return result
+
+    def forbidden_direct_verification(_path: Path) -> object:
+        raise AssertionError("CLI must not bypass the replay runner")
+
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", replay)
+    monkeypatch.setattr(methodology, "verify_bundle_v1", forbidden_direct_verification)
+
+    assert cli.main(["replay-bundle", str(root)]) == 0
+    assert calls == [root]
+    assert "Bundle offline replay verified" in capsys.readouterr().out
+
+
+def test_replay_bundle_text_is_exact_and_discloses_replay_scope(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+    from heliostune.verification import VERIFICATION_CONTROL_NAMES_V1
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", lambda _path: result)
+
+    assert cli.main(["replay-bundle", str(root), "--format", "text"]) == 0
+    lines = [
+        "Bundle offline replay verified",
+        f"path: {json.dumps(str(root), ensure_ascii=True)[1:-1]}",
+        "analyzer_id: heliostune.reference.integer-summary/1",
+        "runner_api: heliostune.offline-replay/1",
+        f"sandbox: {offline_replay.OFFLINE_REPLAY_SANDBOX_V1}",
+        "runs: 2",
+        "output[0].role: analysis_summary",
+        "output[0].media_type: application/json",
+        "output[0].bytes: 37",
+        f"output[0].sha256: {'ab' * 32}",
+    ]
+    lines.extend(
+        f"limitation.{field.name}: {getattr(result.verified.limitations, field.name)}"
+        for field in cli.dataclass_fields(result.verified.limitations)
+    )
+    lines.extend(
+        f"control.{name}: {getattr(result.record.controls, name)}"
+        for name in VERIFICATION_CONTROL_NAMES_V1
+    )
+    lines.extend(("claim_eligible: false", "publication_eligible: false"))
+
+    assert capsys.readouterr().out == "\n".join(lines) + "\n"
+
+
+def test_replay_bundle_json_stdout_is_exact_canonical_bytes_and_bypasses_rich(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+    from heliostune.verification import encode_verification_record_v1
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    expected = encode_verification_record_v1(result.record)
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", lambda _path: result)
+
+    def forbidden_rich(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("JSON output must bypass Rich")
+
+    monkeypatch.setattr(cli._CONSOLE, "print", forbidden_rich)
+    assert cli.main(["replay-bundle", str(root), "--format", "json"]) == 0
+    captured = capfdbinary.readouterr()
+    assert captured.out == expected
+    assert captured.err == b""
+
+
+def test_replay_bundle_output_uses_exact_result_writer_and_is_silent(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+    from heliostune.verification import encode_verification_record_v1
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    output = tmp_path / "offline-replay-record.json"
+    calls: list[tuple[Path, object]] = []
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", lambda _path: result)
+
+    def write(path: Path, replay_result: object) -> None:
+        calls.append((path, replay_result))
+        path.write_bytes(encode_verification_record_v1(result.record))
+
+    monkeypatch.setattr(offline_replay, "write_offline_replay_record_v1", write)
+
+    assert cli.main(["replay-bundle", str(root), "--output", str(output)]) == 0
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert captured.err == b""
+    assert calls == [(output, result)]
+    assert output.read_bytes() == encode_verification_record_v1(result.record)
+
+
+def test_replay_bundle_failed_control_suppresses_success_output_and_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    output = tmp_path / "offline-replay-record.json"
+    result.record = SimpleNamespace(has_failed_controls=True)
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", lambda _path: result)
+
+    def forbidden_write(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("failed controls must not be written")
+
+    monkeypatch.setattr(offline_replay, "write_offline_replay_record_v1", forbidden_write)
+    assert cli.main(["replay-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert b"failed controls" in captured.err
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        "sandbox unavailable",
+        "manifest mismatch",
+        "source mismatch",
+        "input mismatch",
+        "output mismatch",
+        "nondeterminism detected",
+        "replay timeout",
+    ],
+)
+def test_replay_bundle_drill_failures_emit_no_upgraded_output(
+    failure: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+
+    root = tmp_path / "bundle.json"
+    output = tmp_path / "offline-replay-record.json"
+
+    def fail(_path: Path) -> object:
+        raise ArtifactError(failure)
+
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", fail)
+    assert cli.main(["replay-bundle", str(root), "--output", str(output)]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert failure.encode() in captured.err
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("stage", ["encode", "write"])
+def test_replay_bundle_result_failure_emits_no_success_output(
+    stage: str,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+    import heliostune.verification as verification
+
+    root, result = _fake_offline_replay_cli_result(tmp_path)
+    output = tmp_path / "offline-replay-record.json"
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", lambda _path: result)
+
+    def fail(*_args: object, **_kwargs: object) -> None:
+        raise ArtifactError(f"{stage} failed")
+
+    if stage == "encode":
+        monkeypatch.setattr(verification, "encode_verification_record_v1", fail)
+        arguments = ["replay-bundle", str(root), "--format", "json"]
+    else:
+        monkeypatch.setattr(offline_replay, "write_offline_replay_record_v1", fail)
+        arguments = ["replay-bundle", str(root), "--output", str(output)]
+
+    assert cli.main(arguments) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert f"{stage} failed".encode() in captured.err
+    assert not output.exists()
+
+
+def test_replay_bundle_declared_lifecycle_and_provenance_cannot_bypass_drill(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capfdbinary: pytest.CaptureFixture[bytes],
+) -> None:
+    import heliostune.offline_replay as offline_replay
+
+    root = tmp_path / "bundle.json"
+    write_json_atomic(
+        root,
+        {
+            "lifecycle": {"state": "PUBLISHED", "outcome": "completed"},
+            "provenance": {
+                "attestation": "provider_attested",
+                "offline_reproduction": "checked",
+            },
+        },
+    )
+
+    def require_actual_drill(path: Path) -> object:
+        assert path == root
+        raise ArtifactError("offline replay drill did not succeed")
+
+    monkeypatch.setattr(offline_replay, "replay_bundle_v1", require_actual_drill)
+    assert cli.main(["replay-bundle", str(root), "--format", "json"]) == 2
+    captured = capfdbinary.readouterr()
+    assert captured.out == b""
+    assert b"offline replay drill did not succeed" in captured.err
+
+
 def test_verification_output_escapes_content_and_handles_unusual_paths(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

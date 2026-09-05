@@ -1,0 +1,247 @@
+{
+  "schema": "heliostune.suite/1",
+  "suite_id": "gated-mlp-epilogue-reference",
+  "revision": 1,
+  "plugin_id": "fusion-reference-plugin",
+  "plugin_version": 1,
+  "template_id": "gated_mlp_epilogue.v1",
+  "template_status": "reference_template_not_execution_freeze",
+  "domain": "fused_mlp",
+  "numeric_contracts": [
+    {
+      "id": "bf16-fp32-bf16",
+      "input": {
+        "name": "bf16",
+        "usage": "input",
+        "packing": null
+      },
+      "storage": {
+        "name": "bf16",
+        "usage": "storage",
+        "packing": null
+      },
+      "accumulation": {
+        "name": "fp32",
+        "usage": "compute",
+        "packing": null
+      },
+      "output": {
+        "name": "bf16",
+        "usage": "output",
+        "packing": null
+      },
+      "tf32": false,
+      "quantization": null
+    }
+  ],
+  "tensors": [
+    {
+      "id": "input",
+      "role": "input",
+      "shape": [
+        "batch",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "gate_weight",
+      "role": "parameter",
+      "shape": [
+        "intermediate",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "up_weight",
+      "role": "parameter",
+      "shape": [
+        "intermediate",
+        "hidden"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    },
+    {
+      "id": "output",
+      "role": "output",
+      "shape": [
+        "batch",
+        "intermediate"
+      ],
+      "storage_dtype": "bf16",
+      "logical_dtype": "bf16",
+      "layout": "row_major",
+      "contiguous": true,
+      "alignment": 16,
+      "quantization": null,
+      "packing": null
+    }
+  ],
+  "arms": [
+    {
+      "id": "mlp-candidate",
+      "role": "candidate",
+      "entrypoint": "reference_template.gated_mlp_candidate",
+      "domains": [
+        "fused_mlp"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [
+        {
+          "dimension": "hidden",
+          "op": "divisible_by",
+          "value": 16
+        },
+        {
+          "dimension": "intermediate",
+          "op": "divisible_by",
+          "value": 16
+        }
+      ],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "8.0",
+        "features": [
+          "tensor_cores"
+        ]
+      }
+    },
+    {
+      "id": "mlp-reference",
+      "role": "reference",
+      "entrypoint": "reference_template.gated_mlp_reference",
+      "domains": [
+        "fused_mlp"
+      ],
+      "numeric_contract_ids": [
+        "bf16-fp32-bf16"
+      ],
+      "constraints": [],
+      "local_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "remote_capability": {
+        "state": "unprobed",
+        "evidence_sha256": null
+      },
+      "requirements": {
+        "cuda": true,
+        "min_compute_capability": "8.0",
+        "features": [
+          "tensor_cores"
+        ]
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "mlp-case-001",
+      "numeric_contract_id": "bf16-fp32-bf16",
+      "input_seed": 17,
+      "shape": {
+        "batch": 8,
+        "hidden": 4096,
+        "intermediate": 11008
+      },
+      "semantics": {
+        "kind": "gated_mlp",
+        "activation": "silu",
+        "gate_up_layout": "separate",
+        "bias": false,
+        "residual": false,
+        "output_arity": 1,
+        "fusion_boundary": [
+          "gate_projection",
+          "up_projection",
+          "silu",
+          "gating_multiply"
+        ]
+      }
+    }
+  ],
+  "correctness_policies": [
+    {
+      "id": "default-correctness",
+      "reference_arm_id": "mlp-reference",
+      "atol": 0.02,
+      "rtol": 0.02
+    }
+  ],
+  "timing_policies": [
+    {
+      "id": "default-timing",
+      "warmups": 10,
+      "repetitions": 50,
+      "statistic": "median"
+    }
+  ],
+  "expected_cells": [
+    {
+      "id": "mlp-candidate-correctness",
+      "case_id": "mlp-case-001",
+      "arm_id": "mlp-candidate",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "mlp-candidate-timing",
+      "case_id": "mlp-case-001",
+      "arm_id": "mlp-candidate",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    },
+    {
+      "id": "mlp-reference-correctness",
+      "case_id": "mlp-case-001",
+      "arm_id": "mlp-reference",
+      "input_seed": 17,
+      "stage": "correctness",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": null
+    },
+    {
+      "id": "mlp-reference-timing",
+      "case_id": "mlp-case-001",
+      "arm_id": "mlp-reference",
+      "input_seed": 17,
+      "stage": "timing",
+      "correctness_policy_id": "default-correctness",
+      "timing_policy_id": "default-timing"
+    }
+  ],
+  "executor_rule": "timing_requires_retained_passing_correctness_observation"
+}

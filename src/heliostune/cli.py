@@ -960,6 +960,70 @@ def _verify_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def _replay_bundle(args: argparse.Namespace) -> int:
+    if args.output is not None and args.output_format == "text":
+        raise ProtocolError("--format text cannot be combined with --output")
+
+    from heliostune.offline_replay import (
+        OFFLINE_REPLAY_SANDBOX_V1,
+        replay_bundle_v1,
+        write_offline_replay_record_v1,
+    )
+    from heliostune.verification import (
+        VERIFICATION_CONTROL_NAMES_V1,
+        encode_verification_record_v1,
+    )
+
+    result = replay_bundle_v1(args.path)
+    record = result.record
+    if record.has_failed_controls:
+        raise ProtocolError("offline replay record has failed controls; refusing output")
+
+    output_format = args.output_format or ("json" if args.output is not None else "text")
+    if args.output is not None:
+        write_offline_replay_record_v1(args.output, result)
+        return 0
+    if output_format == "json":
+        payload = encode_verification_record_v1(record)
+        sys.stdout.buffer.write(payload)
+        sys.stdout.buffer.flush()
+        return 0
+
+    facts: list[tuple[str, str | int | bool | Path]] = [
+        ("path", result.verified.root_path),
+        ("analyzer_id", result.manifest.analyzer_id),
+        ("runner_api", result.manifest.runner_api),
+        ("sandbox", OFFLINE_REPLAY_SANDBOX_V1),
+        ("runs", 2),
+    ]
+    for index, output in enumerate(result.first_run_outputs):
+        facts.extend(
+            (
+                (f"output[{index}].role", output.role),
+                (f"output[{index}].media_type", output.media_type),
+                (f"output[{index}].bytes", output.bytes),
+                (f"output[{index}].sha256", output.sha256),
+            )
+        )
+    for limitation in dataclass_fields(result.verified.limitations):
+        facts.append(
+            (
+                f"limitation.{limitation.name}",
+                getattr(result.verified.limitations, limitation.name),
+            )
+        )
+    for name in VERIFICATION_CONTROL_NAMES_V1:
+        facts.append((f"control.{name}", getattr(record.controls, name)))
+    facts.extend(
+        (
+            ("claim_eligible", record.claim_eligible),
+            ("publication_eligible", record.publication_eligible),
+        )
+    )
+    _print_facts("Bundle offline replay verified", facts)
+    return 0
+
+
 def _is_local_repository(repository: Path) -> bool:
     return (repository / "pyproject.toml").is_file() and (repository / "src/heliostune").is_dir()
 
@@ -1289,6 +1353,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="write canonical JSON to a new file beside the bundle directory",
     )
     verify_bundle.set_defaults(handler=_verify_bundle)
+
+    replay_bundle = subparsers.add_parser(
+        "replay-bundle",
+        help="replay a registered CPU analyzer twice in an offline sandbox",
+        description=(
+            "Verify a methodology v1 evidence bundle, replay its registered analyzer "
+            "twice in isolated offline workspaces, and compare the declared outputs "
+            "byte for byte."
+        ),
+    )
+    replay_bundle.add_argument("path", type=Path, metavar="PATH")
+    replay_bundle.add_argument(
+        "--format",
+        dest="output_format",
+        choices=("text", "json"),
+        default=None,
+        help="render human-readable replay facts or the upgraded verification record as JSON",
+    )
+    replay_bundle.add_argument(
+        "--output",
+        type=Path,
+        metavar="PATH",
+        help="write canonical JSON to a new file beside the bundle directory",
+    )
+    replay_bundle.set_defaults(handler=_replay_bundle)
 
     verify_plugin = subparsers.add_parser(
         "verify-plugin",

@@ -1,0 +1,33 @@
+{
+  "analyzer_id": "heliostune.reference.integer-summary/1",
+  "implementation": {
+    "source_sha256": "0fc89abbc6a8568e125c126e129d530a5f07d75f379d3bdb4c4e7034f6ce36d3",
+    "sources": [
+      {
+        "bytes": 3561,
+        "media_type": "text/x-python",
+        "role": "analyzer_source",
+        "sha256": "d15b1255007b7fd1d2e3a6f1556bfbfc28101c17d5368de20a8e6e4a614cf3c9"
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "bytes": 50,
+      "media_type": "application/json",
+      "role": "analysis_input",
+      "sha256": "fbaa48056c4b98cf4862ed169bfea5e6244e23f46c4122d98c7db3f0c583885d"
+    }
+  ],
+  "outputs": [
+    {
+      "bytes": 149,
+      "media_type": "application/json",
+      "role": "analysis_summary",
+      "sha256": "fb1da2c01e77f64709d3f314fb225c5759ba5de89f274337e59c25708b95be55"
+    }
+  ],
+  "representation": "byte_exact",
+  "runner_api": "heliostune.offline-replay/1",
+  "schema": "heliostune.analyzer-manifest/1"
+}
