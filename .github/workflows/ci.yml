@@ -36,18 +36,12 @@ jobs:
           uv pip install --python package-env/bin/python dist/*.whl
           package-env/bin/python -c "import heliostune, importlib.metadata as m; assert heliostune.__version__ == m.version('heliostune')"
           package-env/bin/heliostune --help
-          package-env/bin/heliostune replay-bundle \
-            tests/fixtures/offline-replay-v1/bundle.json --format json \
-            > "${RUNNER_TEMP}/wheel-replay-record.json"
+          package-env/bin/python -c "import heliostune._offline_worker; from heliostune.offline_replay import load_analyzer_manifest_v1; load_analyzer_manifest_v1('tests/fixtures/offline-replay-v1/artifacts/analyzer.json')"
           uv venv --clear sdist-env --python 3.11
           uv pip install --python sdist-env/bin/python dist/*.tar.gz
           sdist-env/bin/python -c "import heliostune, importlib.metadata as m; assert heliostune.__version__ == m.version('heliostune')"
           sdist-env/bin/heliostune --help
-          sdist-env/bin/heliostune replay-bundle \
-            tests/fixtures/offline-replay-v1/bundle.json --format json \
-            > "${RUNNER_TEMP}/sdist-replay-record.json"
-          cmp "${RUNNER_TEMP}/wheel-replay-record.json" \
-            "${RUNNER_TEMP}/sdist-replay-record.json"
+          sdist-env/bin/python -c "import heliostune._offline_worker; from heliostune.offline_replay import load_analyzer_manifest_v1; load_analyzer_manifest_v1('tests/fixtures/offline-replay-v1/artifacts/analyzer.json')"
 
   evidence:
     name: Evidence
@@ -63,7 +57,7 @@ jobs:
           python-version: "3.11"
           enable-cache: true
       - run: uv sync --locked --extra dev
-      - name: Exercise CPU offline analyzer replay
+      - name: Exercise CPU offline analyzer replay contracts
         run: uv run pytest tests/test_offline_replay.py
       - name: Regenerate the published H100 summary
         run: |

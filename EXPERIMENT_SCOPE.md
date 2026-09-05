@@ -259,6 +259,9 @@ and resource/process bounds are the sandbox. The Python audit hook is a
 tripwire, not the primary sandbox. If any required executable, namespace,
 mount, chroot, or other isolation setup is unavailable, replay fails closed
 with no weaker fallback.
+Tests may skip only positive real-sandbox drills after a fixed capability probe
+establishes a host user-namespace policy denial. Runtime replay still fails and
+cannot produce checked controls.
 
 The parent rejects timeout, nonzero status, any stderr, malformed, trailing, or
 oversized output, output role/count/order mismatch, run-one/run-two byte

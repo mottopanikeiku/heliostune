@@ -643,6 +643,10 @@ absolute current Python executable and
 `PYTHONDONTWRITEBYTECODE=1`. There is no fallback when user/network/mount/PID
 namespace creation, the tmpfs remount, chroot, or another isolation
 precondition is unavailable.
+A test host may skip only positive real-sandbox drills after the fixed launch
+probe returns a recognized user-namespace policy denial. Failure-path coverage
+remains mandatory, and the runtime never converts unavailability into a checked
+record.
 
 The parent sends one bounded canonical base64 request on standard input and
 captures bounded stdout/stderr in regular files. Timeout and communication

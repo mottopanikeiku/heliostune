@@ -210,6 +210,9 @@ exception. It is a tripwire, not the primary sandbox; user/network namespaces,
 the read-only empty tmpfs chroot, and resource/process limits provide the
 primary isolation. Never add a fallback when any required executable,
 namespace, mount, chroot, or other isolation setup is unavailable.
+Positive real-sandbox tests may skip only after the fixed launch probe
+establishes a host user-namespace policy denial; failure-path tests remain
+mandatory, and runtime replay must still fail.
 Reject nonzero status, timeout, communication failure, any stderr, malformed,
 trailing, or oversized output, role/count/order mismatch, nondeterministic
 runs, or output differing from pre-captured committed bytes.

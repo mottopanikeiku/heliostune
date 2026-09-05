@@ -262,6 +262,9 @@ code catches the immediate exception. The namespaces and read-only empty chroot
 are the isolation boundary; the audit hook is only an additional tripwire.
 There is no weaker fallback: if any required namespace, mount, chroot, or other
 isolation setup is unavailable, replay fails closed.
+The test suite may skip only its positive real-sandbox drills after a fixed
+capability probe establishes that the host policy forbids user namespaces; the
+runtime command still fails and never emits checked controls.
 
 The parent rejects timeouts, nonzero status, any stderr, malformed, trailing, or
 oversized worker output, role/count/order disagreement, a difference between

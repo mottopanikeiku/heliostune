@@ -45,6 +45,30 @@ from heliostune.verification import (
 FIXTURE = Path(__file__).parent / "fixtures/offline-replay-v1"
 
 
+@pytest.fixture(scope="module")
+def sandbox_supported() -> None:
+    try:
+        argv = _worker_argv()
+    except ArtifactError as exc:
+        pytest.skip(f"offline replay sandbox unavailable: {exc}")
+    probe = subprocess.run(
+        (*argv[:-2], "-c", "import os; assert os.getpid() == 1"),
+        cwd=FIXTURE,
+        env=dict(_SANITIZED_ENV),
+        capture_output=True,
+        check=False,
+        timeout=10,
+    )
+    if probe.returncode == 0:
+        return
+    if probe.stderr.startswith(b"unshare:") and b"Operation not permitted" in probe.stderr:
+        pytest.skip("offline replay sandbox unavailable under the host user-namespace policy")
+    pytest.fail(
+        "offline replay sandbox capability probe failed unexpectedly: "
+        + probe.stderr.decode("utf-8", errors="replace")
+    )
+
+
 def _copy_fixture(tmp_path: Path) -> Path:
     destination = tmp_path / "bundle"
     shutil.copytree(FIXTURE, destination)
@@ -226,7 +250,10 @@ def test_worker_audit_hook_denies_and_latches(event: str) -> None:
     assert _offline_worker._audit_denied is True
 
 
-def test_worker_establishes_empty_kernel_read_only_chroot(tmp_path: Path) -> None:
+def test_worker_establishes_empty_kernel_read_only_chroot(
+    tmp_path: Path,
+    sandbox_supported: None,
+) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     workspace.chmod(0o555)
@@ -268,6 +295,7 @@ def test_worker_establishes_empty_kernel_read_only_chroot(tmp_path: Path) -> Non
 def test_worker_rejects_parent_child_source_identity_mismatch(
     tmp_path: Path,
     mismatch: str,
+    sandbox_supported: None,
 ) -> None:
     manifest = load_analyzer_manifest_v1(FIXTURE / "artifacts/analyzer.json")
     verified = verify_bundle_v1(FIXTURE / "bundle.json")
@@ -305,7 +333,9 @@ def test_worker_rejects_parent_child_source_identity_mismatch(
         _run_worker(request, workspace, timeout_s=10)
 
 
-def test_real_replay_is_exact_success_without_promoting_other_claims() -> None:
+def test_real_replay_is_exact_success_without_promoting_other_claims(
+    sandbox_supported: None,
+) -> None:
     result = replay_bundle_v1(FIXTURE / "bundle.json", timeout_s=10)
     assert result.first_run_outputs == result.second_run_outputs == result.manifest.outputs
     assert (
@@ -456,13 +486,30 @@ def test_only_runner_can_mint_result() -> None:
         OfflineReplayResult(None, None, (), (), None, object())  # type: ignore[arg-type]
 
 
+def test_sandbox_unavailability_fails_before_result(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _copy_fixture(tmp_path)
+
+    def unavailable() -> tuple[str, ...]:
+        raise ArtifactError("sandbox unavailable")
+
+    monkeypatch.setattr("heliostune.offline_replay._worker_argv", unavailable)
+    with pytest.raises(ArtifactError, match="sandbox unavailable"):
+        replay_bundle_v1(root)
+
+
 def test_verified_bundle_alone_cannot_build_upgraded_record() -> None:
-    verified = replay_bundle_v1(FIXTURE / "bundle.json", timeout_s=10).verified
+    verified = verify_bundle_v1(FIXTURE / "bundle.json")
     with pytest.raises(ArtifactError, match="completed replay"):
         build_replay_verification_record_v1(verified)  # type: ignore[arg-type]
 
 
-def test_replay_writer_publishes_only_exact_upgrade(tmp_path: Path) -> None:
+def test_replay_writer_publishes_only_exact_upgrade(
+    tmp_path: Path,
+    sandbox_supported: None,
+) -> None:
     root = _copy_fixture(tmp_path)
     result = replay_bundle_v1(root, timeout_s=10)
     destination = tmp_path / "record.json"
