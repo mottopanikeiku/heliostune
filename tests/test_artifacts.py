@@ -102,6 +102,17 @@ def test_strict_json_rejects_duplicates_and_nan_with_path(tmp_path: Path) -> Non
         read_json(nonfinite)
 
 
+def test_strict_json_translates_integer_digit_limit_errors(tmp_path: Path) -> None:
+    oversized_integer = tmp_path / "oversized-integer.json"
+    oversized_integer.write_text(
+        '{"value":' + "1" * 5000 + "}\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SchemaError, match=r"oversized-integer\.json.*invalid JSON"):
+        read_json(oversized_integer)
+
+
 def test_atomic_json_is_sorted_finite_and_newline_terminated(tmp_path: Path) -> None:
     destination = tmp_path / "artifact.json"
     write_json_atomic(destination, {"z": 1, "a": 2})

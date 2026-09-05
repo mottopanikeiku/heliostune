@@ -12,12 +12,14 @@ import pytest
 from heliostune.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.methodology import (
+    CapturedBundleArtifactV1,
     ClaimSpec,
     EvidenceBundleV1,
     ProtocolV1,
     VerificationLimitations,
     VerifiedBundle,
     attempt_chain_descriptor_bytes,
+    capture_bundle_artifacts_v1_from_directory_fd,
     encode_attempt_journal,
     load_bundle_v1,
     load_protocol_v1,
@@ -1998,3 +2000,80 @@ def test_directory_fd_entrypoint_rejects_file_fd_without_closing_caller(tmp_path
         assert os.fstat(file_fd).st_ino == root.stat().st_ino
     finally:
         os.close(file_fd)
+
+
+def test_descriptor_capture_returns_exact_artifacts_in_requested_order(
+    tmp_path: Path,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    verified = verify_bundle_v1(root)
+    directory_fd = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        captured = capture_bundle_artifacts_v1_from_directory_fd(
+            directory_fd,
+            verified,
+            ("timing", "plugin"),
+            diagnostic_directory=tmp_path,
+        )
+        assert all(type(item) is CapturedBundleArtifactV1 for item in captured)
+        assert tuple(item.artifact.role for item in captured) == ("timing", "plugin")
+        assert captured[0].payload == (tmp_path / "artifacts/timing.json").read_bytes()
+        assert captured[1].payload == (tmp_path / "artifacts/plugin.json").read_bytes()
+        assert os.fstat(directory_fd).st_ino == tmp_path.stat().st_ino
+    finally:
+        os.close(directory_fd)
+
+
+@pytest.mark.parametrize("roles", [(), ("plugin", "plugin"), ("missing",)])
+def test_descriptor_capture_rejects_invalid_or_missing_roles(
+    tmp_path: Path,
+    roles: tuple[str, ...],
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    verified = verify_bundle_v1(root)
+    directory_fd = os.open(tmp_path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        with pytest.raises((SchemaError, ArtifactError)):
+            capture_bundle_artifacts_v1_from_directory_fd(
+                directory_fd,
+                verified,
+                roles,
+                diagnostic_directory=tmp_path,
+            )
+    finally:
+        os.close(directory_fd)
+
+
+def test_bundle_rejects_oversized_sparse_artifact_before_read(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = _write_closed_bundle(tmp_path)
+    document = strict_json_loads(root.read_text(encoding="utf-8"), source=root)
+    assert isinstance(document, dict)
+    artifact = _artifact_by_role(document, "plugin")
+    oversized_bytes = 32 * 1024 * 1024 + 1
+    artifact_path = tmp_path / str(artifact["path"])
+    with artifact_path.open("r+b") as sparse_file:
+        sparse_file.truncate(oversized_bytes)
+    artifact["bytes"] = oversized_bytes
+    root.write_text(strict_json_dumps(document), encoding="utf-8")
+
+    oversized_identity = artifact_path.stat().st_ino
+    original_read = os.read
+
+    def guarded_read(descriptor: int, size: int) -> bytes:
+        if os.fstat(descriptor).st_ino == oversized_identity:
+            raise AssertionError("oversized artifact payload was read")
+        return original_read(descriptor, size)
+
+    monkeypatch.setattr(os, "read", guarded_read)
+    with pytest.raises(ArtifactError, match="exceeds.*byte limit"):
+        verify_bundle_v1(root)
+
+
+def test_verification_limitations_reject_caller_forged_replay_status() -> None:
+    with pytest.raises(SchemaError, match="analyzer_replay"):
+        VerificationLimitations(analyzer_replay="checked")  # type: ignore[arg-type]
+    with pytest.raises(SchemaError, match="offline_reproduction"):
+        VerificationLimitations(offline_reproduction="checked")  # type: ignore[arg-type]

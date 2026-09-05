@@ -85,6 +85,8 @@ def strict_json_loads(
         raise SchemaError(f"{location}: invalid JSON at column {exc.colno}: {exc.msg}") from exc
     except SchemaError as exc:
         raise SchemaError(f"{location}: {exc}") from exc
+    except ValueError as exc:
+        raise SchemaError(f"{location}: invalid JSON: {exc}") from exc
 
 
 def strict_json_dumps(value: object, *, compact: bool = False) -> str:

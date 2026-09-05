@@ -7,5 +7,5 @@
 htmlcov/
 __pycache__/
 *.py[cod]
-artifacts/
+/artifacts/
 dist/

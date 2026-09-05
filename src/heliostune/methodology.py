@@ -89,6 +89,9 @@ CELL_IDENTITY_ROLES: tuple[CellIdentityRole, ...] = ("expected_cells", "terminal
 _ATTEMPT_CHAIN_SCHEMA = "heliostune.attempt-chain/1"
 _SELECTED_SUITE_SCHEMA = "heliostune.selected-suite/1"
 _ATTEMPT_CHAIN_INITIAL_HEAD = hashlib.sha256(b"").hexdigest()
+_MAX_BUNDLE_ROOT_BYTES = 2 * 1024 * 1024
+_MAX_BUNDLE_COMPONENT_BYTES = 32 * 1024 * 1024
+_MAX_BUNDLE_TOTAL_BYTES = 64 * 1024 * 1024
 
 
 def plugin_suite_role(index: int) -> str:
@@ -1174,6 +1177,49 @@ class VerificationLimitations:
     catalog_membership: Literal["not_checked"] = "not_checked"
     offline_reproduction: Literal["not_checked"] = "not_checked"
 
+    def __post_init__(self) -> None:
+        deferred = (
+            "protocol_ancestry",
+            "evidence_nonpromotion",
+            "semantic_content_beyond_digests",
+            "claim_eligibility",
+            "analyzer_replay",
+            "provenance_tier_derivation",
+            "signature_cryptography",
+            "catalog_membership",
+            "offline_reproduction",
+        )
+        for name in deferred:
+            if getattr(self, name) != "not_checked":
+                raise SchemaError(f"verification limitation {name} must be 'not_checked'")
+        for name in (
+            "plugin_suite_custody",
+            "attempt_journal_hash_chain",
+            "attempt_reconciliation",
+        ):
+            if getattr(self, name) not in {"not_checked", "checked"}:
+                raise SchemaError(f"verification limitation {name} has an invalid status")
+
+
+@dataclass(frozen=True, slots=True)
+class CapturedBundleArtifactV1:
+    """Exact bytes for one descriptor-pinned declared bundle artifact."""
+
+    artifact: Artifact
+    payload: bytes
+
+    def __post_init__(self) -> None:
+        if type(self.artifact) is not Artifact:
+            raise SchemaError("captured artifact binding must be an Artifact")
+        if type(self.payload) is not bytes:
+            raise SchemaError("captured artifact payload must be bytes")
+        _require_file_identity(
+            self.payload,
+            expected_sha256=self.artifact.sha256,
+            expected_bytes=self.artifact.bytes,
+            context=f"captured bundle artifact role {self.artifact.role!r}",
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class VerifiedBundle:
@@ -1324,8 +1370,26 @@ class _BundleDirectoryReader:
     def close(self) -> None:
         os.close(self._directory_fd)
 
-    def read(self, relative_path: str, *, context: str) -> tuple[Path, bytes]:
+    def read(
+        self,
+        relative_path: str,
+        *,
+        context: str,
+        expected_bytes: int | None = None,
+        max_bytes: int = _MAX_BUNDLE_COMPONENT_BYTES,
+    ) -> tuple[Path, bytes]:
         normalized = _relative_path(relative_path, context=f"{context} path")
+        declared_bytes = (
+            None
+            if expected_bytes is None
+            else exact_int(expected_bytes, context=f"{context} expected bytes", minimum=0)
+        )
+        byte_limit = exact_int(max_bytes, context=f"{context} maximum bytes", minimum=0)
+        if declared_bytes is not None and declared_bytes > byte_limit:
+            raise ArtifactError(
+                f"{context} declared byte count {declared_bytes} exceeds "
+                f"the {byte_limit}-byte limit"
+            )
         parts = normalized.split("/")
         current_fd = self._directory_fd
         opened_directories: list[int] = []
@@ -1347,17 +1411,48 @@ class _BundleDirectoryReader:
             identity = os.fstat(file_fd)
             if not stat.S_ISREG(identity.st_mode):
                 raise ArtifactError(f"{context} is not a regular file: {normalized!r}")
+            if declared_bytes is not None and identity.st_size != declared_bytes:
+                raise ArtifactError(
+                    f"{context} byte count mismatch: expected {declared_bytes}, "
+                    f"found {identity.st_size}"
+                )
+            if identity.st_size > byte_limit:
+                raise ArtifactError(
+                    f"{context} byte count {identity.st_size} exceeds the {byte_limit}-byte limit"
+                )
             key = (identity.st_dev, identity.st_ino)
             if key in self._occupied:
                 raise ArtifactError(
                     f"{context} uses a file identity already used by the closed bundle: "
                     f"{normalized!r}"
                 )
-            chunks: list[bytes] = []
-            while chunk := os.read(file_fd, 1024 * 1024):
-                chunks.append(chunk)
+            payload = bytearray()
+            while True:
+                chunk = os.read(file_fd, min(1024 * 1024, byte_limit - len(payload) + 1))
+                if not chunk:
+                    break
+                payload.extend(chunk)
+                if len(payload) > byte_limit:
+                    raise ArtifactError(
+                        f"{context} grew beyond the {byte_limit}-byte limit while reading"
+                    )
+            final_identity = os.fstat(file_fd)
+            if (
+                final_identity.st_dev,
+                final_identity.st_ino,
+                final_identity.st_size,
+                final_identity.st_mtime_ns,
+                final_identity.st_ctime_ns,
+            ) != (
+                identity.st_dev,
+                identity.st_ino,
+                identity.st_size,
+                identity.st_mtime_ns,
+                identity.st_ctime_ns,
+            ):
+                raise ArtifactError(f"{context} changed while it was being read")
             self._occupied.add(key)
-            return self.directory / normalized, b"".join(chunks)
+            return self.directory / normalized, bytes(payload)
         except ArtifactError:
             raise
         except OSError as exc:
@@ -1788,17 +1883,40 @@ def verify_protocol_v1(path: str | Path) -> VerifiedProtocol:
 
 
 def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle:
-    """Verify a bundle through an already-pinned directory reader."""
+    """Verify a size-bounded bundle through an already-pinned directory reader."""
+
+    total_bytes = 0
+
+    def read_component(
+        relative_path: str,
+        *,
+        context: str,
+        expected_bytes: int | None = None,
+        max_bytes: int = _MAX_BUNDLE_COMPONENT_BYTES,
+    ) -> tuple[Path, bytes]:
+        nonlocal total_bytes
+        remaining = _MAX_BUNDLE_TOTAL_BYTES - total_bytes
+        path, payload = reader.read(
+            relative_path,
+            context=context,
+            expected_bytes=expected_bytes,
+            max_bytes=min(max_bytes, remaining),
+        )
+        total_bytes += len(payload)
+        return path, payload
+
     try:
-        root_path, root_payload = reader.read(
+        root_path, root_payload = read_component(
             reader.root_relative_path,
             context="bundle root",
+            max_bytes=_MAX_BUNDLE_ROOT_BYTES,
         )
         bundle = _parse_bundle_bytes(root_payload, source=root_path)
 
-        protocol_path, protocol_payload = reader.read(
+        protocol_path, protocol_payload = read_component(
             bundle.protocol.path,
             context="bundle protocol",
+            expected_bytes=bundle.protocol.bytes,
         )
         _require_file_identity(
             protocol_payload,
@@ -1813,7 +1931,7 @@ def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle
             bytes=len(protocol_payload),
         )
 
-        attempts_path, attempts_payload = reader.read(
+        attempts_path, attempts_payload = read_component(
             bundle.attempts.path,
             context="bundle attempts",
         )
@@ -1830,9 +1948,10 @@ def _verify_bundle_with_reader(reader: _BundleDirectoryReader) -> VerifiedBundle
         artifact_paths: list[Path] = []
         for artifact in bundle.artifacts:
             artifacts_by_role[artifact.role] = artifact
-            artifact_path, artifact_payload = reader.read(
+            artifact_path, artifact_payload = read_component(
                 artifact.path,
                 context=f"bundle artifact role {artifact.role!r}",
+                expected_bytes=artifact.bytes,
             )
             _require_file_identity(
                 artifact_payload,
@@ -1959,9 +2078,73 @@ def verify_bundle_v1_from_directory_fd(
     )
 
 
+def capture_bundle_artifacts_v1_from_directory_fd(
+    directory_fd: int,
+    verified: VerifiedBundle,
+    roles: tuple[str, ...],
+    *,
+    diagnostic_directory: str | Path | None = None,
+) -> tuple[CapturedBundleArtifactV1, ...]:
+    """Capture declared artifacts in caller order through a pinned bundle directory."""
+
+    descriptor = exact_int(directory_fd, context="bundle directory descriptor", minimum=0)
+    if type(verified) is not VerifiedBundle:
+        raise SchemaError("verified must be a VerifiedBundle")
+    if type(roles) is not tuple or not roles:
+        raise SchemaError("captured artifact roles must be a nonempty tuple")
+    normalized_roles = tuple(
+        nonblank_string(role, context="captured artifact role") for role in roles
+    )
+    if len(normalized_roles) != len(set(normalized_roles)):
+        raise SchemaError("captured artifact roles must be unique")
+
+    reader = _BundleDirectoryReader.from_directory_fd(
+        descriptor,
+        verified.root_path.name,
+        diagnostic_directory=diagnostic_directory,
+    )
+    try:
+        if reader.directory_identity != verified.root_directory_identity:
+            raise ArtifactError("bundle directory descriptor identity changed after verification")
+        if reader.parent_directory_identity != verified.root_parent_directory_identity:
+            raise ArtifactError("bundle parent directory identity changed after verification")
+        _, root_payload = reader.read(
+            reader.root_relative_path,
+            context="bundle root recapture",
+            expected_bytes=verified.root_bytes,
+            max_bytes=_MAX_BUNDLE_ROOT_BYTES,
+        )
+        _require_file_identity(
+            root_payload,
+            expected_sha256=verified.root_sha256,
+            expected_bytes=verified.root_bytes,
+            context="bundle root recapture",
+        )
+        captured_bytes = len(root_payload)
+        by_role = {artifact.role: artifact for artifact in verified.bundle.artifacts}
+        captures: list[CapturedBundleArtifactV1] = []
+        for role in normalized_roles:
+            artifact = by_role.get(role)
+            if artifact is None:
+                raise ArtifactError(f"bundle is missing replay artifact role {role!r}")
+            remaining = _MAX_BUNDLE_TOTAL_BYTES - captured_bytes
+            _, payload = reader.read(
+                artifact.path,
+                context=f"bundle replay artifact role {role!r}",
+                expected_bytes=artifact.bytes,
+                max_bytes=min(_MAX_BUNDLE_COMPONENT_BYTES, remaining),
+            )
+            captured_bytes += len(payload)
+            captures.append(CapturedBundleArtifactV1(artifact=artifact, payload=payload))
+        return tuple(captures)
+    finally:
+        reader.close()
+
+
 __all__ = [
     "Analysis",
     "Artifact",
+    "CapturedBundleArtifactV1",
     "CELL_IDENTITY_ROLES",
     "AttemptsSummary",
     "ClaimSpec",
@@ -1981,6 +2164,7 @@ __all__ = [
     "VerificationLimitations",
     "VerifiedBundle",
     "VerifiedProtocol",
+    "capture_bundle_artifacts_v1_from_directory_fd",
     "attempt_chain_descriptor_bytes",
     "encode_attempt_journal",
     "load_bundle_v1",

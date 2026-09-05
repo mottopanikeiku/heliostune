@@ -1,0 +1,36 @@
+{
+  "analysis": {
+    "analyzer_sha256": "4c5e4aa15e03a1b4586a28869af85d7bf40a782196ff54ce75851e665688e66c",
+    "claims": []
+  },
+  "created_at": "2026-08-26T12:34:56.123456+00:00",
+  "evidence_class": "exploratory",
+  "execution": {
+    "environment_predicate_sha256": "77d5ab257bffa46bc77a57e0702cd7fea69a59990038c2b89ad831744e7c7ae1",
+    "executor_api": "heliostune.executor/1",
+    "expected_cell_count": 2,
+    "expected_cells_sha256": "327479d002aa19940e4c221997446090a635a9467b4dabd2594c8399d9880116",
+    "failure_policy_sha256": "07ad658d1f9fda10ad729f576a5d361e311eef5424610c6c40d6e57d533295c2",
+    "max_physical_attempts": 1,
+    "paid_plan_sha256": null,
+    "retry_policy": "none",
+    "wall_limit_s": 300
+  },
+  "parent_protocol_sha256": null,
+  "plugin": {
+    "artifact_sha256": "9d696f135a5e62ef622a88d85a7bb03e8fa76bddd0bf57ebf20b2eb4c1d1edc1",
+    "id": "fusion-reference-plugin",
+    "version": "1"
+  },
+  "revision": 1,
+  "schema": "heliostune.protocol/1",
+  "semantic": {
+    "candidates_sha256": "9a200160fa17ad6331e6c217e8c5df4e3aec8be2b5f38958773c7514f8dacc0c",
+    "comparators_sha256": "18b66ac14ed35e0853aab48b146ea4ad49dc6ecd068a35ff5c91564134b69380",
+    "numerics_sha256": "3f6a83046918fe62a8f323682783c0b7f622d40fdaeb2c2bab68e6ad0057eb22",
+    "splits_sha256": "83b74af247b2d7f85fd5b7688af2dce7a49f2f83ac9f953d28be8fc99cf6c131",
+    "timing_sha256": "33f7bf4ddfd6d100c5d6b6631a0d906bd4dce2842028ea96f39c26aa86467128",
+    "workloads_sha256": "01e6f3896157bb972b89356165f1efb0ba700c05b30854774f5860961a5c5a4a"
+  },
+  "study_id": "methodology-test"
+}
