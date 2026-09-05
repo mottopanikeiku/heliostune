@@ -38,13 +38,30 @@ VERIFICATION_CONTROL_NAMES_V1 = (
     "offline_reproduction",
 )
 
-VERIFIER_SOURCE_PATHS_V1 = (
+_LEGACY_VERIFIER_SOURCE_PATHS_V1 = (
     "heliostune/artifacts.py",
     "heliostune/errors.py",
     "heliostune/methodology.py",
     "heliostune/scope.py",
     "heliostune/validation.py",
     "heliostune/verification.py",
+)
+
+
+VERIFIER_SOURCE_PATHS_V1 = (
+    "heliostune/_offline_worker.py",
+    "heliostune/_reference_analyzer.py",
+    "heliostune/artifacts.py",
+    "heliostune/errors.py",
+    "heliostune/methodology.py",
+    "heliostune/offline_replay.py",
+    "heliostune/scope.py",
+    "heliostune/validation.py",
+    "heliostune/verification.py",
+)
+_VERIFIER_SOURCE_PATH_ROSTERS_V1 = (
+    _LEGACY_VERIFIER_SOURCE_PATHS_V1,
+    VERIFIER_SOURCE_PATHS_V1,
 )
 
 _CONTROL_STATUSES = {"checked", "not_checked", "not_applicable", "failed"}
@@ -244,8 +261,8 @@ class VerifierIdentityV1:
         nonblank_string(self.version, context="verifier version")
         _digest(self.source_sha256, context="verifier source_sha256")
         _exact_tuple(self.sources, FileIdentityV1, context="verifier sources")
-        if tuple(source.path for source in self.sources) != VERIFIER_SOURCE_PATHS_V1:
-            raise SchemaError("verifier sources must use the fixed v1 roster and order")
+        if tuple(source.path for source in self.sources) not in _VERIFIER_SOURCE_PATH_ROSTERS_V1:
+            raise SchemaError("verifier sources must use a supported fixed v1 roster and order")
         if self.source_sha256 != _source_aggregate_sha256(self.sources):
             raise SchemaError("verifier source_sha256 does not match its framed sources")
 
@@ -624,11 +641,26 @@ def write_verification_record_v1(
     *,
     verified: VerifiedBundle,
 ) -> None:
-    """Write an exact record beside a path-origin verified bundle directory."""
+    """Write an exact base record beside a path-origin verified bundle directory."""
 
     expected = build_verification_record_v1(verified)
     if type(record) is not VerificationRecordV1 or record != expected:
         raise ArtifactError("verification record does not exactly match the verified bundle")
+    _publish_exact_verification_record_v1(path, record, verified=verified)
+
+
+def _publish_exact_verification_record_v1(
+    path: str | Path,
+    record: VerificationRecordV1,
+    *,
+    verified: VerifiedBundle,
+) -> None:
+    """Publish an already-authorized exact record using the shared safe path writer."""
+
+    if type(record) is not VerificationRecordV1:
+        raise SchemaError("record must be a VerificationRecordV1")
+    if type(verified) is not VerifiedBundle:
+        raise SchemaError("verified must be a VerifiedBundle")
     payload = encode_verification_record_v1(record)
 
     destination = Path(path)
