@@ -10,9 +10,9 @@ from pathlib import Path
 import pytest
 
 import heliostune.cli as cli
-import heliostune.engineering_report as engineering_report
-import heliostune.report as legacy_report
-from heliostune.engineering_report import (
+import heliostune.tooling.engineering_report as engineering_report
+import heliostune.tooling.report as legacy_report
+from heliostune.tooling.engineering_report import (
     HOPPER_STUDY_ID,
     PRECISION_STUDY_ID,
     HopperSummary,

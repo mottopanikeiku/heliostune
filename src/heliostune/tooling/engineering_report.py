@@ -11,7 +11,7 @@ from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 from urllib.parse import quote, urlsplit
 
-from heliostune.artifacts import write_text_atomic
+from heliostune.tooling.artifacts import write_text_atomic
 from heliostune.errors import SchemaError
 from heliostune.schema import HardwareProfile
 from heliostune.validation import (

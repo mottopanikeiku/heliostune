@@ -17,7 +17,7 @@ import pytest
 import zstandard
 
 import heliostune.local_executor as local
-import heliostune.remote_execution as remote
+import heliostune.tooling.remote_execution as remote
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.fusion_execution_registry import (
     FUSION_EXECUTION_REGISTRY,
@@ -25,7 +25,7 @@ from heliostune.fusion_execution_registry import (
 )
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult, TensorMaterialization
 from heliostune.native_fusion_executor import NativeFusionExecutionResult
-from heliostune.remote_execution import (
+from heliostune.tooling.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
     REMOTE_RESULT_ENVELOPE_MAX_BYTES,
@@ -50,8 +50,8 @@ from heliostune.remote_execution import (
     write_remote_receipt,
 )
 from heliostune.schema import HardwareProfile
-from heliostune.scope import verify_suite
-from heliostune.wheel_verifier import source_digest, source_entries
+from heliostune.tooling.scope import verify_suite
+from heliostune.tooling.wheel_verifier import source_digest, source_entries
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITE = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"
@@ -1770,7 +1770,7 @@ def test_live_writer_retains_authorized_journal_if_same_inode_mutates_after_boun
             mutated = True
         original_mkdir(path, mode, dir_fd=dir_fd)
 
-    monkeypatch.setattr("heliostune.remote_execution.os.mkdir", mkdir_after_boundary)
+    monkeypatch.setattr("heliostune.tooling.remote_execution.os.mkdir", mkdir_after_boundary)
     try:
         write_remote_receipt(
             records,
@@ -2281,7 +2281,7 @@ def test_remote_execution_import_does_not_load_gpu_modules() -> None:
             sys.executable,
             "-c",
             (
-                "import sys; import heliostune.remote_execution; "
+                "import sys; import heliostune.tooling.remote_execution; "
                 "assert 'heliostune.native_fusion_executor' not in sys.modules; "
                 "assert 'torch' not in sys.modules; assert 'triton' not in sys.modules"
             ),

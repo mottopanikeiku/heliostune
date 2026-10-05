@@ -12,7 +12,7 @@ from types import MappingProxyType
 
 import numpy as np
 
-from heliostune.artifacts import read_json
+from heliostune.tooling.artifacts import read_json
 from heliostune.errors import ProtocolError
 from heliostune.validation import exact_fields, exact_int, exact_object, nonblank_string
 

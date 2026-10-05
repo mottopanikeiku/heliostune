@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import heliostune.selection as selection_module
-from heliostune.artifacts import read_measurements
+from heliostune.tooling.artifacts import read_measurements
 from heliostune.selection import ParhelionCandidate, parhelion_grid, select_parhelion
 
 EXPECTED_GRID = tuple(

@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 import zstandard
 
-import heliostune.artifacts as artifacts_module
-from heliostune.artifacts import (
+import heliostune.tooling.artifacts as artifacts_module
+from heliostune.tooling.artifacts import (
     read_json,
     read_measurements,
     write_bytes_atomic_noreplace,

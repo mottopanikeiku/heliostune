@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Final
 
-from heliostune.artifacts import write_text_atomic
+from heliostune.tooling.artifacts import write_text_atomic
 
 _REPO: Final = Path(__file__).resolve().parents[1]
 _DEFAULT_OUTPUT: Final = _REPO / "benchmarks/historical-artifact-baseline.json"

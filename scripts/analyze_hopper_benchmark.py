@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn, cast
 
-from heliostune.artifacts import read_json, read_measurements, strict_json_dumps
+from heliostune.tooling.artifacts import read_json, read_measurements, strict_json_dumps
 from heliostune.configs import (
     DEFAULT_CONFIGS,
     DEFAULT_WORKLOADS,

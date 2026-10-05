@@ -31,7 +31,7 @@ from analyze_precision_probe import (
     load_summaries,
 )
 
-from heliostune.artifacts import (
+from heliostune.tooling.artifacts import (
     read_json,
     strict_json_dumps,
     strict_json_loads,

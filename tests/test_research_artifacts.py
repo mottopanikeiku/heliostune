@@ -8,10 +8,10 @@ from typing import Any, cast
 
 import pytest
 
-import heliostune.catalog as catalog_module
+import heliostune.tooling.catalog as catalog_module
 import heliostune.cli as cli
-from heliostune.artifacts import read_json
-from heliostune.catalog import build_research_catalog, verify_research_catalog
+from heliostune.tooling.artifacts import read_json
+from heliostune.tooling.catalog import build_research_catalog, verify_research_catalog
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, MODEL_SPECS
 from heliostune.errors import ProtocolError
 

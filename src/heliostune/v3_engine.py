@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import KernelConfig, Workload
 from heliostune.features import V3_FEATURE_NAMES, v3_joint_features
-from heliostune.protocol import (
+from heliostune.tooling.protocol import (
     V3_BUDGETS,
     V3_K_GRID,
     V3_NOISE_VARIANCE,

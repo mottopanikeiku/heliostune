@@ -105,7 +105,7 @@ def _sha256_file(path: Path) -> str:
 
 def _serialized_json_sha256(value: object) -> str:
     """Hash the exact bytes that ``write_json_atomic`` will publish."""
-    from heliostune.artifacts import strict_json_dumps
+    from heliostune.tooling.artifacts import strict_json_dumps
 
     return hashlib.sha256(strict_json_dumps(value).encode("utf-8")).hexdigest()
 
@@ -303,7 +303,7 @@ image = build_image(_MODAL_WHEEL)
 def probe_seed(*, purpose: str, bank: int, workload_key: str) -> int:
     """Return the deterministic 64-bit probe seed for one randomized decision.
 
-    Deliberately outside ``heliostune.protocol.v3_seed``'s frozen purpose namespace: this
+    Deliberately outside ``heliostune.tooling.protocol.v3_seed``'s frozen purpose namespace: this
     is exploratory work and must not mint seeds inside a published protocol.
     """
     if not purpose or purpose != purpose.strip():
@@ -518,7 +518,7 @@ def probe_h100(
 @app.function(image=image, gpu=_MODAL_SELECTOR, timeout=_GATE_TIMEOUT_SECONDS)
 def hopper_correctness_h100() -> dict[str, Any]:
     """Validate every Hopper candidate without executing a timing primitive."""
-    from heliostune.artifacts import strict_json_dumps
+    from heliostune.tooling.artifacts import strict_json_dumps
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
     from heliostune.hopper_kernel import (
         assert_candidate_kernels_correct,
@@ -606,7 +606,7 @@ def _gate_config_manifest() -> dict[str, list[dict[str, object]]]:
 
 
 def _gate_config_manifest_sha256(configs: dict[str, list[dict[str, object]]]) -> str:
-    from heliostune.artifacts import strict_json_dumps
+    from heliostune.tooling.artifacts import strict_json_dumps
 
     return _sha256_payload(strict_json_dumps(configs, compact=True))
 
@@ -880,7 +880,7 @@ def archive_baseline(archive: Path, gpu: str) -> dict[str, Any]:
     """Select on frozen bank 1 and score the selected configuration on bank 2."""
     import math
 
-    from heliostune.artifacts import read_measurements
+    from heliostune.tooling.artifacts import read_measurements
     from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
 
     selection_bank = 1
@@ -1296,7 +1296,7 @@ def _validated_correctness_gate(
     head_sha256: str,
 ) -> dict[str, str]:
     """Validate and bind the completed correctness gate before any paid spawn."""
-    from heliostune.artifacts import strict_json_dumps
+    from heliostune.tooling.artifacts import strict_json_dumps
     from heliostune.collection import AttemptJournal, attempt_journal_path, manifest_path
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
     from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
@@ -1869,7 +1869,7 @@ def main(
     workloads: str = "",
     wheel: str = "",
 ) -> None:
-    from heliostune.artifacts import strict_json_dumps, write_json_atomic
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -1881,8 +1881,8 @@ def main(
         preflight_collection,
     )
     from heliostune.configs import DEFAULT_WORKLOADS
-    from heliostune.protocol import runtime_manifest
-    from heliostune.v3_artifacts import sha256_file
+    from heliostune.tooling.protocol import runtime_manifest
+    from heliostune.tooling.v3_artifacts import sha256_file
 
     if type(warmup_ms) is not int or warmup_ms != _FROZEN_WARMUP_MS:
         raise ValueError(f"warmup-ms must be exactly {_FROZEN_WARMUP_MS}")
@@ -2080,7 +2080,7 @@ def hopper_gate(
     wheel: str = "",
 ) -> None:
     """Run the one-call correctness-only gate required before paid collection."""
-    from heliostune.artifacts import strict_json_dumps, write_json_atomic
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -2090,8 +2090,8 @@ def hopper_gate(
         manifest_path,
         preflight_collection,
     )
-    from heliostune.protocol import runtime_manifest
-    from heliostune.v3_artifacts import sha256_file
+    from heliostune.tooling.protocol import runtime_manifest
+    from heliostune.tooling.v3_artifacts import sha256_file
     from heliostune.validation import nonblank_string
 
     destination = _resolved_gate_output(output)
@@ -2262,7 +2262,7 @@ def hopper_benchmark(
     wheel: str = "",
 ) -> None:
     """Run the single-call, bank-zero H100 engineering benchmark."""
-    from heliostune.artifacts import strict_json_dumps, write_json_atomic
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -2272,8 +2272,8 @@ def hopper_benchmark(
         manifest_path,
         preflight_collection,
     )
-    from heliostune.protocol import runtime_manifest
-    from heliostune.v3_artifacts import sha256_file
+    from heliostune.tooling.protocol import runtime_manifest
+    from heliostune.tooling.v3_artifacts import sha256_file
     from heliostune.validation import nonblank_string
 
     destination = _resolved_gate_output(output)

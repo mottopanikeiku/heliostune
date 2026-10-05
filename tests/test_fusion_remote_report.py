@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import heliostune.cli as cli
-from heliostune.engineering_report import (
+from heliostune.tooling.engineering_report import (
     FUSION_REMOTE_STUDY_ID,
     FusionRemoteSummary,
     parse_engineering_summary,

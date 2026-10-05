@@ -561,7 +561,7 @@ def _fail_sidecar_write(
     monkeypatch: pytest.MonkeyPatch,
     destination: Path,
 ) -> Path:
-    from heliostune import artifacts
+    from heliostune.tooling import artifacts
 
     sidecar = Path(f"{destination}.manifest.json")
     write_json_atomic = artifacts.write_json_atomic

@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-from heliostune.artifacts import read_json, read_measurements
+from heliostune.tooling.artifacts import read_json, read_measurements
 from heliostune.configs import KernelConfig, Workload
 from heliostune.features import v3_feature_rank
 from heliostune.hardware import expectation_for_gpu, validate_hardware

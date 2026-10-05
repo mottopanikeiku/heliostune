@@ -13,7 +13,7 @@ from typing import Any
 
 import pytest
 
-from heliostune.artifacts import strict_json_dumps
+from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.configs import DEFAULT_WORKLOADS, HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
 
 _REPO = Path(__file__).resolve().parents[1]

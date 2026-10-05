@@ -12,7 +12,7 @@ from heliostune.errors import SchemaError
 from heliostune.local_executor import CapabilityProbe
 from heliostune.native_fusion_analysis import analyze_native_fusion_result
 from heliostune.native_fusion_executor import NativeFusionExecutionResult, run_native_fusion_suite
-from heliostune.scope import verify_suite
+from heliostune.tooling.scope import verify_suite
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SUITE_PATH = _ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"

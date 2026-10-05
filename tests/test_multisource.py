@@ -12,7 +12,7 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from heliostune.artifacts import read_measurements
+from heliostune.tooling.artifacts import read_measurements
 from heliostune.configs import KernelConfig, Workload
 from heliostune.errors import SchemaError
 from heliostune.multisource import compare_multisource

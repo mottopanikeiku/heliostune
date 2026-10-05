@@ -10,17 +10,17 @@ from typing import Any
 import pytest
 from test_methodology import _write_closed_bundle
 
-import heliostune.artifacts as artifact_io
-import heliostune.verification as verification
-from heliostune.artifacts import strict_json_dumps
+import heliostune.tooling.artifacts as artifact_io
+import heliostune.tooling.verification as verification
+from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import (
+from heliostune.tooling.methodology import (
     Lifecycle,
     VerificationLimitations,
     verify_bundle_v1,
     verify_bundle_v1_from_directory_fd,
 )
-from heliostune.verification import (
+from heliostune.tooling.verification import (
     VERIFICATION_CONTROL_NAMES_V1,
     VERIFIER_SOURCE_PATHS_V1,
     FileIdentityV1,
@@ -298,15 +298,15 @@ def test_source_roster_aggregate_and_historical_identity(tmp_path: Path) -> None
     record, _ = _record(tmp_path)
     assert tuple(source.path for source in record.verifier.sources) == VERIFIER_SOURCE_PATHS_V1
     assert VERIFIER_SOURCE_PATHS_V1 == (
-        "heliostune/_offline_worker.py",
-        "heliostune/_reference_analyzer.py",
-        "heliostune/artifacts.py",
         "heliostune/errors.py",
-        "heliostune/methodology.py",
-        "heliostune/offline_replay.py",
-        "heliostune/scope.py",
+        "heliostune/tooling/_offline_worker.py",
+        "heliostune/tooling/_reference_analyzer.py",
+        "heliostune/tooling/artifacts.py",
+        "heliostune/tooling/methodology.py",
+        "heliostune/tooling/offline_replay.py",
+        "heliostune/tooling/scope.py",
+        "heliostune/tooling/verification.py",
         "heliostune/validation.py",
-        "heliostune/verification.py",
     )
 
     historical_sources = list(record.verifier.sources)
@@ -329,17 +329,41 @@ def test_source_roster_aggregate_and_historical_identity(tmp_path: Path) -> None
     assert load_verification_record_v1(path) == historical
 
 
-def test_loader_accepts_issue_32_six_source_roster(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "legacy_paths",
+    [
+        (
+            "heliostune/artifacts.py",
+            "heliostune/errors.py",
+            "heliostune/methodology.py",
+            "heliostune/scope.py",
+            "heliostune/validation.py",
+            "heliostune/verification.py",
+        ),
+        (
+            "heliostune/_offline_worker.py",
+            "heliostune/_reference_analyzer.py",
+            "heliostune/artifacts.py",
+            "heliostune/errors.py",
+            "heliostune/methodology.py",
+            "heliostune/offline_replay.py",
+            "heliostune/scope.py",
+            "heliostune/validation.py",
+            "heliostune/verification.py",
+        ),
+    ],
+)
+def test_loader_accepts_historical_source_rosters(
+    tmp_path: Path, legacy_paths: tuple[str, ...]
+) -> None:
     record, _ = _record(tmp_path)
-    legacy_paths = (
-        "heliostune/artifacts.py",
-        "heliostune/errors.py",
-        "heliostune/methodology.py",
-        "heliostune/scope.py",
-        "heliostune/validation.py",
-        "heliostune/verification.py",
+    current_by_old_path = {
+        source.path.replace("heliostune/tooling/", "heliostune/"): source
+        for source in record.verifier.sources
+    }
+    sources = tuple(
+        replace(current_by_old_path[path], path=path) for path in legacy_paths
     )
-    sources = tuple(source for source in record.verifier.sources if source.path in legacy_paths)
     assert tuple(source.path for source in sources) == legacy_paths
     verifier = replace(
         record.verifier,

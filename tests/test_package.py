@@ -19,16 +19,15 @@ def test_root_api_and_version_come_from_installed_metadata() -> None:
         "Workload",
         "__version__",
         "read_jsonl",
-        "read_measurements",
         "write_jsonl",
-        "write_measurements_atomic",
     }
     assert all(hasattr(heliostune, name) for name in heliostune.__all__)
 
 
 def test_css_and_typing_marker_are_packaged_resources() -> None:
     package = importlib.resources.files("heliostune")
-    css = package.joinpath("report.css").read_text(encoding="utf-8")
+    tooling = importlib.resources.files("heliostune.tooling")
+    css = tooling.joinpath("report.css").read_text(encoding="utf-8")
     assert ".control-panel" in css
     assert package.joinpath("py.typed").is_file()
 
@@ -41,7 +40,8 @@ def test_root_import_keeps_replay_and_report_lazy() -> None:
             (
                 "import sys, heliostune; "
                 "assert 'heliostune.replay' not in sys.modules; "
-                "assert 'heliostune.report' not in sys.modules"
+                "assert 'heliostune.tooling.report' not in sys.modules; "
+                "assert 'heliostune.tooling.verification' not in sys.modules"
             ),
         ],
         check=True,

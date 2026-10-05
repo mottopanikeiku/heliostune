@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal, Protocol, cast
 
-from heliostune.artifacts import read_json, strict_json_loads
+from heliostune.tooling.artifacts import read_json, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.validation import exact_bool, exact_fields, exact_int, finite_float, nonblank_string
 

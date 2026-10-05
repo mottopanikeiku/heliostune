@@ -17,9 +17,9 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from heliostune.artifacts import strict_json_dumps
+from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import (
+from heliostune.tooling.methodology import (
     EvidenceBundleV1,
     ProtocolV1,
     VerifiedBundle,
@@ -30,7 +30,7 @@ from heliostune.methodology import (
     selected_suite_descriptor_bytes,
     verify_bundle_v1_from_directory_fd,
 )
-from heliostune.scope import (
+from heliostune.tooling.scope import (
     ExpectedCell,
     Suite,
     VerifiedPlugin,
@@ -41,7 +41,7 @@ from heliostune.scope import (
 
 if TYPE_CHECKING:
     from heliostune.local_executor import CellObservation, LocalExecutionResult
-    from heliostune.scope import Case, TensorSpec
+    from heliostune.tooling.scope import Case, TensorSpec
 
 
 _PROTOCOL_ROLES = (

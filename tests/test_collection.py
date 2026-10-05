@@ -7,7 +7,7 @@ from typing import Any
 
 import pytest
 
-from heliostune.artifacts import (
+from heliostune.tooling.artifacts import (
     read_json,
     read_measurements,
     write_json_atomic,
@@ -26,7 +26,7 @@ from heliostune.collection import (
 )
 from heliostune.configs import KernelConfig, Workload
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
-from heliostune.protocol import v3_seed
+from heliostune.tooling.protocol import v3_seed
 from heliostune.schema import HardwareProfile, Measurement
 
 _WORKLOADS = (

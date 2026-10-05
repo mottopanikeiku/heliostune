@@ -9,7 +9,7 @@ from types import ModuleType
 import numpy as np
 import pytest
 
-from heliostune.artifacts import read_json, write_json_atomic
+from heliostune.tooling.artifacts import read_json, write_json_atomic
 from heliostune.collection import AttemptJournal
 from heliostune.errors import ProtocolError
 

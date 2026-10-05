@@ -10,7 +10,7 @@ from typing import Any, cast
 import pytest
 
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.remote_execution import RemoteIntent, verify_remote_receipt_payloads
+from heliostune.tooling.remote_execution import RemoteIntent, verify_remote_receipt_payloads
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/publish_native_rmsnorm_h100.py"
@@ -163,6 +163,22 @@ def test_committed_publication_is_offline_byte_exact(
     ):
         monkeypatch.setattr(PUBLISHER, source_reader, fail_source_read)
     PUBLISHER.check()
+
+
+def test_historical_source_bindings_survive_current_package_changes() -> None:
+    manifest = PUBLISHER._strict_json_bytes(
+        PUBLISHER._MANIFEST_PATH.read_bytes(), context="test historical manifest"
+    )
+    publisher_path = "scripts/publish_native_rmsnorm_h100.py"
+    historical = PUBLISHER._source_bytes(publisher_path, historical=True)
+    current = PUBLISHER._source_bytes(publisher_path, historical=False)
+    assert PUBLISHER.sha256_bytes(historical) == manifest["artifacts"]["publisher"]["sha256"]
+    assert current == PUBLISHER._PUBLISHER_PATH.read_bytes()
+    assert historical != current
+    for binding in manifest["sources"]["current"].values():
+        assert PUBLISHER.sha256_bytes(
+            PUBLISHER._source_bytes(binding["path"], historical=True)
+        ) == binding["sha256"]
 
 
 def test_raw_losslessly_embeds_both_exact_receipts_and_attempt_sidecars() -> None:

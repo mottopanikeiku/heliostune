@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from heliostune.artifacts import write_json_atomic
-from heliostune.catalog import build_research_catalog, verify_research_catalog
+from heliostune.tooling.artifacts import write_json_atomic
+from heliostune.tooling.catalog import build_research_catalog, verify_research_catalog
 
 _REPO = Path(__file__).resolve().parents[1]
 _DEFAULT = _REPO / "benchmarks/research-artifact-manifest.json"

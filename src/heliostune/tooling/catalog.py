@@ -10,7 +10,7 @@ from typing import cast
 
 import zstandard
 
-from heliostune.artifacts import read_json, read_measurements
+from heliostune.tooling.artifacts import read_json, read_measurements
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, MODEL_SPECS
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
 from heliostune.multisource import compare_multisource

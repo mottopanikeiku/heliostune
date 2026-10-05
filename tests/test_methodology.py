@@ -9,9 +9,9 @@ from typing import Any
 
 import pytest
 
-from heliostune.artifacts import strict_json_dumps, strict_json_loads
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import (
+from heliostune.tooling.methodology import (
     CapturedBundleArtifactV1,
     ClaimSpec,
     EvidenceBundleV1,

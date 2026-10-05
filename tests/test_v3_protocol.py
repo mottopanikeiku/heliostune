@@ -9,9 +9,9 @@ from types import ModuleType
 import numpy as np
 import pytest
 
-from heliostune.artifacts import read_json
+from heliostune.tooling.artifacts import read_json
 from heliostune.errors import ProtocolError
-from heliostune.protocol import (
+from heliostune.tooling.protocol import (
     V3_METHOD_ROLES,
     V3_PILOT_CONFIG_KEYS,
     V3_PILOT_WORKLOAD_KEYS,

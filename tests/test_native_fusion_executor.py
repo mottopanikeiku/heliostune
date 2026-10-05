@@ -40,7 +40,7 @@ from heliostune.native_fusion_executor import (
     _validate_frozen_suite,
     run_native_fusion_suite,
 )
-from heliostune.scope import verify_suite
+from heliostune.tooling.scope import verify_suite
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SUITE = _ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"

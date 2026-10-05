@@ -8,10 +8,10 @@ from typing import Any
 
 import pytest
 
-import heliostune.scope as scope_module
+import heliostune.tooling.scope as scope_module
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.fusion_kernels import RESIDUAL_RMSNORM_CONFIGS
-from heliostune.scope import (
+from heliostune.tooling.scope import (
     DOMAIN_VOCABULARY,
     DTYPE_VOCABULARY,
     EXECUTABLE_TEMPLATE_IDS,

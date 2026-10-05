@@ -14,9 +14,9 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from .artifacts import strict_json_loads
+from heliostune.tooling.artifacts import strict_json_loads
 from .errors import SchemaError
-from .scope import Case, ExpectedCell, GatedMLPSemantics, RMSNormSemantics, Suite, verify_suite
+from heliostune.tooling.scope import Case, ExpectedCell, GatedMLPSemantics, RMSNormSemantics, Suite, verify_suite
 
 if TYPE_CHECKING:
     from .native_fusion_executor import NativeFusionExecutionResult

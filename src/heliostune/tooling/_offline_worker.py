@@ -1,4 +1,4 @@
-"""Fixed subprocess worker for :mod:`heliostune.offline_replay`."""
+"""Fixed subprocess worker for :mod:`heliostune.tooling.offline_replay`."""
 
 from __future__ import annotations
 
@@ -10,14 +10,14 @@ import stat
 import sys
 from typing import NoReturn
 
-from heliostune.offline_replay import (
+from heliostune.tooling.offline_replay import (
     _MAX_FRAME_BYTES,
     _MAX_RESULT_BYTES,
     _decode_worker_request,
     _encode_worker_result,
     _registered_analyzer,
 )
-from heliostune.verification import _capture_verifier_identity_v1
+from heliostune.tooling.verification import _capture_verifier_identity_v1
 
 _MAX_CPU_SECONDS = 10
 _MAX_ADDRESS_SPACE = 512 * 1024 * 1024

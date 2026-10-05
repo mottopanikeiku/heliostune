@@ -10,11 +10,11 @@ from typing import Any
 
 import pytest
 
-from heliostune import _offline_worker
-from heliostune.artifacts import strict_json_dumps, strict_json_loads
+from heliostune.tooling import _offline_worker
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import verify_bundle_v1
-from heliostune.offline_replay import (
+from heliostune.tooling.methodology import verify_bundle_v1
+from heliostune.tooling.offline_replay import (
     _MAX_FRAME_BYTES,
     _MAX_RESULT_BYTES,
     _SANITIZED_ENV,
@@ -36,7 +36,7 @@ from heliostune.offline_replay import (
     replay_bundle_v1,
     write_offline_replay_record_v1,
 )
-from heliostune.verification import (
+from heliostune.tooling.verification import (
     VERIFICATION_CONTROL_NAMES_V1,
     build_verification_record_v1,
     load_verification_record_v1,
@@ -217,7 +217,7 @@ def test_worker_argv_and_environment_are_exact() -> None:
         "--kill-child=SIGKILL",
         "--mount-proc",
     )
-    assert argv[-5:] == ("-B", "-P", "-s", "-m", "heliostune._offline_worker")
+    assert argv[-5:] == ("-B", "-P", "-s", "-m", "heliostune.tooling._offline_worker")
     assert _SANITIZED_ENV == {
         "HOME": "/",
         "LC_ALL": "C",
@@ -259,7 +259,7 @@ def test_worker_establishes_empty_kernel_read_only_chroot(
     workspace.chmod(0o555)
     code = (
         "import os, socket\n"
-        "from heliostune import _offline_worker as worker\n"
+        "from heliostune.tooling import _offline_worker as worker\n"
         "worker._require_namespace_context()\n"
         "worker._enter_read_only_chroot()\n"
         "assert os.statvfs('/').f_flag & os.ST_RDONLY\n"
@@ -368,7 +368,7 @@ def test_replay_uses_two_distinct_empty_read_only_workspaces(
         seen.append(workspace)
         return (("analysis_summary", output),)
 
-    monkeypatch.setattr("heliostune.offline_replay._run_worker", fake)
+    monkeypatch.setattr("heliostune.tooling.offline_replay._run_worker", fake)
     replay_bundle_v1(root, timeout_s=2)
     assert len(seen) == 2 and seen[0] != seen[1]
 
@@ -385,7 +385,7 @@ def test_nondeterminism_fails_without_result(
         calls += 1
         return (("analysis_summary", committed if calls == 1 else b"different"),)
 
-    monkeypatch.setattr("heliostune.offline_replay._run_worker", fake)
+    monkeypatch.setattr("heliostune.tooling.offline_replay._run_worker", fake)
     with pytest.raises(ArtifactError, match="nondeterministic"):
         replay_bundle_v1(root)
 
@@ -403,7 +403,7 @@ def test_source_mismatch_fails_before_spawn(
     artifact.update(bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest())
     root.write_text(strict_json_dumps(bundle))
     monkeypatch.setattr(
-        "heliostune.offline_replay._run_worker", lambda *a, **k: pytest.fail("worker spawned")
+        "heliostune.tooling.offline_replay._run_worker", lambda *a, **k: pytest.fail("worker spawned")
     )
     with pytest.raises(ArtifactError, match="binding"):
         replay_bundle_v1(root)
@@ -412,7 +412,7 @@ def test_source_mismatch_fails_before_spawn(
 def test_worker_timeout_kills_process_group_and_reaps(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import heliostune.offline_replay as replay
+    import heliostune.tooling.offline_replay as replay
 
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -448,7 +448,7 @@ def test_worker_communication_failure_kills_process_group_and_reaps(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    import heliostune.offline_replay as replay
+    import heliostune.tooling.offline_replay as replay
 
     workspace = tmp_path / "communication-workspace"
     workspace.mkdir()
@@ -495,7 +495,7 @@ def test_sandbox_unavailability_fails_before_result(
     def unavailable() -> tuple[str, ...]:
         raise ArtifactError("sandbox unavailable")
 
-    monkeypatch.setattr("heliostune.offline_replay._worker_argv", unavailable)
+    monkeypatch.setattr("heliostune.tooling.offline_replay._worker_argv", unavailable)
     with pytest.raises(ArtifactError, match="sandbox unavailable"):
         replay_bundle_v1(root)
 

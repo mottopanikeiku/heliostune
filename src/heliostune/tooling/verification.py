@@ -11,9 +11,9 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
-from heliostune.artifacts import strict_json_dumps, strict_json_loads
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.methodology import (
+from heliostune.tooling.methodology import (
     Artifact,
     Lifecycle,
     VerificationLimitations,
@@ -48,7 +48,8 @@ _LEGACY_VERIFIER_SOURCE_PATHS_V1 = (
 )
 
 
-VERIFIER_SOURCE_PATHS_V1 = (
+# Keep both published rosters parseable; new records identify the installed layout.
+_PRE_TOOLING_VERIFIER_SOURCE_PATHS_V1 = (
     "heliostune/_offline_worker.py",
     "heliostune/_reference_analyzer.py",
     "heliostune/artifacts.py",
@@ -59,8 +60,21 @@ VERIFIER_SOURCE_PATHS_V1 = (
     "heliostune/validation.py",
     "heliostune/verification.py",
 )
+
+VERIFIER_SOURCE_PATHS_V1 = (
+    "heliostune/errors.py",
+    "heliostune/tooling/_offline_worker.py",
+    "heliostune/tooling/_reference_analyzer.py",
+    "heliostune/tooling/artifacts.py",
+    "heliostune/tooling/methodology.py",
+    "heliostune/tooling/offline_replay.py",
+    "heliostune/tooling/scope.py",
+    "heliostune/tooling/verification.py",
+    "heliostune/validation.py",
+)
 _VERIFIER_SOURCE_PATH_ROSTERS_V1 = (
     _LEGACY_VERIFIER_SOURCE_PATHS_V1,
+    _PRE_TOOLING_VERIFIER_SOURCE_PATHS_V1,
     VERIFIER_SOURCE_PATHS_V1,
 )
 
@@ -697,7 +711,7 @@ def _publish_exact_verification_record_v1(
                 "verification record output must be a sibling of the verified bundle directory"
             )
 
-        from heliostune.artifacts import write_bytes_atomic_noreplace_at
+        from heliostune.tooling.artifacts import write_bytes_atomic_noreplace_at
 
         write_bytes_atomic_noreplace_at(
             output_parent_fd,

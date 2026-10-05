@@ -10,7 +10,7 @@ from pathlib import Path
 
 import zstandard
 
-from heliostune.artifacts import write_bytes_atomic
+from heliostune.tooling.artifacts import write_bytes_atomic
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.replay import BenchmarkTable
