@@ -12,8 +12,8 @@ from test_methodology import _write_closed_bundle
 
 import heliostune.tooling.artifacts as artifact_io
 import heliostune.tooling.verification as verification
-from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.tooling.methodology import (
     Lifecycle,
     VerificationLimitations,
@@ -361,9 +361,7 @@ def test_loader_accepts_historical_source_rosters(
         source.path.replace("heliostune/tooling/", "heliostune/"): source
         for source in record.verifier.sources
     }
-    sources = tuple(
-        replace(current_by_old_path[path], path=path) for path in legacy_paths
-    )
+    sources = tuple(replace(current_by_old_path[path], path=path) for path in legacy_paths)
     assert tuple(source.path for source in sources) == legacy_paths
     verifier = replace(
         record.verifier,

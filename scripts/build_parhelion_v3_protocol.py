@@ -7,7 +7,6 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-from heliostune.tooling.artifacts import read_json, write_json_atomic
 from heliostune.configs import (
     DEFAULT_WORKLOADS,
     PARHELION_V3_CANDIDATE_CONFIGS,
@@ -16,6 +15,7 @@ from heliostune.configs import (
     TRITON_TUTORIAL_CONFIG_PATH,
 )
 from heliostune.features import V2_FEATURE_NAMES, V3_FEATURE_NAMES
+from heliostune.tooling.artifacts import read_json, write_json_atomic
 from heliostune.tooling.protocol import (
     V3_BANKS,
     V3_BUDGETS,

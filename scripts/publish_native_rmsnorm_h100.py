@@ -15,9 +15,9 @@ from typing import NoReturn, cast
 
 import zstandard
 
-from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
 from heliostune.native_fusion_analysis import analyze_native_fusion_result
 from heliostune.native_fusion_executor import NativeFusionExecutionResult
+from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
 from heliostune.tooling.remote_execution import (
     VerifiedRemoteReceipt,
     canonical_json_bytes,

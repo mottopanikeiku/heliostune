@@ -11,8 +11,8 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
-from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.tooling.methodology import (
     Artifact,
     Lifecycle,

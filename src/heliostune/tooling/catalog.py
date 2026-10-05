@@ -10,11 +10,11 @@ from typing import cast
 
 import zstandard
 
-from heliostune.tooling.artifacts import read_json, read_measurements
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, MODEL_SPECS
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
 from heliostune.multisource import compare_multisource
 from heliostune.replay import BenchmarkTable
+from heliostune.tooling.artifacts import read_json, read_measurements
 from heliostune.validation import exact_fields, exact_int, exact_object, nonblank_string
 
 _MODEL_CONFIG_SHA256 = {

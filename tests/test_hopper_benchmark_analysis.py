@@ -13,8 +13,8 @@ from typing import Any
 
 import pytest
 
-from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.configs import DEFAULT_WORKLOADS, HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
+from heliostune.tooling.artifacts import strict_json_dumps
 
 _REPO = Path(__file__).resolve().parents[1]
 _ANALYZER_PATH = _REPO / "scripts/analyze_hopper_benchmark.py"

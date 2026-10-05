@@ -8,12 +8,12 @@ from typing import Any, cast
 
 import pytest
 
-import heliostune.tooling.catalog as catalog_module
 import heliostune.cli as cli
-from heliostune.tooling.artifacts import read_json
-from heliostune.tooling.catalog import build_research_catalog, verify_research_catalog
+import heliostune.tooling.catalog as catalog_module
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, MODEL_SPECS
 from heliostune.errors import ProtocolError
+from heliostune.tooling.artifacts import read_json
+from heliostune.tooling.catalog import build_research_catalog, verify_research_catalog
 
 _REPO = Path(__file__).resolve().parents[1]
 _CATALOG = _REPO / "benchmarks/research-artifact-manifest.json"

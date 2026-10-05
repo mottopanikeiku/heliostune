@@ -19,8 +19,8 @@ from heliostune.tooling.artifacts import (
     write_bytes_atomic,
 )
 from heliostune.tooling.protocol import load_v3_protocol, require_v3_runtime, runtime_manifest
-from heliostune.uncertainty import paired_contrast
 from heliostune.tooling.v3_artifacts import sha256_file
+from heliostune.uncertainty import paired_contrast
 from heliostune.v3_engine import (
     V3Evaluation,
     V3Prepared,

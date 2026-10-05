@@ -10,6 +10,9 @@ import pytest
 import zstandard
 
 import heliostune.tooling.artifacts as artifacts_module
+from heliostune.configs import KernelConfig, Workload
+from heliostune.errors import ArtifactError, SchemaError
+from heliostune.schema import HardwareProfile, Measurement
 from heliostune.tooling.artifacts import (
     read_json,
     read_measurements,
@@ -19,9 +22,6 @@ from heliostune.tooling.artifacts import (
     write_measurements_atomic,
     write_text_atomic,
 )
-from heliostune.configs import KernelConfig, Workload
-from heliostune.errors import ArtifactError, SchemaError
-from heliostune.schema import HardwareProfile, Measurement
 
 
 def _row() -> Measurement:

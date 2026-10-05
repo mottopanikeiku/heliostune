@@ -20,13 +20,6 @@ import zstandard
 from rich.console import Console
 from rich.table import Table
 
-from heliostune.tooling.artifacts import (
-    read_json,
-    read_measurements,
-    write_bytes_atomic,
-    write_json_atomic,
-    write_measurements_atomic,
-)
 from heliostune.errors import ArtifactError, HeliostuneError, ProtocolError, SchemaError
 from heliostune.multisource import compare_multisource
 from heliostune.multisource_engine import (
@@ -36,6 +29,13 @@ from heliostune.multisource_engine import (
 from heliostune.replay import compare_methods
 from heliostune.schema import Measurement, read_jsonl
 from heliostune.selection import select_parhelion
+from heliostune.tooling.artifacts import (
+    read_json,
+    read_measurements,
+    write_bytes_atomic,
+    write_json_atomic,
+    write_measurements_atomic,
+)
 from heliostune.validation import exact_object, nonblank_string
 
 _CONSOLE = Console()
@@ -614,8 +614,8 @@ def _report(args: argparse.Namespace) -> int:
 
 
 def _demo(args: argparse.Namespace) -> int:
-    from heliostune.tooling.report import render_report
     from heliostune.synthetic import synthetic_measurements
+    from heliostune.tooling.report import render_report
 
     data_path = args.output_dir / "measurements.jsonl"
     summary_path = args.output_dir / "summary.json"
@@ -1139,8 +1139,8 @@ def _run_local_suite(args: argparse.Namespace) -> int:
                 f"local suite output directory is no longer empty: {output_dir}"
             ) from exc
     if result.verified_suite_sha256 == NATIVE_RMSNORM_SUITE_SHA256:
-        from heliostune.tooling.native_fusion_bundle import write_native_fusion_bundle
         from heliostune.native_fusion_executor import NativeFusionExecutionResult
+        from heliostune.tooling.native_fusion_bundle import write_native_fusion_bundle
 
         if not isinstance(result, NativeFusionExecutionResult):
             raise SchemaError("native suite digest returned a non-native execution result")

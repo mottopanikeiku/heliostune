@@ -518,13 +518,13 @@ def probe_h100(
 @app.function(image=image, gpu=_MODAL_SELECTOR, timeout=_GATE_TIMEOUT_SECONDS)
 def hopper_correctness_h100() -> dict[str, Any]:
     """Validate every Hopper candidate without executing a timing primitive."""
-    from heliostune.tooling.artifacts import strict_json_dumps
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
     from heliostune.hopper_kernel import (
         assert_candidate_kernels_correct,
         validation_workloads,
     )
     from heliostune.kernel import get_hardware_profile
+    from heliostune.tooling.artifacts import strict_json_dumps
 
     workloads = validation_workloads()
     results = assert_candidate_kernels_correct(_GPU)
@@ -880,8 +880,8 @@ def archive_baseline(archive: Path, gpu: str) -> dict[str, Any]:
     """Select on frozen bank 1 and score the selected configuration on bank 2."""
     import math
 
-    from heliostune.tooling.artifacts import read_measurements
     from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
+    from heliostune.tooling.artifacts import read_measurements
 
     selection_bank = 1
     evaluation_bank = 2
@@ -1296,9 +1296,9 @@ def _validated_correctness_gate(
     head_sha256: str,
 ) -> dict[str, str]:
     """Validate and bind the completed correctness gate before any paid spawn."""
-    from heliostune.tooling.artifacts import strict_json_dumps
     from heliostune.collection import AttemptJournal, attempt_journal_path, manifest_path
     from heliostune.configs import HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
+    from heliostune.tooling.artifacts import strict_json_dumps
     from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
 
     if not gate_path.is_file():
@@ -1869,7 +1869,6 @@ def main(
     workloads: str = "",
     wheel: str = "",
 ) -> None:
-    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -1881,6 +1880,7 @@ def main(
         preflight_collection,
     )
     from heliostune.configs import DEFAULT_WORKLOADS
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.tooling.protocol import runtime_manifest
     from heliostune.tooling.v3_artifacts import sha256_file
 
@@ -2080,7 +2080,6 @@ def hopper_gate(
     wheel: str = "",
 ) -> None:
     """Run the one-call correctness-only gate required before paid collection."""
-    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -2090,6 +2089,7 @@ def hopper_gate(
         manifest_path,
         preflight_collection,
     )
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.tooling.protocol import runtime_manifest
     from heliostune.tooling.v3_artifacts import sha256_file
     from heliostune.validation import nonblank_string
@@ -2262,7 +2262,6 @@ def hopper_benchmark(
     wheel: str = "",
 ) -> None:
     """Run the single-call, bank-zero H100 engineering benchmark."""
-    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.collection import (
         AttemptRecord,
         AttemptStatus,
@@ -2272,6 +2271,7 @@ def hopper_benchmark(
         manifest_path,
         preflight_collection,
     )
+    from heliostune.tooling.artifacts import strict_json_dumps, write_json_atomic
     from heliostune.tooling.protocol import runtime_manifest
     from heliostune.tooling.v3_artifacts import sha256_file
     from heliostune.validation import nonblank_string

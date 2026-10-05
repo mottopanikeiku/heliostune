@@ -10,11 +10,11 @@ from pathlib import Path
 
 import zstandard
 
-from heliostune.tooling.artifacts import write_bytes_atomic
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.replay import BenchmarkTable
 from heliostune.schema import Measurement, read_jsonl
+from heliostune.tooling.artifacts import write_bytes_atomic
 
 _REPO = Path(__file__).resolve().parents[1]
 _L4_A10 = _REPO / "benchmarks/data/measurements.jsonl.zst"

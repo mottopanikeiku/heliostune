@@ -10,9 +10,9 @@ from typing import Any
 
 import pytest
 
+from heliostune.errors import ArtifactError, SchemaError
 from heliostune.tooling import _offline_worker
 from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
-from heliostune.errors import ArtifactError, SchemaError
 from heliostune.tooling.methodology import verify_bundle_v1
 from heliostune.tooling.offline_replay import (
     _MAX_FRAME_BYTES,
@@ -403,7 +403,8 @@ def test_source_mismatch_fails_before_spawn(
     artifact.update(bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest())
     root.write_text(strict_json_dumps(bundle))
     monkeypatch.setattr(
-        "heliostune.tooling.offline_replay._run_worker", lambda *a, **k: pytest.fail("worker spawned")
+        "heliostune.tooling.offline_replay._run_worker",
+        lambda *a, **k: pytest.fail("worker spawned"),
     )
     with pytest.raises(ArtifactError, match="binding"):
         replay_bundle_v1(root)

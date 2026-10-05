@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from heliostune.tooling._reference_analyzer import analyze
 from heliostune.errors import SchemaError
+from heliostune.tooling._reference_analyzer import analyze
 
 _CANONICAL_INPUT = b'{\n  "values": [\n    -7,\n    0,\n    12\n  ]\n}\n'
 _EXPECTED_OUTPUT = (

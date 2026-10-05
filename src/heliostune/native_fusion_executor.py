@@ -14,8 +14,10 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from heliostune.tooling.artifacts import strict_json_loads
-from .errors import ArtifactError, SchemaError
 from heliostune.tooling.scope import Suite, verify_suite
+from heliostune.tooling.wheel_verifier import source_digest, source_entries
+
+from .errors import ArtifactError, SchemaError
 from .validation import (
     exact_bool,
     exact_fields,
@@ -25,7 +27,6 @@ from .validation import (
     optional_finite_float,
     optional_nonblank_string,
 )
-from heliostune.tooling.wheel_verifier import source_digest, source_entries
 
 NATIVE_RMSNORM_SUITE_SHA256 = "23f7397f2adee93cd9f7919aaf075c0f8b5e92cd6d4257ce4c54197d3c98035f"
 _SCHEMA: Literal["heliostune.local_executor/2"] = "heliostune.local_executor/2"

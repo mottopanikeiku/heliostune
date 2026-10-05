@@ -19,9 +19,9 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Literal, cast
 
+from heliostune.errors import ArtifactError, SchemaError
 from heliostune.tooling import _reference_analyzer
 from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
-from heliostune.errors import ArtifactError, SchemaError
 from heliostune.tooling.methodology import (
     CapturedBundleArtifactV1,
     VerifiedBundle,
@@ -29,13 +29,13 @@ from heliostune.tooling.methodology import (
     verify_bundle_v1,
     verify_bundle_v1_from_directory_fd,
 )
-from heliostune.validation import exact_fields, exact_int, nonblank_string
 from heliostune.tooling.verification import (
     VerificationRecordV1,
     VerifierIdentityV1,
     _publish_exact_verification_record_v1,
     build_verification_record_v1,
 )
+from heliostune.validation import exact_fields, exact_int, nonblank_string
 
 ANALYZER_MANIFEST_ROLE_V1 = "analyzer"
 ANALYZER_MANIFEST_MEDIA_TYPE_V1 = "application/json"
@@ -276,7 +276,9 @@ class _AnalyzerRegistryEntry:
 def _reference_registry_entry() -> _AnalyzerRegistryEntry:
     try:
         payload = (
-            importlib.resources.files("heliostune.tooling").joinpath("_reference_analyzer.py").read_bytes()
+            importlib.resources.files("heliostune.tooling")
+            .joinpath("_reference_analyzer.py")
+            .read_bytes()
         )
     except OSError as exc:
         raise ArtifactError(f"cannot capture installed reference analyzer source: {exc}") from exc

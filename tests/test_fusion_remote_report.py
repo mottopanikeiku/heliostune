@@ -8,13 +8,13 @@ from pathlib import Path
 import pytest
 
 import heliostune.cli as cli
+from heliostune.errors import SchemaError
 from heliostune.tooling.engineering_report import (
     FUSION_REMOTE_STUDY_ID,
     FusionRemoteSummary,
     parse_engineering_summary,
     render_engineering_report,
 )
-from heliostune.errors import SchemaError
 
 _REPOSITORY = Path(__file__).resolve().parents[1]
 _SUMMARY = _REPOSITORY / "benchmarks/results/fusion-remote-exploratory-summary.json"

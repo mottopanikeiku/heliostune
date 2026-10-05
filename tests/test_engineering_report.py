@@ -12,6 +12,7 @@ import pytest
 import heliostune.cli as cli
 import heliostune.tooling.engineering_report as engineering_report
 import heliostune.tooling.report as legacy_report
+from heliostune.errors import SchemaError
 from heliostune.tooling.engineering_report import (
     HOPPER_STUDY_ID,
     PRECISION_STUDY_ID,
@@ -20,7 +21,6 @@ from heliostune.tooling.engineering_report import (
     parse_engineering_summary,
     render_engineering_report,
 )
-from heliostune.errors import SchemaError
 
 _REPOSITORY = Path(__file__).resolve().parents[1]
 _HOPPER_SUMMARY = _REPOSITORY / "benchmarks/results/hopper-h100-engineering-summary-v2.json"

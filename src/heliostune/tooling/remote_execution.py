@@ -20,12 +20,12 @@ from typing import TYPE_CHECKING, Literal, cast
 
 import zstandard
 
-from heliostune.tooling.artifacts import strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.fusion_execution_registry import FusionExecutionSpec, fusion_execution_spec
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.local_executor import LocalExecutionResult, parse_local_execution_result
 from heliostune.schema import HardwareProfile
+from heliostune.tooling.artifacts import strict_json_loads
 from heliostune.tooling.scope import Plugin, Suite
 from heliostune.validation import exact_bool, exact_fields, exact_int, nonblank_string
 

@@ -9,9 +9,9 @@ from types import ModuleType
 import numpy as np
 import pytest
 
-from heliostune.tooling.artifacts import read_json, write_json_atomic
 from heliostune.collection import AttemptJournal
 from heliostune.errors import ProtocolError
+from heliostune.tooling.artifacts import read_json, write_json_atomic
 
 _REPO = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO / "scripts/build_parhelion_v3_validation_failure.py"

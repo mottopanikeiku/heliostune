@@ -176,9 +176,10 @@ def test_historical_source_bindings_survive_current_package_changes() -> None:
     assert current == PUBLISHER._PUBLISHER_PATH.read_bytes()
     assert historical != current
     for binding in manifest["sources"]["current"].values():
-        assert PUBLISHER.sha256_bytes(
-            PUBLISHER._source_bytes(binding["path"], historical=True)
-        ) == binding["sha256"]
+        assert (
+            PUBLISHER.sha256_bytes(PUBLISHER._source_bytes(binding["path"], historical=True))
+            == binding["sha256"]
+        )
 
 
 def test_raw_losslessly_embeds_both_exact_receipts_and_attempt_sidecars() -> None:

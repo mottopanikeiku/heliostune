@@ -12,8 +12,8 @@ from types import MappingProxyType
 
 import numpy as np
 
-from heliostune.tooling.artifacts import read_json
 from heliostune.errors import ProtocolError
+from heliostune.tooling.artifacts import read_json
 from heliostune.validation import exact_fields, exact_int, exact_object, nonblank_string
 
 V3_PRIOR_PRECISION = 1.0

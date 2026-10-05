@@ -25,6 +25,7 @@ from heliostune.fusion_execution_registry import (
 )
 from heliostune.local_executor import CapabilityProbe, LocalExecutionResult, TensorMaterialization
 from heliostune.native_fusion_executor import NativeFusionExecutionResult
+from heliostune.schema import HardwareProfile
 from heliostune.tooling.remote_execution import (
     RECEIPT_LIMITATIONS,
     RECEIPT_SCHEMA,
@@ -49,7 +50,6 @@ from heliostune.tooling.remote_execution import (
     verify_remote_receipt_payloads,
     write_remote_receipt,
 )
-from heliostune.schema import HardwareProfile
 from heliostune.tooling.scope import verify_suite
 from heliostune.tooling.wheel_verifier import source_digest, source_entries
 

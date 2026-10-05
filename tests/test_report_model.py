@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from heliostune.tooling.artifacts import read_json
 from heliostune.errors import SchemaError
+from heliostune.tooling.artifacts import read_json
 from heliostune.tooling.report_model import ReportData, normalize_report_summary
 
 

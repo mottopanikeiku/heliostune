@@ -8,6 +8,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
+from heliostune.schema import Measurement
 from heliostune.tooling.artifacts import (
     read_json,
     read_measurements,
@@ -16,7 +17,6 @@ from heliostune.tooling.artifacts import (
     write_measurements_atomic,
 )
 from heliostune.tooling.protocol import load_v3_protocol, require_v3_runtime
-from heliostune.schema import Measurement
 from heliostune.tooling.v3_artifacts import sha256_file
 from heliostune.validation import exact_object
 

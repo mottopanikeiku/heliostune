@@ -7,9 +7,10 @@ from collections.abc import Mapping, Sequence
 from typing import Any, cast
 
 from heliostune.tooling.artifacts import strict_json_loads
+from heliostune.tooling.scope import Suite
+
 from .errors import SchemaError
 from .native_fusion_executor import NativeFusionExecutionResult
-from heliostune.tooling.scope import Suite
 
 _SCHEMA = "heliostune.native-fusion-stage-gate/1"
 _THRESHOLD = 1.1

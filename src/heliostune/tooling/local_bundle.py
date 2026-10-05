@@ -17,8 +17,8 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.tooling.artifacts import strict_json_dumps
 from heliostune.tooling.methodology import (
     EvidenceBundleV1,
     ProtocolV1,

@@ -15,6 +15,14 @@ from numpy.typing import NDArray
 from heliostune.bandit import BayesianLinearBandit
 from heliostune.configs import KernelConfig, Workload
 from heliostune.features import V3_FEATURE_NAMES, v3_joint_features
+from heliostune.replay import BenchmarkTable, eligible_source_workloads
+from heliostune.retrieval import (
+    RETRIEVAL_FEATURE_NAMES,
+    ArchiveObservation,
+    RetrievalIndex,
+    log_tflops_reward,
+)
+from heliostune.schema import HardwareProfile, Measurement
 from heliostune.tooling.protocol import (
     V3_BUDGETS,
     V3_K_GRID,
@@ -25,14 +33,6 @@ from heliostune.tooling.protocol import (
     require_v3_runtime,
     v3_seed,
 )
-from heliostune.replay import BenchmarkTable, eligible_source_workloads
-from heliostune.retrieval import (
-    RETRIEVAL_FEATURE_NAMES,
-    ArchiveObservation,
-    RetrievalIndex,
-    log_tflops_reward,
-)
-from heliostune.schema import HardwareProfile, Measurement
 
 _OBSERVATION_BANK = 0
 _REFERENCE_BANK = 1

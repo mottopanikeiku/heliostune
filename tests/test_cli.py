@@ -16,10 +16,10 @@ import pytest
 import zstandard
 
 import heliostune.cli as cli
-from heliostune.tooling.artifacts import write_json_atomic
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.tooling.methodology import VerificationLimitations
 from heliostune.multisource_engine import ReleaseProvenance, validate_release_provenance
+from heliostune.tooling.artifacts import write_json_atomic
+from heliostune.tooling.methodology import VerificationLimitations
 
 
 @pytest.mark.parametrize(
@@ -2015,8 +2015,8 @@ def test_run_local_suite_dispatches_native_digest_and_type_to_native_writer(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from heliostune import local_executor, native_fusion_executor
-    from heliostune.tooling import local_bundle, native_fusion_bundle
     from heliostune.local_executor import CapabilityProbe
+    from heliostune.tooling import local_bundle, native_fusion_bundle
 
     repository = Path(cli.__file__).resolve().parents[2]
     suite = repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
@@ -2146,8 +2146,8 @@ def test_native_source_race_after_execution_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from heliostune import local_executor, native_fusion_executor
-    from heliostune.tooling import native_fusion_bundle
     from heliostune.local_executor import CapabilityProbe
+    from heliostune.tooling import native_fusion_bundle
 
     repository = Path(cli.__file__).resolve().parents[2]
     suite = repository / "benchmarks/suites/residual-rmsnorm-triton-v1.json"
