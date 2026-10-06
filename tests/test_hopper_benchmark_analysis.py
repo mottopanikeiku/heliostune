@@ -14,7 +14,7 @@ from typing import Any
 import pytest
 
 from heliostune.configs import DEFAULT_WORKLOADS, HOPPER_GEMM_CONFIGS, SKINNY_GEMV_CONFIGS
-from heliostune.tooling.artifacts import strict_json_dumps
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 
 _REPO = Path(__file__).resolve().parents[1]
 _ANALYZER_PATH = _REPO / "scripts/analyze_hopper_benchmark.py"
@@ -31,6 +31,60 @@ def _load_analyzer() -> ModuleType:
 
 
 _ANALYZER = _load_analyzer()
+
+
+def _load_publisher(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    monkeypatch.syspath_prepend(str(_REPO / "scripts"))
+    name = "_test_publish_hopper_engineering_result"
+    path = _REPO / "scripts/publish_hopper_engineering_result.py"
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_committed_publications_reproduce_without_rewriting(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    publisher = _load_publisher(monkeypatch)
+    retained = (
+        publisher._RAW,
+        publisher._JOURNAL,
+        publisher._SUMMARY,
+        publisher._MANIFEST,
+        publisher._PRECISION_RAW,
+        publisher._PRECISION_JOURNAL,
+        publisher._PRECISION_SUMMARY,
+        publisher._PRECISION_MANIFEST,
+        _REPO / "site/hopper-h100-engineering.html",
+        _REPO / "site/h100-precision-probe.html",
+    )
+    before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in retained}
+    publisher.check()
+    assert {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in retained} == before
+
+
+def test_publication_source_identities_use_original_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    publisher = _load_publisher(monkeypatch)
+    for path in (publisher._PRECISION_MANIFEST, publisher._MANIFEST):
+        manifest = strict_json_loads(path.read_text(encoding="utf-8"), source=str(path))
+        for binding in (manifest["analysis"]["analyzer"], manifest["publisher"]):
+            source = _REPO / binding["path"]
+            assert (
+                publisher._publication_source_sha256(source, historical=True) == binding["sha256"]
+            )
+            assert (
+                publisher._publication_source_sha256(source, historical=False)
+                == hashlib.sha256(source.read_bytes()).hexdigest()
+            )
+        assert (
+            publisher._publication_source_sha256(publisher._PUBLISHER, historical=False)
+            != manifest["publisher"]["sha256"]
+        )
 
 
 def _seeds() -> dict[str, int]:
