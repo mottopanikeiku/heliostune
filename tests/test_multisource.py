@@ -12,7 +12,6 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from heliostune.artifacts import read_measurements
 from heliostune.configs import KernelConfig, Workload
 from heliostune.errors import SchemaError
 from heliostune.multisource import compare_multisource
@@ -34,6 +33,7 @@ from heliostune.multisource_engine import (
 )
 from heliostune.replay import compare_methods
 from heliostune.schema import HardwareProfile, Measurement
+from heliostune.tooling.artifacts import read_measurements
 
 _CONFIGS = (
     KernelConfig(16, 32, 32, 4, 2),

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,10 +18,10 @@ from urllib.parse import urlparse
 
 import zstandard
 
-from heliostune.artifacts import strict_json_loads, write_bytes_atomic
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.local_executor import LocalExecutionResult
-from heliostune.remote_execution import (
+from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
+from heliostune.tooling.remote_execution import (
     RemoteIntent,
     RemoteJournalRecord,
     RemoteResultEnvelope,
@@ -46,6 +47,8 @@ _RAW_PATH = _REPOSITORY / "benchmarks/data/fusion-remote-exploratory.json.zst"
 _SUMMARY_PATH = _REPOSITORY / "benchmarks/results/fusion-remote-exploratory-summary.json"
 _MANIFEST_PATH = _REPOSITORY / "benchmarks/fusion-remote-exploratory-manifest.json"
 _PUBLISHER_PATH = Path(__file__).resolve()
+# Historical publisher identity is independent of current import locations.
+_HISTORICAL_SOURCE_COMMIT = "9f29906220f7c5e4d7662f60738fd483fcbe5fdc"
 _STUDY_ID = "fusion-remote-h100-exploratory"
 _RAW_SCHEMA = "heliostune.fusion-remote-exploratory.raw/1"
 _SUMMARY_SCHEMA = "heliostune.fusion-remote-exploratory.summary/1"
@@ -907,12 +910,30 @@ def _collection_command(spec: AttemptSpec) -> str:
     )
 
 
+def _publisher_bytes(*, historical: bool) -> bytes:
+    if not historical:
+        return _PUBLISHER_PATH.read_bytes()
+    relative = "scripts/publish_fusion_remote_results.py"
+    try:
+        return subprocess.run(
+            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
+            cwd=_REPOSITORY,
+            check=True,
+            capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError(
+            f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"
+        ) from exc
+
+
 def _manifest(
     analyzed: Sequence[AnalyzedAttempt],
     *,
     compressed: bytes,
     raw: bytes,
     summary: bytes,
+    historical: bool = False,
 ) -> dict[str, object]:
     attempts: list[dict[str, object]] = []
     inputs: dict[str, object] = {}
@@ -966,7 +987,7 @@ def _manifest(
         },
         "publisher": {
             "path": "scripts/publish_fusion_remote_results.py",
-            "sha256": sha256_bytes(_PUBLISHER_PATH.read_bytes()),
+            "sha256": sha256_bytes(_publisher_bytes(historical=historical)),
         },
         "report": {"path": None, "status": "not_created"},
         "schema": _MANIFEST_SCHEMA,
@@ -1015,7 +1036,13 @@ def check() -> None:
     if actual_summary != expected_summary:
         _fail("published summary is not the byte-exact analysis of committed raw evidence")
     expected_manifest = _json_bytes(
-        _manifest(analyzed, compressed=compressed, raw=raw, summary=expected_summary)
+        _manifest(
+            analyzed,
+            compressed=compressed,
+            raw=raw,
+            summary=expected_summary,
+            historical=True,
+        )
     )
     actual_manifest = _MANIFEST_PATH.read_bytes()
     _strict_json_bytes(actual_manifest, context="fusion remote exploratory manifest")

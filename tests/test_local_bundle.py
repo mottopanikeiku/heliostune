@@ -11,8 +11,7 @@ from typing import Any, Literal
 
 import pytest
 
-import heliostune.local_bundle as local_bundle
-from heliostune.artifacts import strict_json_dumps, strict_json_loads, write_bytes_atomic
+import heliostune.tooling.local_bundle as local_bundle
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import (
     CapabilityProbe,
@@ -22,8 +21,9 @@ from heliostune.local_executor import (
     TensorMaterialization,
     TimingObservation,
 )
-from heliostune.methodology import VerifiedBundle, verify_bundle_v1
-from heliostune.scope import verify_plugin, verify_suite
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads, write_bytes_atomic
+from heliostune.tooling.methodology import VerifiedBundle, verify_bundle_v1
+from heliostune.tooling.scope import verify_plugin, verify_suite
 
 _ROOT = Path(__file__).resolve().parents[1]
 _PLUGIN = _ROOT / "benchmarks/plugins/fusion-reference-plugin-v1.json"

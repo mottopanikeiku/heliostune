@@ -7,6 +7,7 @@ import base64
 import binascii
 import html
 import io
+import subprocess
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,10 +15,10 @@ from typing import NoReturn, cast
 
 import zstandard
 
-from heliostune.artifacts import strict_json_loads, write_bytes_atomic
 from heliostune.native_fusion_analysis import analyze_native_fusion_result
 from heliostune.native_fusion_executor import NativeFusionExecutionResult
-from heliostune.remote_execution import (
+from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
+from heliostune.tooling.remote_execution import (
     VerifiedRemoteReceipt,
     canonical_json_bytes,
     sha256_bytes,
@@ -28,6 +29,8 @@ from heliostune.validation import exact_fields, exact_object
 
 _REPOSITORY = Path(__file__).resolve().parents[1]
 _PUBLISHER_PATH = Path(__file__).resolve()
+# Snapshot before the package move; historical publication identities use these bytes.
+_HISTORICAL_SOURCE_COMMIT = "9f29906220f7c5e4d7662f60738fd483fcbe5fdc"
 _RAW_PATH = _REPOSITORY / "benchmarks/data/native-rmsnorm-h100.json.zst"
 _SUMMARY_PATH = _REPOSITORY / "benchmarks/results/native-rmsnorm-h100-summary.json"
 _MANIFEST_PATH = _REPOSITORY / "benchmarks/native-rmsnorm-h100-manifest.json"
@@ -68,7 +71,7 @@ _PUBLICATION_SOURCES = {
     "executor": "src/heliostune/native_fusion_executor.py",
     "kernel_api": "src/heliostune/fusion_kernels.py",
     "kernel_runtime": "src/heliostune/_fusion_gpu.py",
-    "remote_transport": "src/heliostune/remote_execution.py",
+    "remote_transport": "src/heliostune/tooling/remote_execution.py",
     "modal_transport": "modal_fusion_executor.py",
 }
 
@@ -590,13 +593,33 @@ code {{ overflow-wrap: anywhere; }}
     return document.encode("utf-8")
 
 
-def _source_bindings(result: NativeFusionExecutionResult) -> dict[str, object]:
+def _source_bytes(relative: str, *, historical: bool) -> bytes:
+    if not historical:
+        return (_REPOSITORY / relative).read_bytes()
+    try:
+        return subprocess.run(
+            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
+            cwd=_REPOSITORY,
+            check=True,
+            capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError(
+            f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"
+        ) from exc
+
+
+def _source_bindings(
+    result: NativeFusionExecutionResult, *, historical: bool = False
+) -> dict[str, object]:
     current: dict[str, object] = {
         "suite": _binding(_SUITE_PATH, (_REPOSITORY / _SUITE_PATH).read_bytes()),
         "plugin": _binding(_PLUGIN_PATH, (_REPOSITORY / _PLUGIN_PATH).read_bytes()),
     }
     for role, relative in _PUBLICATION_SOURCES.items():
-        current[role] = _binding(relative, (_REPOSITORY / relative).read_bytes())
+        if historical:
+            relative = relative.replace("/tooling/", "/")
+        current[role] = _binding(relative, _source_bytes(relative, historical=historical))
     return {
         "current": current,
         "executed_remote_package": dict(result.executor_sources),
@@ -610,6 +633,7 @@ def _manifest(
     raw: bytes,
     summary: bytes,
     report: bytes,
+    historical: bool = False,
 ) -> dict[str, object]:
     result = _completed_result(analyzed)
     attempts = [_attempt_summary(item) for item in analyzed]
@@ -617,7 +641,8 @@ def _manifest(
         "actual_cost_usd": None,
         "artifacts": {
             "publisher": _binding(
-                "scripts/publish_native_rmsnorm_h100.py", _PUBLISHER_PATH.read_bytes()
+                "scripts/publish_native_rmsnorm_h100.py",
+                _source_bytes("scripts/publish_native_rmsnorm_h100.py", historical=historical),
             ),
             "raw": {
                 "compressed_bytes": len(compressed),
@@ -648,12 +673,12 @@ def _manifest(
         "performance_claim": False,
         "publication_eligible": False,
         "schema": _MANIFEST_SCHEMA,
-        "sources": _source_bindings(result),
+        "sources": _source_bindings(result, historical=historical),
         "study_id": _STUDY_ID,
     }
 
 
-def _derive(compressed: bytes) -> Publication:
+def _derive(compressed: bytes, *, historical: bool = False) -> Publication:
     raw = _decompress(compressed)
     if _compress(raw) != compressed:
         _fail("published raw artifact is not the deterministic zstd encoding")
@@ -663,7 +688,14 @@ def _derive(compressed: bytes) -> Publication:
         cast(Mapping[str, object], _strict_json_bytes(summary, context="summary"))
     )
     manifest = _json_bytes(
-        _manifest(analyzed, compressed=compressed, raw=raw, summary=summary, report=report)
+        _manifest(
+            analyzed,
+            compressed=compressed,
+            raw=raw,
+            summary=summary,
+            report=report,
+            historical=historical,
+        )
     )
     return Publication(compressed, raw, summary, report, manifest)
 
@@ -689,7 +721,7 @@ def check() -> None:
             _fail(
                 f"required committed publication file is missing: {path.relative_to(_REPOSITORY)}"
             )
-    publication = _derive(_RAW_PATH.read_bytes())
+    publication = _derive(_RAW_PATH.read_bytes(), historical=True)
     committed = {
         _SUMMARY_PATH: publication.summary,
         _MANIFEST_PATH: publication.manifest,
@@ -701,7 +733,7 @@ def check() -> None:
             _fail(
                 f"{path.relative_to(_REPOSITORY)} is not byte-derived from committed raw evidence"
             )
-    print("checked native RMSNorm H100 publication from committed compressed raw evidence only")
+    print("checked native RMSNorm H100 publication from committed raw and historical source bytes")
     print(
         f"raw={sha256_bytes(publication.compressed)} summary={sha256_bytes(publication.summary)} "
         f"manifest={sha256_bytes(publication.manifest)} report={sha256_bytes(publication.report)}"

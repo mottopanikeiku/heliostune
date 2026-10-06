@@ -6,9 +6,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from heliostune.artifacts import strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.remote_execution import (
+from heliostune.tooling.artifacts import strict_json_loads
+from heliostune.tooling.remote_execution import (
     CLIENT_TIMEOUT_SECONDS,
     VerifiedRemoteReceipt,
     decode_remote_request,

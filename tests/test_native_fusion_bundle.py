@@ -9,18 +9,18 @@ from typing import cast
 
 import pytest
 
-from heliostune.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
 from heliostune.local_executor import CapabilityProbe
-from heliostune.methodology import encode_attempt_journal, verify_bundle_v1
-from heliostune.native_fusion_bundle import (
+from heliostune.native_fusion_executor import NativeFusionExecutionResult, run_native_fusion_suite
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
+from heliostune.tooling.methodology import encode_attempt_journal, verify_bundle_v1
+from heliostune.tooling.native_fusion_bundle import (
     _attempt_journal,
     preflight_native_fusion_bundle,
     write_native_fusion_bundle,
 )
-from heliostune.native_fusion_executor import NativeFusionExecutionResult, run_native_fusion_suite
-from heliostune.scope import verify_plugin
-from heliostune.wheel_verifier import source_digest, source_entries
+from heliostune.tooling.scope import verify_plugin
+from heliostune.tooling.wheel_verifier import source_digest, source_entries
 
 _ROOT = Path(__file__).resolve().parents[1]
 _SUITE = _ROOT / "benchmarks/suites/residual-rmsnorm-triton-v1.json"

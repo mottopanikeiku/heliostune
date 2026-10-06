@@ -1,7 +1,7 @@
 """Publish and byte-check the H100 engineering and precision-probe evidence.
 
 Generation reads the gitignored local collection, correctness, and precision bundles. Check mode
-uses only committed files and never contacts Git or Modal unless --compare-head is explicitly used.
+uses committed data and the pinned pre-move Git source snapshot, without contacting Modal.
 Both modes derive the precision finding with the precision analyzer's pure verdict function.
 """
 
@@ -31,14 +31,14 @@ from analyze_precision_probe import (
     load_summaries,
 )
 
-from heliostune.artifacts import (
+from heliostune.collection import AttemptJournal, sha256_file
+from heliostune.schema import HardwareProfile
+from heliostune.tooling.artifacts import (
     read_json,
     strict_json_dumps,
     strict_json_loads,
     write_bytes_atomic,
 )
-from heliostune.collection import AttemptJournal, sha256_file
-from heliostune.schema import HardwareProfile
 from heliostune.validation import (
     exact_bool,
     exact_fields,
@@ -68,6 +68,8 @@ _PRECISION_MANIFEST = _REPO / "benchmarks/h100-precision-probe-manifest.json"
 _ANALYZER = _REPO / "scripts/analyze_hopper_benchmark.py"
 _PRECISION_ANALYZER = _REPO / "scripts/analyze_precision_probe.py"
 _PUBLISHER = Path(__file__).resolve()
+# Historical publication identities must not change when active imports move.
+_HISTORICAL_SOURCE_COMMIT = "9f29906220f7c5e4d7662f60738fd483fcbe5fdc"
 
 _STUDY_ID = "hopper-h100-engineering-benchmark"
 _ANALYSIS_STATUS = "post_hoc_exploratory"
@@ -1215,6 +1217,24 @@ def _committed_provenance(
     return provenance
 
 
+def _publication_source_sha256(path: Path, *, historical: bool) -> str:
+    if not historical:
+        return sha256_file(path)
+    relative = path.relative_to(_REPO).as_posix()
+    try:
+        blob = subprocess.run(
+            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
+            cwd=_REPO,
+            check=True,
+            capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError(
+            f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"
+        ) from exc
+    return _sha256_bytes(blob)
+
+
 def _precision_manifest(
     *,
     accounting: Mapping[str, object],
@@ -1224,6 +1244,7 @@ def _precision_manifest(
     raw: bytes,
     summary: bytes,
     verdict: ExplanationVerdict,
+    historical: bool = False,
 ) -> dict[str, object]:
     hardware = _precision_hardware(artifact)
     return {
@@ -1231,7 +1252,7 @@ def _precision_manifest(
             "analysis_status": _ANALYSIS_STATUS,
             "analyzer": {
                 "path": "scripts/analyze_precision_probe.py",
-                "sha256": sha256_file(_PRECISION_ANALYZER),
+                "sha256": _publication_source_sha256(_PRECISION_ANALYZER, historical=historical),
             },
             "pure_verdict_function": "analyze_precision_probe.evaluate_explanation",
             "verdict": {
@@ -1298,7 +1319,7 @@ def _precision_manifest(
         },
         "publisher": {
             "path": "scripts/publish_hopper_engineering_result.py",
-            "sha256": sha256_file(_PUBLISHER),
+            "sha256": _publication_source_sha256(_PUBLISHER, historical=historical),
         },
         "schema_version": 1,
         "study_id": "h100-fp16-reduction-probe",
@@ -1315,13 +1336,14 @@ def _manifest(
     journal: bytes,
     precision_publication: Mapping[str, object],
     summary: bytes,
+    historical: bool = False,
 ) -> dict[str, object]:
     return {
         "analysis": {
             "analysis_status": _ANALYSIS_STATUS,
             "analyzer": {
                 "path": "scripts/analyze_hopper_benchmark.py",
-                "sha256": sha256_file(_ANALYZER),
+                "sha256": _publication_source_sha256(_ANALYZER, historical=historical),
             },
             "cost_screen": {
                 "geometric_mean_speedup_threshold": _GATE_SPEEDUP,
@@ -1393,7 +1415,7 @@ def _manifest(
         },
         "publisher": {
             "path": "scripts/publish_hopper_engineering_result.py",
-            "sha256": sha256_file(_PUBLISHER),
+            "sha256": _publication_source_sha256(_PUBLISHER, historical=historical),
         },
         "schema_version": 1,
         "study_id": _STUDY_ID,
@@ -1791,6 +1813,7 @@ def check(*, compare_head: bool = False) -> None:
             raw=precision_raw,
             summary=expected_precision_summary,
             verdict=precision_verdict,
+            historical=True,
         )
     )
     actual_precision_manifest = _PRECISION_MANIFEST.read_bytes()
@@ -1887,6 +1910,7 @@ def check(*, compare_head: bool = False) -> None:
             journal=journal,
             precision_publication=precision_publication,
             summary=expected_summary,
+            historical=True,
         )
     )
     if _MANIFEST.read_bytes() != expected_manifest:

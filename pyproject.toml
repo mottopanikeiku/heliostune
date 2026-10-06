@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "heliostune"
 version = "0.6.0.dev0"
-description = "Retrieval-first GPU autotuning and evidence-control research platform"
+description = "Retrieval-based GPU autotuning for Triton matmul kernels"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 license = "MIT"

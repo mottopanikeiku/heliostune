@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from heliostune.artifacts import read_json
+from heliostune.tooling.artifacts import read_json
 from heliostune.validation import (
     exact_int,
     exact_object,

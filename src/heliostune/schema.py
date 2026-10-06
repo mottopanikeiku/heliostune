@@ -7,9 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, TextIO, cast
 
-from heliostune.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.configs import KernelConfig, Workload
 from heliostune.errors import SchemaError
+from heliostune.tooling.artifacts import strict_json_dumps, strict_json_loads
 from heliostune.validation import (
     exact_bool,
     exact_fields,

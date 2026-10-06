@@ -11,8 +11,8 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
-from heliostune.artifacts import write_text_atomic
-from heliostune.report_model import ReportData, normalize_report_summary
+from heliostune.tooling.artifacts import write_text_atomic
+from heliostune.tooling.report_model import ReportData, normalize_report_summary
 
 _CHART_WIDTH = 960
 _CHART_HEIGHT = 410
@@ -27,7 +27,7 @@ _MISSING = "Not reported"
 
 
 def _styles() -> str:
-    return files("heliostune").joinpath("report.css").read_text(encoding="utf-8")
+    return files("heliostune.tooling").joinpath("report.css").read_text(encoding="utf-8")
 
 
 def _escape(value: Any) -> str:

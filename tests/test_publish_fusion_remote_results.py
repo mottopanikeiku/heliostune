@@ -30,6 +30,17 @@ PUBLISHER = _load_publisher()
 Mutation = Callable[[dict[str, Any]], None]
 
 
+def test_historical_publisher_identity_is_not_current_source_identity() -> None:
+    manifest = PUBLISHER._strict_json_bytes(
+        PUBLISHER._MANIFEST_PATH.read_bytes(), context="test historical manifest"
+    )
+    historical = PUBLISHER._publisher_bytes(historical=True)
+    current = PUBLISHER._publisher_bytes(historical=False)
+    assert PUBLISHER.sha256_bytes(historical) == manifest["publisher"]["sha256"]
+    assert current == SCRIPT.read_bytes()
+    assert historical != current
+
+
 def _completed(raw: dict[str, Any]) -> dict[str, Any]:
     return cast(dict[str, Any], raw["attempts"][2])
 

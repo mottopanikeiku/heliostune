@@ -101,9 +101,9 @@ def test_manifest_binds_complete_scientific_source_and_lock_closure() -> None:
 
     assert inventory_paths == expected_paths
     assert {
-        "src/heliostune/artifacts.py",
+        "src/heliostune/tooling/artifacts.py",
         "src/heliostune/bandit.py",
-        "src/heliostune/protocol.py",
+        "src/heliostune/tooling/protocol.py",
         "src/heliostune/replay.py",
         "src/heliostune/retrieval.py",
         "src/heliostune/uncertainty.py",
