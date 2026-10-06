@@ -20,13 +20,6 @@ import zstandard
 from rich.console import Console
 from rich.table import Table
 
-from heliostune.artifacts import (
-    read_json,
-    read_measurements,
-    write_bytes_atomic,
-    write_json_atomic,
-    write_measurements_atomic,
-)
 from heliostune.errors import ArtifactError, HeliostuneError, ProtocolError, SchemaError
 from heliostune.multisource import compare_multisource
 from heliostune.multisource_engine import (
@@ -36,6 +29,13 @@ from heliostune.multisource_engine import (
 from heliostune.replay import compare_methods
 from heliostune.schema import Measurement, read_jsonl
 from heliostune.selection import select_parhelion
+from heliostune.tooling.artifacts import (
+    read_json,
+    read_measurements,
+    write_bytes_atomic,
+    write_json_atomic,
+    write_measurements_atomic,
+)
 from heliostune.validation import exact_object, nonblank_string
 
 _CONSOLE = Console()
@@ -525,7 +525,7 @@ def _select_parhelion(args: argparse.Namespace) -> int:
 
 def _select_v3(args: argparse.Namespace) -> int:
     from heliostune.collection import sha256_file
-    from heliostune.protocol import (
+    from heliostune.tooling.protocol import (
         load_v3_protocol,
         require_v3_runtime,
         runtime_manifest,
@@ -596,11 +596,11 @@ def _select_v3(args: argparse.Namespace) -> int:
 
 
 def _report(args: argparse.Namespace) -> int:
-    from heliostune.engineering_report import (
+    from heliostune.tooling.engineering_report import (
         ENGINEERING_STUDY_IDS,
         render_engineering_report,
     )
-    from heliostune.report import render_report
+    from heliostune.tooling.report import render_report
 
     _reject_output_collisions(args.output)
     summary = exact_object(read_json(args.input), context="report summary")
@@ -614,8 +614,8 @@ def _report(args: argparse.Namespace) -> int:
 
 
 def _demo(args: argparse.Namespace) -> int:
-    from heliostune.report import render_report
     from heliostune.synthetic import synthetic_measurements
+    from heliostune.tooling.report import render_report
 
     data_path = args.output_dir / "measurements.jsonl"
     summary_path = args.output_dir / "summary.json"
@@ -688,7 +688,7 @@ def _inspect(args: argparse.Namespace) -> int:
 
 
 def _verify_catalog(args: argparse.Namespace) -> int:
-    from heliostune.catalog import verify_research_catalog
+    from heliostune.tooling.catalog import verify_research_catalog
 
     facts = verify_research_catalog(args.catalog)
     _CONSOLE.print(
@@ -729,7 +729,7 @@ def _print_structural_verification(
 
 
 def _list_scope(_args: argparse.Namespace) -> int:
-    from heliostune.scope import (
+    from heliostune.tooling.scope import (
         DOMAIN_VOCABULARY,
         DTYPE_VOCABULARY,
         EXECUTABLE_TEMPLATE_IDS,
@@ -805,7 +805,7 @@ def _list_scope(_args: argparse.Namespace) -> int:
 
 
 def _verify_plugin(args: argparse.Namespace) -> int:
-    from heliostune.scope import verify_plugin
+    from heliostune.tooling.scope import verify_plugin
 
     verified = verify_plugin(args.path)
     plugin = verified.plugin
@@ -838,7 +838,7 @@ def _verify_plugin(args: argparse.Namespace) -> int:
 
 
 def _verify_suite(args: argparse.Namespace) -> int:
-    from heliostune.scope import verify_suite
+    from heliostune.tooling.scope import verify_suite
 
     verified = verify_suite(args.path)
     suite = verified.suite
@@ -865,7 +865,7 @@ def _verify_suite(args: argparse.Namespace) -> int:
 
 
 def _verify_protocol(args: argparse.Namespace) -> int:
-    from heliostune.methodology import verify_protocol_v1
+    from heliostune.tooling.methodology import verify_protocol_v1
 
     verified = verify_protocol_v1(args.path)
     protocol = verified.protocol
@@ -888,8 +888,8 @@ def _verify_bundle(args: argparse.Namespace) -> int:
     if args.output is not None and args.output_format == "text":
         raise ProtocolError("--format text cannot be combined with --output")
 
-    from heliostune.methodology import verify_bundle_v1
-    from heliostune.verification import (
+    from heliostune.tooling.methodology import verify_bundle_v1
+    from heliostune.tooling.verification import (
         build_verification_record_v1,
         encode_verification_record_v1,
         write_verification_record_v1,
@@ -964,12 +964,12 @@ def _replay_bundle(args: argparse.Namespace) -> int:
     if args.output is not None and args.output_format == "text":
         raise ProtocolError("--format text cannot be combined with --output")
 
-    from heliostune.offline_replay import (
+    from heliostune.tooling.offline_replay import (
         OFFLINE_REPLAY_SANDBOX_V1,
         replay_bundle_v1,
         write_offline_replay_record_v1,
     )
-    from heliostune.verification import (
+    from heliostune.tooling.verification import (
         VERIFICATION_CONTROL_NAMES_V1,
         encode_verification_record_v1,
     )
@@ -1105,7 +1105,7 @@ def _run_local_suite(args: argparse.Namespace) -> int:
         LocalExecutionResult,
         execute_local_suite,
     )
-    from heliostune.scope import verify_suite
+    from heliostune.tooling.scope import verify_suite
 
     try:
         selected_suite = verify_suite(args.suite)
@@ -1122,7 +1122,7 @@ def _run_local_suite(args: argparse.Namespace) -> int:
                 raise ArtifactError(
                     f"local suite output directory is no longer empty: {output_dir}"
                 ) from exc
-        from heliostune.native_fusion_bundle import preflight_native_fusion_bundle
+        from heliostune.tooling.native_fusion_bundle import preflight_native_fusion_bundle
 
         preflight_native_fusion_bundle(
             args.suite,
@@ -1139,8 +1139,8 @@ def _run_local_suite(args: argparse.Namespace) -> int:
                 f"local suite output directory is no longer empty: {output_dir}"
             ) from exc
     if result.verified_suite_sha256 == NATIVE_RMSNORM_SUITE_SHA256:
-        from heliostune.native_fusion_bundle import write_native_fusion_bundle
         from heliostune.native_fusion_executor import NativeFusionExecutionResult
+        from heliostune.tooling.native_fusion_bundle import write_native_fusion_bundle
 
         if not isinstance(result, NativeFusionExecutionResult):
             raise SchemaError("native suite digest returned a non-native execution result")
@@ -1150,7 +1150,7 @@ def _run_local_suite(args: argparse.Namespace) -> int:
             output_dir=output_dir,
         )
     else:
-        from heliostune.local_bundle import write_local_bundle
+        from heliostune.tooling.local_bundle import write_local_bundle
 
         if not isinstance(result, LocalExecutionResult):
             raise SchemaError("legacy suite digest returned a non-legacy execution result")

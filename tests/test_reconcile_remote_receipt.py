@@ -14,7 +14,7 @@ from test_remote_execution import _aborted_result, _envelope, _failed_compile_re
 
 import heliostune.local_executor as local
 from heliostune.errors import ArtifactError, SchemaError
-from heliostune.remote_execution import (
+from heliostune.tooling.remote_execution import (
     RemoteIntent,
     RemoteJournalRecord,
     canonical_json_bytes,
@@ -25,7 +25,7 @@ from heliostune.remote_execution import (
     sha256_bytes,
     verify_remote_receipt,
 )
-from heliostune.scope import verify_suite
+from heliostune.tooling.scope import verify_suite
 
 _REPOSITORY = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPOSITORY / "scripts/reconcile_remote_receipt.py"
@@ -397,7 +397,7 @@ def test_reconcile_publishes_authorized_snapshot_when_source_mutates_after_bound
             mutated.append(changed)
         original_mkdir(path, mode, dir_fd=dir_fd)
 
-    monkeypatch.setattr("heliostune.remote_execution.os.mkdir", mkdir_after_boundary)
+    monkeypatch.setattr("heliostune.tooling.remote_execution.os.mkdir", mkdir_after_boundary)
     published = script.reconcile_remote_receipt(
         case.output,
         repository=case.repository,

@@ -263,7 +263,7 @@ def _remote_collect(
     )
     from heliostune.hardware import expectation_for_gpu, validate_hardware
     from heliostune.kernel import collect_benchmarks, get_hardware_profile
-    from heliostune.protocol import v3_seed
+    from heliostune.tooling.protocol import v3_seed
 
     workloads_by_key = {workload.key: workload for workload in DEFAULT_WORKLOADS}
     configs_by_key = {config.key: config for config in PARHELION_V3_CANDIDATE_CONFIGS}
@@ -480,9 +480,9 @@ def _selected_manifests(
     protocol_path: Path | None,
     config_path: Path | None,
 ) -> tuple[tuple[str, ...], tuple[str, ...], str]:
-    from heliostune.artifacts import read_json
     from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS
-    from heliostune.protocol import (
+    from heliostune.tooling.artifacts import read_json
+    from heliostune.tooling.protocol import (
         V3_PILOT_CONFIG_KEYS,
         V3_PILOT_WORKLOAD_KEYS,
         load_v3_protocol,
@@ -537,7 +537,6 @@ def main(
     config_manifest: str = "",
     wheel: str = "",
 ) -> None:
-    from heliostune.artifacts import strict_json_dumps
     from heliostune.collection import (
         CallPlanItem,
         CollectionBinding,
@@ -548,6 +547,7 @@ def main(
         preflight_collection,
         sha256_file,
     )
+    from heliostune.tooling.artifacts import strict_json_dumps
 
     gpu_names = _strict_csv(gpus, label="gpus")
     bank_values = _strict_banks(banks)

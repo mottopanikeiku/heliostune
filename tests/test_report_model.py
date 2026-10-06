@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from heliostune.artifacts import read_json
 from heliostune.errors import SchemaError
-from heliostune.report_model import ReportData, normalize_report_summary
+from heliostune.tooling.artifacts import read_json
+from heliostune.tooling.report_model import ReportData, normalize_report_summary
 
 
 def _summary() -> dict[str, object]:

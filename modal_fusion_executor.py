@@ -70,7 +70,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _source_digest(repository: Path) -> str:
-    from heliostune.wheel_verifier import source_digest, source_entries
+    from heliostune.tooling.wheel_verifier import source_digest, source_entries
 
     return source_digest(source_entries(repository / "src/heliostune"))
 
@@ -202,7 +202,7 @@ def validate_wheel_manifest(
         ):
             raise RuntimeError(f"Modal wheel manifest {field} is not a lowercase hex digest")
     if not remote:
-        from heliostune.wheel_verifier import verify_wheel_against_source
+        from heliostune.tooling.wheel_verifier import verify_wheel_against_source
 
         root = _REPO if repository is None else repository.resolve()
         head = _git_head(root)
@@ -287,12 +287,12 @@ def execute_fusion_suite(request_json: str) -> str:
     """Validate and execute one suite, returning one compressed transport wrapper."""
     from heliostune.fusion_execution_registry import fusion_execution_spec
     from heliostune.local_executor import execute_local_suite
-    from heliostune.remote_execution import (
+    from heliostune.tooling.remote_execution import (
         RemoteResultEnvelope,
         decode_remote_request,
         sha256_bytes,
     )
-    from heliostune.scope import verify_suite
+    from heliostune.tooling.scope import verify_suite
 
     intent, suite_bytes, request_digest = decode_remote_request(request_json)
     execution = fusion_execution_spec(intent.suite_sha256)
@@ -384,14 +384,14 @@ class _LocalPlan:
 
 def _preflight(suite: str | Path, plugin: str | Path, output: str | Path) -> _LocalPlan:
     from heliostune.fusion_execution_registry import fusion_execution_spec
-    from heliostune.remote_execution import (
+    from heliostune.tooling.remote_execution import (
         RemoteIntent,
         decode_remote_request,
         encode_remote_request,
         protect_remote_output,
         sha256_bytes,
     )
-    from heliostune.scope import verify_plugin, verify_suite
+    from heliostune.tooling.scope import verify_plugin, verify_suite
 
     suite_path = Path(suite)
     plugin_path = Path(plugin)
@@ -470,7 +470,7 @@ def _cancel_then_unresolve(
 
 
 def _publish_unresolved(plan: _LocalPlan, records: Any, *, client_spawn_count: int) -> None:
-    from heliostune.remote_execution import write_remote_receipt
+    from heliostune.tooling.remote_execution import write_remote_receipt
 
     if records.journal.state != "unresolved":
         return
@@ -488,7 +488,7 @@ def _publish_unresolved(plan: _LocalPlan, records: Any, *, client_spawn_count: i
 
 
 def _execute_plan(plan: _LocalPlan, output: str | Path, remote_function: Any) -> int:
-    from heliostune.remote_execution import (
+    from heliostune.tooling.remote_execution import (
         CLIENT_TIMEOUT_SECONDS,
         create_remote_records,
         validate_remote_result,

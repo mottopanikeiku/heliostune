@@ -12,7 +12,7 @@ import zipfile
 from email.parser import BytesParser
 from pathlib import Path
 
-from heliostune.artifacts import strict_json_dumps, write_bytes_atomic
+from heliostune.tooling.artifacts import strict_json_dumps, write_bytes_atomic
 
 _REPO = Path(__file__).resolve().parents[1]
 _OUTPUT = _REPO / "artifacts/modal-wheel"

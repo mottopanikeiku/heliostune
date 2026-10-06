@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal, Protocol, cast
 
-from heliostune.artifacts import read_json, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.tooling.artifacts import read_json, strict_json_loads
 from heliostune.validation import exact_bool, exact_fields, exact_int, finite_float, nonblank_string
 
 DType = Literal["fp32", "tf32", "fp16", "bf16", "fp8_e4m3fn", "fp8_e5m2", "int8", "int4", "uint4"]

@@ -15,7 +15,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn, cast
 
-from heliostune.artifacts import read_json, read_measurements, strict_json_dumps
 from heliostune.configs import (
     DEFAULT_CONFIGS,
     DEFAULT_WORKLOADS,
@@ -27,6 +26,7 @@ from heliostune.configs import (
 )
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.schema import HardwareProfile, Measurement
+from heliostune.tooling.artifacts import read_json, read_measurements, strict_json_dumps
 from heliostune.validation import (
     exact_bool,
     exact_fields,

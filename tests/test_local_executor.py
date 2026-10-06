@@ -15,7 +15,7 @@ import pytest
 
 import heliostune.local_executor as local
 from heliostune.errors import SchemaError
-from heliostune.scope import Suite, load_suite
+from heliostune.tooling.scope import Suite, load_suite
 
 ROOT = Path(__file__).parents[1]
 MLP = ROOT / "benchmarks/suites/gated-mlp-epilogue-v1.json"

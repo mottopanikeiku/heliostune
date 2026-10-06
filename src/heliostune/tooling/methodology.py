@@ -17,8 +17,8 @@ from datetime import datetime
 from pathlib import Path, PurePosixPath
 from typing import Literal, cast
 
-from heliostune.artifacts import read_json, strict_json_dumps, strict_json_loads
 from heliostune.errors import ArtifactError, SchemaError
+from heliostune.tooling.artifacts import read_json, strict_json_dumps, strict_json_loads
 from heliostune.validation import (
     exact_fields,
     exact_int,
@@ -1739,7 +1739,7 @@ def _verify_plugin_suite_custody(
             )
         suite_artifacts.append((paths_by_role[role], payloads_by_role[role]))
 
-    from heliostune.scope import verify_plugin_inventory
+    from heliostune.tooling.scope import verify_plugin_inventory
 
     verified = verify_plugin_inventory(
         paths_by_role["plugin"],

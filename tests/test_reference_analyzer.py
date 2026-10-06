@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from heliostune._reference_analyzer import analyze
 from heliostune.errors import SchemaError
+from heliostune.tooling._reference_analyzer import analyze
 
 _CANONICAL_INPUT = b'{\n  "values": [\n    -7,\n    0,\n    12\n  ]\n}\n'
 _EXPECTED_OUTPUT = (
@@ -161,7 +161,7 @@ def test_input_role_count_order_and_tuple_types_are_strict(inputs: object) -> No
 
 
 def test_module_imports_and_calls_are_statically_cpu_pure() -> None:
-    source = Path(__file__).parents[1] / "src" / "heliostune" / "_reference_analyzer.py"
+    source = Path(__file__).parents[1] / "src" / "heliostune" / "tooling" / "_reference_analyzer.py"
     tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
     imported_roots: set[str] = set()
     forbidden_calls = {

@@ -7,7 +7,6 @@ import hashlib
 import tempfile
 from pathlib import Path
 
-from heliostune.artifacts import read_json, write_json_atomic
 from heliostune.configs import (
     DEFAULT_WORKLOADS,
     PARHELION_V3_CANDIDATE_CONFIGS,
@@ -16,7 +15,8 @@ from heliostune.configs import (
     TRITON_TUTORIAL_CONFIG_PATH,
 )
 from heliostune.features import V2_FEATURE_NAMES, V3_FEATURE_NAMES
-from heliostune.protocol import (
+from heliostune.tooling.artifacts import read_json, write_json_atomic
+from heliostune.tooling.protocol import (
     V3_BANKS,
     V3_BUDGETS,
     V3_FINAL_SEEDS,
@@ -50,10 +50,10 @@ _SOURCE_PATHS = (
     "src/heliostune/features.py",
     "src/heliostune/hardware.py",
     "src/heliostune/kernel.py",
-    "src/heliostune/protocol.py",
+    "src/heliostune/tooling/protocol.py",
     "src/heliostune/retrieval.py",
     "src/heliostune/schema.py",
-    "src/heliostune/v3_artifacts.py",
+    "src/heliostune/tooling/v3_artifacts.py",
     "src/heliostune/v3_engine.py",
 )
 
