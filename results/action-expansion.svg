@@ -1,0 +1,700 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="3028" viewBox="0 0 1320 3028" role="img" aria-labelledby="title desc">
+<title id="title">Action expansion: fixed bank-1 winners scored on bank 2</title>
+<desc id="desc">Horizontal log-scale candidate-to-torch ratios. Blue circles show old actions; orange squares show new actions. Lower is faster. Missing ratios are marked unscored. Labels map to named workloads in the linked summary.</desc>
+<rect width="100%" height="100%" fill="white"/>
+<g font-family="sans-serif" font-size="12" fill="#17212b">
+<text x="20" y="28" font-size="19">Action expansion — bank-1 selection / bank-2 scoring</text>
+<text x="20" y="50">Candidate / same-session torch; smaller is better. Named workloads retained; no bank-2 oracle selection.</text>
+<circle cx="26" cy="72" r="4" fill="#1261a0"/><text x="38" y="76">Old 36-action winner</text>
+<rect x="235" y="68" width="8" height="8" fill="#b54c00"/><text x="251" y="76">New-action winner</text>
+<a href="action-expansion-summary.json"><text x="470" y="76" fill="#1261a0" text-decoration="underline">JSON results / full label mapping</text></a>
+<text x="20" y="97">Descriptive single-device timing; quantile spread is in JSON, not statistical uncertainty. Union winner and failures are in JSON.</text>
+<line x1="700.00" y1="125" x2="700.00" y2="3002" stroke="#ddd"/>
+<text x="700.00" y="119" text-anchor="middle">0.5×</text>
+<line x1="846.67" y1="125" x2="846.67" y2="3002" stroke="#444"/>
+<text x="846.67" y="119" text-anchor="middle">1×</text>
+<line x1="993.33" y1="125" x2="993.33" y2="3002" stroke="#ddd"/>
+<text x="993.33" y="119" text-anchor="middle">2×</text>
+<line x1="1140.00" y1="125" x2="1140.00" y2="3002" stroke="#ddd"/>
+<text x="1140.00" y="119" text-anchor="middle">4×</text>
+<text x="1215" y="119" text-anchor="middle">Unscored</text>
+<text x="20" y="140" font-weight="bold">M = 1</text>
+<g id="w001"><title>granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="174">001  granite-3.1-8b / attention-out  [1, 4096, 4096]</text></a>
+<line x1="846.67" y1="166" x2="988.30" y2="166" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="988.30" cy="166" r="3.5" fill="#1261a0"><title>old: 1.95301× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="175" x2="871.83" y2="175" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="868.33" y="171.5" width="7" height="7" fill="#b54c00"><title>new: 1.12628× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w002"><title>granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="202">002  granite-3.1-8b / attention-qkv  [1, 6144, 4096]</text></a>
+<line x1="846.67" y1="194" x2="945.37" y2="194" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="945.37" cy="194" r="3.5" fill="#1261a0"><title>old: 1.59433× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="203" x2="860.51" y2="203" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="857.01" y="199.5" width="7" height="7" fill="#b54c00"><title>new: 1.06761× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w003"><title>granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="230">003  granite-3.1-8b / ffn-down  [1, 4096, 12800]</text></a>
+<line x1="846.67" y1="222" x2="988.82" y2="222" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="988.82" cy="222" r="3.5" fill="#1261a0"><title>old: 1.95778× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="231" x2="846.16" y2="231" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="842.66" y="227.5" width="7" height="7" fill="#b54c00"><title>new: 0.997587× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w004"><title>granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="258">004  granite-3.1-8b / ffn-up  [1, 12800, 4096]</text></a>
+<line x1="846.67" y1="250" x2="881.27" y2="250" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="881.27" cy="250" r="3.5" fill="#1261a0"><title>old: 1.17768× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="259" x2="847.75" y2="259" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="844.25" y="255.5" width="7" height="7" fill="#b54c00"><title>new: 1.00513× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w005"><title>mistral-7b-attention-out-decode-1-m1-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="286">005  mistral-7b / attention-out  [1, 4096, 4096]</text></a>
+<line x1="846.67" y1="278" x2="985.45" y2="278" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="985.45" cy="278" r="3.5" fill="#1261a0"><title>old: 1.9269× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="287" x2="870.35" y2="287" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="866.85" y="283.5" width="7" height="7" fill="#b54c00"><title>new: 1.11842× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w006"><title>mistral-7b-attention-qkv-decode-1-m1-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="314">006  mistral-7b / attention-qkv  [1, 6144, 4096]</text></a>
+<line x1="846.67" y1="306" x2="941.71" y2="306" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="941.71" cy="306" r="3.5" fill="#1261a0"><title>old: 1.56699× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="315" x2="856.42" y2="315" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="852.92" y="311.5" width="7" height="7" fill="#b54c00"><title>new: 1.04716× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w007"><title>mistral-7b-ffn-down-decode-1-m1-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="342">007  mistral-7b / ffn-down  [1, 4096, 14336]</text></a>
+<line x1="846.67" y1="334" x2="994.70" y2="334" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="994.70" cy="334" r="3.5" fill="#1261a0"><title>old: 2.01291× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="343" x2="845.83" y2="343" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="842.33" y="339.5" width="7" height="7" fill="#b54c00"><title>new: 0.99607× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w008"><title>mistral-7b-ffn-up-decode-1-m1-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="370">008  mistral-7b / ffn-up  [1, 14336, 4096]</text></a>
+<line x1="846.67" y1="362" x2="872.67" y2="362" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="872.67" cy="362" r="3.5" fill="#1261a0"><title>old: 1.13074× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="371" x2="845.17" y2="371" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="841.67" y="367.5" width="7" height="7" fill="#b54c00"><title>new: 0.992933× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w009"><title>phi-3-mini-attention-out-decode-1-m1-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="398">009  phi-3-mini / attention-out  [1, 3072, 3072]</text></a>
+<line x1="846.67" y1="390" x2="960.53" y2="390" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="960.53" cy="390" r="3.5" fill="#1261a0"><title>old: 1.71278× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="399" x2="839.51" y2="399" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="836.01" y="395.5" width="7" height="7" fill="#b54c00"><title>new: 0.966725× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w010"><title>phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="426">010  phi-3-mini / attention-qkv  [1, 9216, 3072]</text></a>
+<line x1="846.67" y1="418" x2="916.77" y2="418" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="916.77" cy="418" r="3.5" fill="#1261a0"><title>old: 1.39278× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="427" x2="868.02" y2="427" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="864.52" y="423.5" width="7" height="7" fill="#b54c00"><title>new: 1.10619× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w011"><title>phi-3-mini-ffn-down-decode-1-m1-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="454">011  phi-3-mini / ffn-down  [1, 3072, 8192]</text></a>
+<line x1="846.67" y1="446" x2="1019.20" y2="446" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1019.20" cy="446" r="3.5" fill="#1261a0"><title>old: 2.26004× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="455" x2="847.51" y2="455" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="844.01" y="451.5" width="7" height="7" fill="#b54c00"><title>new: 1.00402× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w012"><title>phi-3-mini-ffn-up-decode-1-m1-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="482">012  phi-3-mini / ffn-up  [1, 8192, 3072]</text></a>
+<line x1="846.67" y1="474" x2="920.76" y2="474" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="920.76" cy="474" r="3.5" fill="#1261a0"><title>old: 1.41932× torch; m32n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="483" x2="860.60" y2="483" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="857.10" y="479.5" width="7" height="7" fill="#b54c00"><title>new: 1.06806× torch; split_k:m16n128k64-w4s3-split4</title></rect>
+</g>
+<g id="w013"><title>qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="510">013  qwen2.5-7b / attention-out  [1, 3584, 3584]</text></a>
+<line x1="846.67" y1="502" x2="994.08" y2="502" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="994.08" cy="502" r="3.5" fill="#1261a0"><title>old: 2.00709× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="511" x2="880.57" y2="511" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="877.07" y="507.5" width="7" height="7" fill="#b54c00"><title>new: 1.17376× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w014"><title>qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="538">014  qwen2.5-7b / attention-qkv  [1, 4608, 3584]</text></a>
+<line x1="846.67" y1="530" x2="971.85" y2="530" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="971.85" cy="530" r="3.5" fill="#1261a0"><title>old: 1.80689× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="539" x2="871.73" y2="539" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="868.23" y="535.5" width="7" height="7" fill="#b54c00"><title>new: 1.12575× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w015"><title>qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="566">015  qwen2.5-7b / ffn-down  [1, 3584, 18944]</text></a>
+<line x1="846.67" y1="558" x2="1010.78" y2="558" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1010.78" cy="558" r="3.5" fill="#1261a0"><title>old: 2.17195× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="567" x2="834.59" y2="567" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="831.09" y="563.5" width="7" height="7" fill="#b54c00"><title>new: 0.944511× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w016"><title>qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="594">016  qwen2.5-7b / ffn-up  [1, 18944, 3584]</text></a>
+<line x1="846.67" y1="586" x2="856.54" y2="586" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="856.54" cy="586" r="3.5" fill="#1261a0"><title>old: 1.04775× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="595" x2="847.67" y2="595" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="844.17" y="591.5" width="7" height="7" fill="#b54c00"><title>new: 1.00477× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<text x="20" y="618" font-weight="bold">M = 7</text>
+<g id="w017"><title>granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="652">017  granite-3.1-8b / attention-out  [7, 4096, 4096]</text></a>
+<line x1="846.67" y1="644" x2="990.97" y2="644" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="990.97" cy="644" r="3.5" fill="#1261a0"><title>old: 1.97774× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="653" x2="875.39" y2="653" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="871.89" y="649.5" width="7" height="7" fill="#b54c00"><title>new: 1.1454× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w018"><title>granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="680">018  granite-3.1-8b / attention-qkv  [7, 6144, 4096]</text></a>
+<line x1="846.67" y1="672" x2="946.29" y2="672" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="946.29" cy="672" r="3.5" fill="#1261a0"><title>old: 1.60132× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="681" x2="864.32" y2="681" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="860.82" y="677.5" width="7" height="7" fill="#b54c00"><title>new: 1.087× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w019"><title>granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="708">019  granite-3.1-8b / ffn-down  [7, 4096, 12800]</text></a>
+<line x1="846.67" y1="700" x2="988.29" y2="700" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="988.29" cy="700" r="3.5" fill="#1261a0"><title>old: 1.95293× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="709" x2="848.32" y2="709" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="844.82" y="705.5" width="7" height="7" fill="#b54c00"><title>new: 1.00785× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w020"><title>granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="736">020  granite-3.1-8b / ffn-up  [7, 12800, 4096]</text></a>
+<line x1="846.67" y1="728" x2="877.33" y2="728" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="877.33" cy="728" r="3.5" fill="#1261a0"><title>old: 1.15595× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="737" x2="849.87" y2="737" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="846.37" y="733.5" width="7" height="7" fill="#b54c00"><title>new: 1.01528× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w021"><title>mistral-7b-attention-out-decode-7-m7-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="764">021  mistral-7b / attention-out  [7, 4096, 4096]</text></a>
+<line x1="846.67" y1="756" x2="994.44" y2="756" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="994.44" cy="756" r="3.5" fill="#1261a0"><title>old: 2.01053× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="765" x2="877.96" y2="765" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="874.46" y="761.5" width="7" height="7" fill="#b54c00"><title>new: 1.1594× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w022"><title>mistral-7b-attention-qkv-decode-7-m7-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="792">022  mistral-7b / attention-qkv  [7, 6144, 4096]</text></a>
+<line x1="846.67" y1="784" x2="944.50" y2="784" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="944.50" cy="784" r="3.5" fill="#1261a0"><title>old: 1.58779× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="793" x2="862.87" y2="793" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="859.37" y="789.5" width="7" height="7" fill="#b54c00"><title>new: 1.07961× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w023"><title>mistral-7b-ffn-down-decode-7-m7-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="820">023  mistral-7b / ffn-down  [7, 4096, 14336]</text></a>
+<line x1="846.67" y1="812" x2="993.45" y2="812" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="993.45" cy="812" r="3.5" fill="#1261a0"><title>old: 2.00112× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="821" x2="848.92" y2="821" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="845.42" y="817.5" width="7" height="7" fill="#b54c00"><title>new: 1.01069× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w024"><title>mistral-7b-ffn-up-decode-7-m7-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="848">024  mistral-7b / ffn-up  [7, 14336, 4096]</text></a>
+<line x1="846.67" y1="840" x2="869.43" y2="840" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="869.43" cy="840" r="3.5" fill="#1261a0"><title>old: 1.11357× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="849" x2="845.18" y2="849" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="841.68" y="845.5" width="7" height="7" fill="#b54c00"><title>new: 0.993011× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w025"><title>phi-3-mini-attention-out-decode-7-m7-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="876">025  phi-3-mini / attention-out  [7, 3072, 3072]</text></a>
+<line x1="846.67" y1="868" x2="955.20" y2="868" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="955.20" cy="868" r="3.5" fill="#1261a0"><title>old: 1.67014× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="877" x2="842.21" y2="877" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="838.71" y="873.5" width="7" height="7" fill="#b54c00"><title>new: 0.979167× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w026"><title>phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="904">026  phi-3-mini / attention-qkv  [7, 9216, 3072]</text></a>
+<line x1="846.67" y1="896" x2="913.68" y2="896" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="913.68" cy="896" r="3.5" fill="#1261a0"><title>old: 1.37257× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="905" x2="869.63" y2="905" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="866.13" y="901.5" width="7" height="7" fill="#b54c00"><title>new: 1.11464× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w027"><title>phi-3-mini-ffn-down-decode-7-m7-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="932">027  phi-3-mini / ffn-down  [7, 3072, 8192]</text></a>
+<line x1="846.67" y1="924" x2="1016.61" y2="924" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1016.61" cy="924" r="3.5" fill="#1261a0"><title>old: 2.23254× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="933" x2="849.19" y2="933" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="845.69" y="929.5" width="7" height="7" fill="#b54c00"><title>new: 1.01198× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w028"><title>phi-3-mini-ffn-up-decode-7-m7-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="960">028  phi-3-mini / ffn-up  [7, 8192, 3072]</text></a>
+<line x1="846.67" y1="952" x2="921.88" y2="952" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="921.88" cy="952" r="3.5" fill="#1261a0"><title>old: 1.42682× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="961" x2="868.01" y2="961" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="864.51" y="957.5" width="7" height="7" fill="#b54c00"><title>new: 1.10615× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w029"><title>qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="988">029  qwen2.5-7b / attention-out  [7, 3584, 3584]</text></a>
+<line x1="846.67" y1="980" x2="994.81" y2="980" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="994.81" cy="980" r="3.5" fill="#1261a0"><title>old: 2.01404× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="989" x2="882.13" y2="989" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="878.63" y="985.5" width="7" height="7" fill="#b54c00"><title>new: 1.18246× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w030"><title>qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1016">030  qwen2.5-7b / attention-qkv  [7, 4608, 3584]</text></a>
+<line x1="846.67" y1="1008" x2="976.05" y2="1008" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="976.05" cy="1008" r="3.5" fill="#1261a0"><title>old: 1.84314× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1017" x2="874.44" y2="1017" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="870.94" y="1013.5" width="7" height="7" fill="#b54c00"><title>new: 1.14027× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w031"><title>qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="1044">031  qwen2.5-7b / ffn-down  [7, 3584, 18944]</text></a>
+<line x1="846.67" y1="1036" x2="1007.97" y2="1036" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1007.97" cy="1036" r="3.5" fill="#1261a0"><title>old: 2.14319× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1045" x2="835.58" y2="1045" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="832.08" y="1041.5" width="7" height="7" fill="#b54c00"><title>new: 0.94896× torch; split_k:m16n64k64-w4s3-split16</title></rect>
+</g>
+<g id="w032"><title>qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1072">032  qwen2.5-7b / ffn-up  [7, 18944, 3584]</text></a>
+<line x1="846.67" y1="1064" x2="855.32" y2="1064" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="855.32" cy="1064" r="3.5" fill="#1261a0"><title>old: 1.04175× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1073" x2="847.67" y2="1073" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="844.17" y="1069.5" width="7" height="7" fill="#b54c00"><title>new: 1.00476× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<text x="20" y="1096" font-weight="bold">M = 31</text>
+<g id="w033"><title>granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1130">033  granite-3.1-8b / attention-out  [31, 4096, 4096]</text></a>
+<line x1="846.67" y1="1122" x2="984.79" y2="1122" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="984.79" cy="1122" r="3.5" fill="#1261a0"><title>old: 1.92086× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1131" x2="879.07" y2="1131" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="875.57" y="1127.5" width="7" height="7" fill="#b54c00"><title>new: 1.16547× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w034"><title>granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1158">034  granite-3.1-8b / attention-qkv  [31, 6144, 4096]</text></a>
+<line x1="846.67" y1="1150" x2="944.63" y2="1150" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="944.63" cy="1150" r="3.5" fill="#1261a0"><title>old: 1.58881× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1159" x2="869.94" y2="1159" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="866.44" y="1155.5" width="7" height="7" fill="#b54c00"><title>new: 1.11625× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w035"><title>granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="1186">035  granite-3.1-8b / ffn-down  [31, 4096, 12800]</text></a>
+<line x1="846.67" y1="1178" x2="988.11" y2="1178" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="988.11" cy="1178" r="3.5" fill="#1261a0"><title>old: 1.95125× torch; m32n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1187" x2="851.89" y2="1187" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="848.39" y="1183.5" width="7" height="7" fill="#b54c00"><title>new: 1.02497× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w036"><title>granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1214">036  granite-3.1-8b / ffn-up  [31, 12800, 4096]</text></a>
+<line x1="846.67" y1="1206" x2="879.63" y2="1206" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="879.63" cy="1206" r="3.5" fill="#1261a0"><title>old: 1.16858× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="1215" x2="850.53" y2="1215" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="847.03" y="1211.5" width="7" height="7" fill="#b54c00"><title>new: 1.01845× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w037"><title>mistral-7b-attention-out-mixed-31-m31-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1242">037  mistral-7b / attention-out  [31, 4096, 4096]</text></a>
+<line x1="846.67" y1="1234" x2="985.40" y2="1234" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="985.40" cy="1234" r="3.5" fill="#1261a0"><title>old: 1.92641× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1243" x2="879.42" y2="1243" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="875.92" y="1239.5" width="7" height="7" fill="#b54c00"><title>new: 1.16739× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w038"><title>mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1270">038  mistral-7b / attention-qkv  [31, 6144, 4096]</text></a>
+<line x1="846.67" y1="1262" x2="947.06" y2="1262" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="947.06" cy="1262" r="3.5" fill="#1261a0"><title>old: 1.60718× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1271" x2="872.64" y2="1271" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="869.14" y="1267.5" width="7" height="7" fill="#b54c00"><title>new: 1.13058× torch; split_k:m16n128k64-w4s3-split4</title></rect>
+</g>
+<g id="w039"><title>mistral-7b-ffn-down-mixed-31-m31-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="1298">039  mistral-7b / ffn-down  [31, 4096, 14336]</text></a>
+<line x1="846.67" y1="1290" x2="992.40" y2="1290" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="992.40" cy="1290" r="3.5" fill="#1261a0"><title>old: 1.99117× torch; m32n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1299" x2="850.83" y2="1299" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="847.33" y="1295.5" width="7" height="7" fill="#b54c00"><title>new: 1.01986× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w040"><title>mistral-7b-ffn-up-mixed-31-m31-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1326">040  mistral-7b / ffn-up  [31, 14336, 4096]</text></a>
+<line x1="846.67" y1="1318" x2="873.59" y2="1318" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="873.59" cy="1318" r="3.5" fill="#1261a0"><title>old: 1.13571× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="1327" x2="848.71" y2="1327" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="845.21" y="1323.5" width="7" height="7" fill="#b54c00"><title>new: 1.00971× torch; tile:m128n128k128-w8s3g8</title></rect>
+</g>
+<g id="w041"><title>phi-3-mini-attention-out-mixed-31-m31-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1354">041  phi-3-mini / attention-out  [31, 3072, 3072]</text></a>
+<line x1="846.67" y1="1346" x2="993.33" y2="1346" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="993.33" cy="1346" r="3.5" fill="#1261a0"><title>old: 2× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1355" x2="894.06" y2="1355" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="890.56" y="1351.5" width="7" height="7" fill="#b54c00"><title>new: 1.25103× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w042"><title>phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1382">042  phi-3-mini / attention-qkv  [31, 9216, 3072]</text></a>
+<line x1="846.67" y1="1374" x2="915.72" y2="1374" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="915.72" cy="1374" r="3.5" fill="#1261a0"><title>old: 1.38588× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="1383" x2="879.13" y2="1383" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="875.63" y="1379.5" width="7" height="7" fill="#b54c00"><title>new: 1.16581× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w043"><title>phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="1410">043  phi-3-mini / ffn-down  [31, 3072, 8192]</text></a>
+<line x1="846.67" y1="1402" x2="1016.55" y2="1402" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1016.55" cy="1402" r="3.5" fill="#1261a0"><title>old: 2.2319× torch; m16n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1411" x2="861.84" y2="1411" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="858.34" y="1407.5" width="7" height="7" fill="#b54c00"><title>new: 1.07436× torch; split_k:m16n128k64-w4s3-split16</title></rect>
+</g>
+<g id="w044"><title>phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1438">044  phi-3-mini / ffn-up  [31, 8192, 3072]</text></a>
+<line x1="846.67" y1="1430" x2="921.08" y2="1430" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="921.08" cy="1430" r="3.5" fill="#1261a0"><title>old: 1.42146× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1439" x2="881.35" y2="1439" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="877.85" y="1435.5" width="7" height="7" fill="#b54c00"><title>new: 1.1781× torch; split_k:m16n128k64-w4s3-split4</title></rect>
+</g>
+<g id="w045"><title>qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1466">045  qwen2.5-7b / attention-out  [31, 3584, 3584]</text></a>
+<line x1="846.67" y1="1458" x2="994.44" y2="1458" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="994.44" cy="1458" r="3.5" fill="#1261a0"><title>old: 2.01047× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1467" x2="893.22" y2="1467" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="889.72" y="1463.5" width="7" height="7" fill="#b54c00"><title>new: 1.24607× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w046"><title>qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1494">046  qwen2.5-7b / attention-qkv  [31, 4608, 3584]</text></a>
+<line x1="846.67" y1="1486" x2="974.26" y2="1486" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="974.26" cy="1486" r="3.5" fill="#1261a0"><title>old: 1.82764× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1495" x2="883.24" y2="1495" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="879.74" y="1491.5" width="7" height="7" fill="#b54c00"><title>new: 1.18871× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w047"><title>qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="1522">047  qwen2.5-7b / ffn-down  [31, 3584, 18944]</text></a>
+<line x1="846.67" y1="1514" x2="1022.70" y2="1514" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1022.70" cy="1514" r="3.5" fill="#1261a0"><title>old: 2.2978× torch; m32n32k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1523" x2="859.01" y2="1523" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="855.51" y="1519.5" width="7" height="7" fill="#b54c00"><title>new: 1.06006× torch; split_k:m16n64k64-w4s3-split4</title></rect>
+</g>
+<g id="w048"><title>qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1550">048  qwen2.5-7b / ffn-up  [31, 18944, 3584]</text></a>
+<line x1="846.67" y1="1542" x2="861.57" y2="1542" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="861.57" cy="1542" r="3.5" fill="#1261a0"><title>old: 1.07298× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1551" x2="849.78" y2="1551" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="846.28" y="1547.5" width="7" height="7" fill="#b54c00"><title>new: 1.01481× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<text x="20" y="1574" font-weight="bold">M = 96</text>
+<g id="w049"><title>granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1608">049  granite-3.1-8b / attention-out  [96, 4096, 4096]</text></a>
+<line x1="846.67" y1="1600" x2="987.17" y2="1600" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="987.17" cy="1600" r="3.5" fill="#1261a0"><title>old: 1.94261× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1609" x2="947.78" y2="1609" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="944.28" y="1605.5" width="7" height="7" fill="#b54c00"><title>new: 1.61263× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w050"><title>granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1636">050  granite-3.1-8b / attention-qkv  [96, 6144, 4096]</text></a>
+<line x1="846.67" y1="1628" x2="952.52" y2="1628" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="952.52" cy="1628" r="3.5" fill="#1261a0"><title>old: 1.64918× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1637" x2="908.23" y2="1637" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="904.73" y="1633.5" width="7" height="7" fill="#b54c00"><title>new: 1.3377× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w051"><title>granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="1664">051  granite-3.1-8b / ffn-down  [96, 4096, 12800]</text></a>
+<line x1="846.67" y1="1656" x2="986.31" y2="1656" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="986.31" cy="1656" r="3.5" fill="#1261a0"><title>old: 1.93467× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1665" x2="933.71" y2="1665" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="930.21" y="1661.5" width="7" height="7" fill="#b54c00"><title>new: 1.50888× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w052"><title>granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1692">052  granite-3.1-8b / ffn-up  [96, 12800, 4096]</text></a>
+<line x1="846.67" y1="1684" x2="880.95" y2="1684" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="880.95" cy="1684" r="3.5" fill="#1261a0"><title>old: 1.17589× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="1693" x2="845.36" y2="1693" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="841.86" y="1689.5" width="7" height="7" fill="#b54c00"><title>new: 0.99385× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w053"><title>mistral-7b-attention-out-mixed-96-m96-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1720">053  mistral-7b / attention-out  [96, 4096, 4096]</text></a>
+<line x1="846.67" y1="1712" x2="986.48" y2="1712" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="986.48" cy="1712" r="3.5" fill="#1261a0"><title>old: 1.93626× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1721" x2="945.25" y2="1721" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="941.75" y="1717.5" width="7" height="7" fill="#b54c00"><title>new: 1.59348× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w054"><title>mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1748">054  mistral-7b / attention-qkv  [96, 6144, 4096]</text></a>
+<line x1="846.67" y1="1740" x2="952.99" y2="1740" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="952.99" cy="1740" r="3.5" fill="#1261a0"><title>old: 1.65279× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1749" x2="909.21" y2="1749" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="905.71" y="1745.5" width="7" height="7" fill="#b54c00"><title>new: 1.34392× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w055"><title>mistral-7b-ffn-down-mixed-96-m96-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="1776">055  mistral-7b / ffn-down  [96, 4096, 14336]</text></a>
+<line x1="846.67" y1="1768" x2="991.29" y2="1768" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="991.29" cy="1768" r="3.5" fill="#1261a0"><title>old: 1.98077× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1777" x2="938.33" y2="1777" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="934.83" y="1773.5" width="7" height="7" fill="#b54c00"><title>new: 1.5422× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w056"><title>mistral-7b-ffn-up-mixed-96-m96-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="1804">056  mistral-7b / ffn-up  [96, 14336, 4096]</text></a>
+<line x1="846.67" y1="1796" x2="879.16" y2="1796" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="879.16" cy="1796" r="3.5" fill="#1261a0"><title>old: 1.16598× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="1805" x2="850.13" y2="1805" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="846.63" y="1801.5" width="7" height="7" fill="#b54c00"><title>new: 1.01648× torch; tile:m128n128k128-w8s3g8</title></rect>
+</g>
+<g id="w057"><title>phi-3-mini-attention-out-mixed-96-m96-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1832">057  phi-3-mini / attention-out  [96, 3072, 3072]</text></a>
+<line x1="846.67" y1="1824" x2="986.99" y2="1824" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="986.99" cy="1824" r="3.5" fill="#1261a0"><title>old: 1.94094× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1833" x2="955.09" y2="1833" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="951.59" y="1829.5" width="7" height="7" fill="#b54c00"><title>new: 1.66929× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w058"><title>phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1860">058  phi-3-mini / attention-qkv  [96, 9216, 3072]</text></a>
+<line x1="846.67" y1="1852" x2="914.48" y2="1852" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="914.48" cy="1852" r="3.5" fill="#1261a0"><title>old: 1.37781× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1861" x2="872.53" y2="1861" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="869.03" y="1857.5" width="7" height="7" fill="#b54c00"><title>new: 1.13001× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w059"><title>phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="1888">059  phi-3-mini / ffn-down  [96, 3072, 8192]</text></a>
+<line x1="846.67" y1="1880" x2="1002.38" y2="1880" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1002.38" cy="1880" r="3.5" fill="#1261a0"><title>old: 2.08734× torch; m16n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1889" x2="947.85" y2="1889" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="944.35" y="1885.5" width="7" height="7" fill="#b54c00"><title>new: 1.61319× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w060"><title>phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="1916">060  phi-3-mini / ffn-up  [96, 8192, 3072]</text></a>
+<line x1="846.67" y1="1908" x2="924.12" y2="1908" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="924.12" cy="1908" r="3.5" fill="#1261a0"><title>old: 1.44201× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1917" x2="888.54" y2="1917" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="885.04" y="1913.5" width="7" height="7" fill="#b54c00"><title>new: 1.21882× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w061"><title>qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1944">061  qwen2.5-7b / attention-out  [96, 3584, 3584]</text></a>
+<line x1="846.67" y1="1936" x2="992.89" y2="1936" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="992.89" cy="1936" r="3.5" fill="#1261a0"><title>old: 1.99577× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1945" x2="955.18" y2="1945" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="951.68" y="1941.5" width="7" height="7" fill="#b54c00"><title>new: 1.67005× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w062"><title>qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="1972">062  qwen2.5-7b / attention-qkv  [96, 4608, 3584]</text></a>
+<line x1="846.67" y1="1964" x2="968.71" y2="1964" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="968.71" cy="1964" r="3.5" fill="#1261a0"><title>old: 1.78028× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="1973" x2="924.36" y2="1973" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="920.86" y="1969.5" width="7" height="7" fill="#b54c00"><title>new: 1.44366× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w063"><title>qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="2000">063  qwen2.5-7b / ffn-down  [96, 3584, 18944]</text></a>
+<line x1="846.67" y1="1992" x2="1017.87" y2="1992" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1017.87" cy="1992" r="3.5" fill="#1261a0"><title>old: 2.24589× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2001" x2="963.09" y2="2001" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="959.59" y="1997.5" width="7" height="7" fill="#b54c00"><title>new: 1.73362× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w064"><title>qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2028">064  qwen2.5-7b / ffn-up  [96, 18944, 3584]</text></a>
+<line x1="846.67" y1="2020" x2="869.60" y2="2020" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="869.60" cy="2020" r="3.5" fill="#1261a0"><title>old: 1.11445× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2029" x2="846.67" y2="2029" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="843.17" y="2025.5" width="7" height="7" fill="#b54c00"><title>new: 1× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<text x="20" y="2052" font-weight="bold">M = 257</text>
+<g id="w065"><title>granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2086">065  granite-3.1-8b / attention-out  [257, 4096, 4096]</text></a>
+<line x1="846.67" y1="2078" x2="955.69" y2="2078" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="955.69" cy="2078" r="3.5" fill="#1261a0"><title>old: 1.67401× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2087" x2="912.39" y2="2087" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="908.89" y="2083.5" width="7" height="7" fill="#b54c00"><title>new: 1.36427× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w066"><title>granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2114">066  granite-3.1-8b / attention-qkv  [257, 6144, 4096]</text></a>
+<line x1="846.67" y1="2106" x2="917.92" y2="2106" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="917.92" cy="2106" r="3.5" fill="#1261a0"><title>old: 1.40036× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2115" x2="903.60" y2="2115" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="900.10" y="2111.5" width="7" height="7" fill="#b54c00"><title>new: 1.30872× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w067"><title>granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="2142">067  granite-3.1-8b / ffn-down  [257, 4096, 12800]</text></a>
+<line x1="846.67" y1="2134" x2="964.24" y2="2134" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="964.24" cy="2134" r="3.5" fill="#1261a0"><title>old: 1.74304× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2143" x2="927.10" y2="2143" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="923.60" y="2139.5" width="7" height="7" fill="#b54c00"><title>new: 1.46248× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w068"><title>granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2170">068  granite-3.1-8b / ffn-up  [257, 12800, 4096]</text></a>
+<line x1="846.67" y1="2162" x2="935.99" y2="2162" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="935.99" cy="2162" r="3.5" fill="#1261a0"><title>old: 1.5252× torch; m64n128k32-w8s3g8</title></circle>
+<line x1="846.67" y1="2171" x2="954.07" y2="2171" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="950.57" y="2167.5" width="7" height="7" fill="#b54c00"><title>new: 1.66125× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w069"><title>mistral-7b-attention-out-prefill-257-m257-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2198">069  mistral-7b / attention-out  [257, 4096, 4096]</text></a>
+<line x1="846.67" y1="2190" x2="956.71" y2="2190" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="956.71" cy="2190" r="3.5" fill="#1261a0"><title>old: 1.68213× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2199" x2="912.03" y2="2199" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="908.53" y="2195.5" width="7" height="7" fill="#b54c00"><title>new: 1.36195× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w070"><title>mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2226">070  mistral-7b / attention-qkv  [257, 6144, 4096]</text></a>
+<line x1="846.67" y1="2218" x2="917.89" y2="2218" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="917.89" cy="2218" r="3.5" fill="#1261a0"><title>old: 1.40018× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2227" x2="896.07" y2="2227" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="892.57" y="2223.5" width="7" height="7" fill="#b54c00"><title>new: 1.26297× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w071"><title>mistral-7b-ffn-down-prefill-257-m257-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="2254">071  mistral-7b / ffn-down  [257, 4096, 14336]</text></a>
+<line x1="846.67" y1="2246" x2="966.42" y2="2246" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="966.42" cy="2246" r="3.5" fill="#1261a0"><title>old: 1.76112× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2255" x2="932.13" y2="2255" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="928.63" y="2251.5" width="7" height="7" fill="#b54c00"><title>new: 1.49762× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w072"><title>mistral-7b-ffn-up-prefill-257-m257-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2282">072  mistral-7b / ffn-up  [257, 14336, 4096]</text></a>
+<line x1="846.67" y1="2274" x2="990.38" y2="2274" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="990.38" cy="2274" r="3.5" fill="#1261a0"><title>old: 1.97231× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2283" x2="951.74" y2="2283" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="948.24" y="2279.5" width="7" height="7" fill="#b54c00"><title>new: 1.64309× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w073"><title>phi-3-mini-attention-out-prefill-257-m257-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2310">073  phi-3-mini / attention-out  [257, 3072, 3072]</text></a>
+<line x1="846.67" y1="2302" x2="952.44" y2="2302" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="952.44" cy="2302" r="3.5" fill="#1261a0"><title>old: 1.64852× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2311" x2="913.54" y2="2311" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="910.04" y="2307.5" width="7" height="7" fill="#b54c00"><title>new: 1.3717× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w074"><title>phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2338">074  phi-3-mini / attention-qkv  [257, 9216, 3072]</text></a>
+<line x1="846.67" y1="2330" x2="888.25" y2="2330" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="888.25" cy="2330" r="3.5" fill="#1261a0"><title>old: 1.21718× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2339" x2="855.73" y2="2339" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="852.23" y="2335.5" width="7" height="7" fill="#b54c00"><title>new: 1.04375× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w075"><title>phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="2366">075  phi-3-mini / ffn-down  [257, 3072, 8192]</text></a>
+<line x1="846.67" y1="2358" x2="966.97" y2="2358" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="966.97" cy="2358" r="3.5" fill="#1261a0"><title>old: 1.76567× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2367" x2="919.44" y2="2367" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="915.94" y="2363.5" width="7" height="7" fill="#b54c00"><title>new: 1.41045× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w076"><title>phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2394">076  phi-3-mini / ffn-up  [257, 8192, 3072]</text></a>
+<line x1="846.67" y1="2386" x2="913.85" y2="2386" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="913.85" cy="2386" r="3.5" fill="#1261a0"><title>old: 1.37373× torch; m64n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2395" x2="880.26" y2="2395" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="876.76" y="2391.5" width="7" height="7" fill="#b54c00"><title>new: 1.17206× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w077"><title>qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2422">077  qwen2.5-7b / attention-out  [257, 3584, 3584]</text></a>
+<line x1="846.67" y1="2414" x2="966.79" y2="2414" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="966.79" cy="2414" r="3.5" fill="#1261a0"><title>old: 1.76422× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2423" x2="922.96" y2="2423" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="919.46" y="2419.5" width="7" height="7" fill="#b54c00"><title>new: 1.43412× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w078"><title>qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2450">078  qwen2.5-7b / attention-qkv  [257, 4608, 3584]</text></a>
+<line x1="846.67" y1="2442" x2="928.48" y2="2442" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="928.48" cy="2442" r="3.5" fill="#1261a0"><title>old: 1.47201× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2451" x2="878.12" y2="2451" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="874.62" y="2447.5" width="7" height="7" fill="#b54c00"><title>new: 1.16026× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w079"><title>qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="2478">079  qwen2.5-7b / ffn-down  [257, 3584, 18944]</text></a>
+<line x1="846.67" y1="2470" x2="1012.78" y2="2470" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="1012.78" cy="2470" r="3.5" fill="#1261a0"><title>old: 2.19252× torch; m64n64k32-w4s4g4</title></circle>
+<line x1="846.67" y1="2479" x2="978.41" y2="2479" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="974.91" y="2475.5" width="7" height="7" fill="#b54c00"><title>new: 1.86381× torch; tile:m128n128k64-w4s5g8</title></rect>
+</g>
+<g id="w080"><title>qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2506">080  qwen2.5-7b / ffn-up  [257, 18944, 3584]</text></a>
+<line x1="846.67" y1="2498" x2="923.46" y2="2498" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="923.46" cy="2498" r="3.5" fill="#1261a0"><title>old: 1.43755× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2507" x2="882.39" y2="2507" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="878.89" y="2503.5" width="7" height="7" fill="#b54c00"><title>new: 1.18392× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<text x="20" y="2530" font-weight="bold">M = 1024</text>
+<g id="w081"><title>granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2564">081  granite-3.1-8b / attention-out  [1024, 4096, 4096]</text></a>
+<line x1="846.67" y1="2556" x2="886.78" y2="2556" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="886.78" cy="2556" r="3.5" fill="#1261a0"><title>old: 1.20871× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2565" x2="851.97" y2="2565" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="848.47" y="2561.5" width="7" height="7" fill="#b54c00"><title>new: 1.02536× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w082"><title>granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2592">082  granite-3.1-8b / attention-qkv  [1024, 6144, 4096]</text></a>
+<line x1="846.67" y1="2584" x2="937.87" y2="2584" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="937.87" cy="2584" r="3.5" fill="#1261a0"><title>old: 1.53882× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2593" x2="877.13" y2="2593" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="873.63" y="2589.5" width="7" height="7" fill="#b54c00"><title>new: 1.15487× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w083"><title>granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800</title>
+<a href="action-expansion-summary.json"><text x="20" y="2620">083  granite-3.1-8b / ffn-down  [1024, 4096, 12800]</text></a>
+<line x1="846.67" y1="2612" x2="917.00" y2="2612" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="917.00" cy="2612" r="3.5" fill="#1261a0"><title>old: 1.39428× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2621" x2="861.93" y2="2621" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="858.43" y="2617.5" width="7" height="7" fill="#b54c00"><title>new: 1.07479× torch; persistent:hopper-m128n256k64-w8s3g8-sub0-ws0</title></rect>
+</g>
+<g id="w084"><title>granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2648">084  granite-3.1-8b / ffn-up  [1024, 12800, 4096]</text></a>
+<line x1="846.67" y1="2640" x2="911.25" y2="2640" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="911.25" cy="2640" r="3.5" fill="#1261a0"><title>old: 1.35694× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2649" x2="866.16" y2="2649" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="862.66" y="2645.5" width="7" height="7" fill="#b54c00"><title>new: 1.09652× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w085"><title>mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2676">085  mistral-7b / attention-out  [1024, 4096, 4096]</text></a>
+<line x1="846.67" y1="2668" x2="884.48" y2="2668" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="884.48" cy="2668" r="3.5" fill="#1261a0"><title>old: 1.19569× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2677" x2="852.39" y2="2677" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="848.89" y="2673.5" width="7" height="7" fill="#b54c00"><title>new: 1.0274× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w086"><title>mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2704">086  mistral-7b / attention-qkv  [1024, 6144, 4096]</text></a>
+<line x1="846.67" y1="2696" x2="944.56" y2="2696" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="944.56" cy="2696" r="3.5" fill="#1261a0"><title>old: 1.58829× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2705" x2="883.26" y2="2705" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="879.76" y="2701.5" width="7" height="7" fill="#b54c00"><title>new: 1.18881× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w087"><title>mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336</title>
+<a href="action-expansion-summary.json"><text x="20" y="2732">087  mistral-7b / ffn-down  [1024, 4096, 14336]</text></a>
+<line x1="846.67" y1="2724" x2="920.50" y2="2724" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="920.50" cy="2724" r="3.5" fill="#1261a0"><title>old: 1.41754× torch; m128n128k32-w8s3g8</title></circle>
+<line x1="846.67" y1="2733" x2="875.63" y2="2733" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="872.13" y="2729.5" width="7" height="7" fill="#b54c00"><title>new: 1.14667× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w088"><title>mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096</title>
+<a href="action-expansion-summary.json"><text x="20" y="2760">088  mistral-7b / ffn-up  [1024, 14336, 4096]</text></a>
+<line x1="846.67" y1="2752" x2="924.96" y2="2752" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="924.96" cy="2752" r="3.5" fill="#1261a0"><title>old: 1.44778× torch; m128n128k32-w8s3g8</title></circle>
+<line x1="846.67" y1="2761" x2="874.30" y2="2761" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="870.80" y="2757.5" width="7" height="7" fill="#b54c00"><title>new: 1.13951× torch; persistent:hopper-m128n256k64-w8s3g8-sub0-ws0</title></rect>
+</g>
+<g id="w089"><title>phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2788">089  phi-3-mini / attention-out  [1024, 3072, 3072]</text></a>
+<line x1="846.67" y1="2780" x2="911.74" y2="2780" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="911.74" cy="2780" r="3.5" fill="#1261a0"><title>old: 1.36008× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2789" x2="881.61" y2="2789" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="878.11" y="2785.5" width="7" height="7" fill="#b54c00"><title>new: 1.17954× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w090"><title>phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2816">090  phi-3-mini / attention-qkv  [1024, 9216, 3072]</text></a>
+<line x1="846.67" y1="2808" x2="936.05" y2="2808" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="936.05" cy="2808" r="3.5" fill="#1261a0"><title>old: 1.52567× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2817" x2="879.34" y2="2817" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="875.84" y="2813.5" width="7" height="7" fill="#b54c00"><title>new: 1.16697× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w091"><title>phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192</title>
+<a href="action-expansion-summary.json"><text x="20" y="2844">091  phi-3-mini / ffn-down  [1024, 3072, 8192]</text></a>
+<line x1="846.67" y1="2836" x2="932.94" y2="2836" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="932.94" cy="2836" r="3.5" fill="#1261a0"><title>old: 1.50338× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2845" x2="893.88" y2="2845" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="890.38" y="2841.5" width="7" height="7" fill="#b54c00"><title>new: 1.25× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w092"><title>phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072</title>
+<a href="action-expansion-summary.json"><text x="20" y="2872">092  phi-3-mini / ffn-up  [1024, 8192, 3072]</text></a>
+<line x1="846.67" y1="2864" x2="921.90" y2="2864" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="921.90" cy="2864" r="3.5" fill="#1261a0"><title>old: 1.42694× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2873" x2="859.76" y2="2873" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="856.26" y="2869.5" width="7" height="7" fill="#b54c00"><title>new: 1.06384× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w093"><title>qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2900">093  qwen2.5-7b / attention-out  [1024, 3584, 3584]</text></a>
+<line x1="846.67" y1="2892" x2="885.11" y2="2892" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="885.11" cy="2892" r="3.5" fill="#1261a0"><title>old: 1.19925× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2901" x2="851.85" y2="2901" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="848.35" y="2897.5" width="7" height="7" fill="#b54c00"><title>new: 1.02481× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w094"><title>qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2928">094  qwen2.5-7b / attention-qkv  [1024, 4608, 3584]</text></a>
+<line x1="846.67" y1="2920" x2="941.75" y2="2920" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="941.75" cy="2920" r="3.5" fill="#1261a0"><title>old: 1.56735× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2929" x2="914.08" y2="2929" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="910.58" y="2925.5" width="7" height="7" fill="#b54c00"><title>new: 1.37523× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+<g id="w095"><title>qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944</title>
+<a href="action-expansion-summary.json"><text x="20" y="2956">095  qwen2.5-7b / ffn-down  [1024, 3584, 18944]</text></a>
+<line x1="846.67" y1="2948" x2="923.88" y2="2948" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="923.88" cy="2948" r="3.5" fill="#1261a0"><title>old: 1.44041× torch; m128n128k32-w8s3g8</title></circle>
+<line x1="846.67" y1="2957" x2="869.11" y2="2957" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="865.61" y="2953.5" width="7" height="7" fill="#b54c00"><title>new: 1.11192× torch; tile:m128n256k64-w8s4g8</title></rect>
+</g>
+<g id="w096"><title>qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584</title>
+<a href="action-expansion-summary.json"><text x="20" y="2984">096  qwen2.5-7b / ffn-up  [1024, 18944, 3584]</text></a>
+<line x1="846.67" y1="2976" x2="908.24" y2="2976" stroke="#1261a0" stroke-opacity="0.5"/>
+<circle cx="908.24" cy="2976" r="3.5" fill="#1261a0"><title>old: 1.33775× torch; m128n128k32-w8s4g4</title></circle>
+<line x1="846.67" y1="2985" x2="855.40" y2="2985" stroke="#b54c00" stroke-opacity="0.5"/>
+<rect x="851.90" y="2981.5" width="7" height="7" fill="#b54c00"><title>new: 1.04212× torch; persistent:hopper-m128n128k64-w4s4g8-sub0-ws0</title></rect>
+</g>
+</g>
+</svg>
