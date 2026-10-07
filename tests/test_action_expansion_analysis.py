@@ -507,3 +507,23 @@ def test_collection_sessions_must_be_objects_in_a_list() -> None:
     data["sessions"] = ["session-a"]
     with pytest.raises(ValueError, match="session"):
         _analyze(data)
+
+
+def test_committed_full_results_are_reproducible(tmp_path: Path) -> None:
+    output = tmp_path / "action-expansion-summary.json"
+    figure = tmp_path / "action-expansion.svg"
+    assert (
+        _ANALYZER.main(
+            [
+                "--input",
+                str(_REPO / "results/action-expansion-raw.json"),
+                "--output",
+                str(output),
+                "--figure",
+                str(figure),
+            ]
+        )
+        == 0
+    )
+    assert output.read_bytes() == (_REPO / "results/action-expansion-summary.json").read_bytes()
+    assert figure.read_bytes() == (_REPO / "results/action-expansion.svg").read_bytes()
