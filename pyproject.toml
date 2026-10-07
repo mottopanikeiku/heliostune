@@ -96,8 +96,8 @@ show_error_codes = true
 branch = true
 source = ["heliostune"]
 # GPU-only JIT modules are gated by the paid pre-timing correctness check; CPU CI
-# cannot import either implementation.
-omit = ["src/heliostune/_fusion_gpu.py", "src/heliostune/hopper_kernel.py"]
+# cannot import these implementations.
+omit = ["src/heliostune/_fusion_gpu.py", "src/heliostune/hopper_kernel.py", "src/heliostune/action_expansion.py"]
 
 [tool.coverage.report]
 show_missing = true
