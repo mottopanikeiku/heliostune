@@ -1,21 +1,21 @@
 # Contributing
 
-Start with the tuner in `src/heliostune/bandit.py`, `retrieval.py` and `multisource_engine.py`. Report generation and run-checking utilities live in `src/heliostune/tooling/`. Keep the core independent of GPU execution when testing it on CPU.
+I keep the tuner in `src/heliostune/bandit.py`, `retrieval.py` and `multisource_engine.py`, independent of GPU execution for CPU tests. Offline analysis and report utilities live in `src/heliostune/tooling/`.
 
 ## Local changes
 
 ```bash
 uv sync --locked --extra dev
-nice -n 19 uv run --locked pytest -q -x tests/test_bandit.py tests/test_retrieval.py tests/test_multisource.py tests/test_tuner_results.py
+nice -n 19 uv run --locked pytest -q -x tests/test_bandit.py tests/test_retrieval.py tests/test_multisource.py tests/test_tuner_results.py tests/test_matmul_audit.py
 nice -n 19 uv run --locked pytest -q -x
 ```
 
-Run the targeted behavioral tests first. GPU collection needs suitable hardware and explicit spending approval; installing the CPU development environment does not grant either. Tests that use unavailable isolation or GPU facilities may skip, and those skips should be reported rather than presented as successful execution.
+I run targeted behavioral tests before the full suite. The CPU development environment does not install GPU dependencies. Tests that need unavailable Linux isolation or GPU facilities may skip; a skip is not a successful execution of that path.
 
-For the current comparison table, run `nice -n 19 python3 scripts/summarize_tuner_results.py`. It reads committed results and does not collect timings. Keep generated summaries deterministic and traceable to their input files.
+For the four-GPU overview and detailed H100 action-set audit, I run `nice -n 19 uv run --locked python scripts/audit_matmul_action_set.py`. It reads committed measurements and writes `results/action-set-audit.json` and two SVGs. `nice -n 19 python3 scripts/summarize_tuner_results.py` regenerates the policy comparison table. Neither command collects timings. The audit tests check computation on small hand-calculated matrices, separate-device aggregation and reproduction of committed outputs.
 
 ## Results and claims
 
-Do not alter data or reports backing published numbers. New analyses belong at new paths, identify their inputs and distinguish new measurements from summaries or replays. Report null, negative and failed outcomes plainly. A score relative to an enumerated Triton reference is not a fraction of the hardware's best achievable performance.
+I leave measurements and reports backing published numbers unchanged. New analyses use new paths and identify their inputs. I distinguish new measurements from summaries or replays and report negative outcomes plainly. A score relative to an enumerated Triton reference is not a fraction of the hardware's best achievable performance. Choosing a minimum on the scoring bank is a descriptive diagnostic, not an independently evaluated policy.
 
-The next proposed experiment is in [docs/NEXT.md](docs/NEXT.md). Detailed older study, release and run-record procedures are retained in the [historical documents](docs/history/INDEX.md); their paths and commands describe the previous checkout. New code uses `heliostune.tooling`, not the old module locations.
+The [next comparison](docs/NEXT.md) describes the scientific question. The [historical documents](docs/history/INDEX.md) retain earlier protocols and commands; they describe the checkout used for those studies.

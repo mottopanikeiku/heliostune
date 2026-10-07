@@ -1,0 +1,201 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="868" height="675" viewBox="0 0 868 675" role="img" aria-labelledby="title desc">
+<title id="title">H100 torch advantage by matrix shape</title>
+<desc id="desc">Rows give N and K; columns give M for A[M,K] @ B[K,N]. Each cell is the geometric mean reference/torch ratio for that shape. Duplicate shapes across model families are averaged, not extra devices. Orange favors torch, blue favors Triton. Cell ratios are rounded to two decimals; tooltips give six decimals. A displayed 1.00 need not be a tie.</desc>
+<rect width="100%" height="100%" fill="#fff"/>
+<g font-family="sans-serif" fill="#18212b">
+<text x="20.00" y="32.00" font-size="21" text-anchor="start">H100 torch advantage by matrix shape</text>
+<text x="20.00" y="57.00" font-size="14" text-anchor="start">Bank-2 reference / torch medians · reference selected on bank 1</text>
+<text x="20.00" y="80.00" font-size="12" text-anchor="start">Repeated shapes across models: geometric mean; not independent devices</text>
+<text x="20.00" y="109.00" font-size="13" text-anchor="start">N × K</text>
+<text x="279.00" y="109.00" font-size="13" text-anchor="middle">M = 1</text>
+<text x="377.00" y="109.00" font-size="13" text-anchor="middle">M = 7</text>
+<text x="475.00" y="109.00" font-size="13" text-anchor="middle">M = 31</text>
+<text x="573.00" y="109.00" font-size="13" text-anchor="middle">M = 96</text>
+<text x="671.00" y="109.00" font-size="13" text-anchor="middle">M = 257</text>
+<text x="769.00" y="109.00" font-size="13" text-anchor="middle">M = 1024</text>
+<text x="20.00" y="142.00" font-size="14" text-anchor="start">3072 × 3072</text>
+<rect x="232" y="121" width="94" height="31" rx="3" fill="#e9cdc3"><title>M=1, N=3072, K=3072: 1.687719×; torch wins 1/1 workloads; range 1.687719–1.687719×</title></rect>
+<text x="279" y="142" text-anchor="middle" font-size="14" fill="#18212b">1.69×</text>
+<rect x="330" y="121" width="94" height="31" rx="3" fill="#e9cdc3"><title>M=7, N=3072, K=3072: 1.683566×; torch wins 1/1 workloads; range 1.683566–1.683566×</title></rect>
+<text x="377" y="142" text-anchor="middle" font-size="14" fill="#18212b">1.68×</text>
+<rect x="428" y="121" width="94" height="31" rx="3" fill="#e4beb0"><title>M=31, N=3072, K=3072: 2.033403×; torch wins 1/1 workloads; range 2.033403–2.033403×</title></rect>
+<text x="475" y="142" text-anchor="middle" font-size="14" fill="#18212b">2.03×</text>
+<rect x="526" y="121" width="94" height="31" rx="3" fill="#e5c1b3"><title>M=96, N=3072, K=3072: 1.962376×; torch wins 1/1 workloads; range 1.962376–1.962376×</title></rect>
+<text x="573" y="142" text-anchor="middle" font-size="14" fill="#18212b">1.96×</text>
+<rect x="624" y="121" width="94" height="31" rx="3" fill="#ead0c7"><title>M=257, N=3072, K=3072: 1.625000×; torch wins 1/1 workloads; range 1.625000–1.625000×</title></rect>
+<text x="671" y="142" text-anchor="middle" font-size="14" fill="#18212b">1.63×</text>
+<rect x="722" y="121" width="94" height="31" rx="3" fill="#efded8"><title>M=1024, N=3072, K=3072: 1.374622×; torch wins 1/1 workloads; range 1.374622–1.374622×</title></rect>
+<text x="769" y="142" text-anchor="middle" font-size="14" fill="#18212b">1.37×</text>
+<text x="20.00" y="177.00" font-size="14" text-anchor="start">3072 × 8192</text>
+<rect x="232" y="156" width="94" height="31" rx="3" fill="#e1b4a4"><title>M=1, N=3072, K=8192: 2.275583×; torch wins 1/1 workloads; range 2.275583–2.275583×</title></rect>
+<text x="279" y="177" text-anchor="middle" font-size="14" fill="#18212b">2.28×</text>
+<rect x="330" y="156" width="94" height="31" rx="3" fill="#e1b5a5"><title>M=7, N=3072, K=8192: 2.257316×; torch wins 1/1 workloads; range 2.257316–2.257316×</title></rect>
+<text x="377" y="177" text-anchor="middle" font-size="14" fill="#18212b">2.26×</text>
+<rect x="428" y="156" width="94" height="31" rx="3" fill="#e1b5a5"><title>M=31, N=3072, K=8192: 2.248509×; torch wins 1/1 workloads; range 2.248509–2.248509×</title></rect>
+<text x="475" y="177" text-anchor="middle" font-size="14" fill="#18212b">2.25×</text>
+<rect x="526" y="156" width="94" height="31" rx="3" fill="#e3bbac"><title>M=96, N=3072, K=8192: 2.111615×; torch wins 1/1 workloads; range 2.111615–2.111615×</title></rect>
+<text x="573" y="177" text-anchor="middle" font-size="14" fill="#18212b">2.11×</text>
+<rect x="624" y="156" width="94" height="31" rx="3" fill="#e8cabf"><title>M=257, N=3072, K=8192: 1.749256×; torch wins 1/1 workloads; range 1.749256–1.749256×</title></rect>
+<text x="671" y="177" text-anchor="middle" font-size="14" fill="#18212b">1.75×</text>
+<rect x="722" y="156" width="94" height="31" rx="3" fill="#ecd5cc"><title>M=1024, N=3072, K=8192: 1.537120×; torch wins 1/1 workloads; range 1.537120–1.537120×</title></rect>
+<text x="769" y="177" text-anchor="middle" font-size="14" fill="#18212b">1.54×</text>
+<text x="20.00" y="212.00" font-size="14" text-anchor="start">3584 × 3584</text>
+<rect x="232" y="191" width="94" height="31" rx="3" fill="#e4beb0"><title>M=1, N=3584, K=3584: 2.021429×; torch wins 1/1 workloads; range 2.021429–2.021429×</title></rect>
+<text x="279" y="212" text-anchor="middle" font-size="14" fill="#18212b">2.02×</text>
+<rect x="330" y="191" width="94" height="31" rx="3" fill="#e4beb1"><title>M=7, N=3584, K=3584: 2.015901×; torch wins 1/1 workloads; range 2.015901–2.015901×</title></rect>
+<text x="377" y="212" text-anchor="middle" font-size="14" fill="#18212b">2.02×</text>
+<rect x="428" y="191" width="94" height="31" rx="3" fill="#e5bfb1"><title>M=31, N=3584, K=3584: 2.003509×; torch wins 1/1 workloads; range 2.003509–2.003509×</title></rect>
+<text x="475" y="212" text-anchor="middle" font-size="14" fill="#18212b">2.00×</text>
+<rect x="526" y="191" width="94" height="31" rx="3" fill="#e4beb0"><title>M=96, N=3584, K=3584: 2.032986×; torch wins 1/1 workloads; range 2.032986–2.032986×</title></rect>
+<text x="573" y="212" text-anchor="middle" font-size="14" fill="#18212b">2.03×</text>
+<rect x="624" y="191" width="94" height="31" rx="3" fill="#e8c8bd"><title>M=257, N=3584, K=3584: 1.792023×; torch wins 1/1 workloads; range 1.792023–1.792023×</title></rect>
+<text x="671" y="212" text-anchor="middle" font-size="14" fill="#18212b">1.79×</text>
+<rect x="722" y="191" width="94" height="31" rx="3" fill="#f3e8e5"><title>M=1024, N=3584, K=3584: 1.208024×; torch wins 1/1 workloads; range 1.208024–1.208024×</title></rect>
+<text x="769" y="212" text-anchor="middle" font-size="14" fill="#18212b">1.21×</text>
+<text x="20.00" y="247.00" font-size="14" text-anchor="start">3584 × 18944</text>
+<rect x="232" y="226" width="94" height="31" rx="3" fill="#e1b5a4"><title>M=1, N=3584, K=18944: 2.272136×; torch wins 1/1 workloads; range 2.272136–2.272136×</title></rect>
+<text x="279" y="247" text-anchor="middle" font-size="14" fill="#18212b">2.27×</text>
+<rect x="330" y="226" width="94" height="31" rx="3" fill="#e1b5a5"><title>M=7, N=3584, K=18944: 2.252113×; torch wins 1/1 workloads; range 2.252113–2.252113×</title></rect>
+<text x="377" y="247" text-anchor="middle" font-size="14" fill="#18212b">2.25×</text>
+<rect x="428" y="226" width="94" height="31" rx="3" fill="#e0b2a2"><title>M=31, N=3584, K=18944: 2.329776×; torch wins 1/1 workloads; range 2.329776–2.329776×</title></rect>
+<text x="475" y="247" text-anchor="middle" font-size="14" fill="#18212b">2.33×</text>
+<rect x="526" y="226" width="94" height="31" rx="3" fill="#e1b5a5"><title>M=96, N=3584, K=18944: 2.264706×; torch wins 1/1 workloads; range 2.264706–2.264706×</title></rect>
+<text x="573" y="247" text-anchor="middle" font-size="14" fill="#18212b">2.26×</text>
+<rect x="624" y="226" width="94" height="31" rx="3" fill="#e2b7a8"><title>M=257, N=3584, K=18944: 2.192210×; torch wins 1/1 workloads; range 2.192210–2.192210×</title></rect>
+<text x="671" y="247" text-anchor="middle" font-size="14" fill="#18212b">2.19×</text>
+<rect x="722" y="226" width="94" height="31" rx="3" fill="#eed9d2"><title>M=1024, N=3584, K=18944: 1.453452×; torch wins 1/1 workloads; range 1.453452–1.453452×</title></rect>
+<text x="769" y="247" text-anchor="middle" font-size="14" fill="#18212b">1.45×</text>
+<text x="20.00" y="282.00" font-size="14" text-anchor="start">4096 × 4096</text>
+<rect x="232" y="261" width="94" height="31" rx="3" fill="#e5c0b3"><title>M=1, N=4096, K=4096: 1.968468×; torch wins 2/2 workloads; range 1.968468–1.968468×</title></rect>
+<text x="279" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.97×</text>
+<rect x="330" y="261" width="94" height="31" rx="3" fill="#e5bfb2"><title>M=7, N=4096, K=4096: 1.990945×; torch wins 2/2 workloads; range 1.986425–1.995475×</title></rect>
+<text x="377" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.99×</text>
+<rect x="428" y="261" width="94" height="31" rx="3" fill="#e5c1b4"><title>M=31, N=4096, K=4096: 1.951446×; torch wins 2/2 workloads; range 1.947214–1.955687×</title></rect>
+<text x="475" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.95×</text>
+<rect x="526" y="261" width="94" height="31" rx="3" fill="#e5c1b4"><title>M=96, N=4096, K=4096: 1.951677×; torch wins 2/2 workloads; range 1.941092–1.962319×</title></rect>
+<text x="573" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.95×</text>
+<rect x="624" y="261" width="94" height="31" rx="3" fill="#eacec4"><title>M=257, N=4096, K=4096: 1.671710×; torch wins 2/2 workloads; range 1.662398–1.681075×</title></rect>
+<text x="671" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.67×</text>
+<rect x="722" y="261" width="94" height="31" rx="3" fill="#f3e9e5"><title>M=1024, N=4096, K=4096: 1.204771×; torch wins 2/2 workloads; range 1.201540–1.208010×</title></rect>
+<text x="769" y="282" text-anchor="middle" font-size="14" fill="#18212b">1.20×</text>
+<text x="20.00" y="317.00" font-size="14" text-anchor="start">4096 × 12800</text>
+<rect x="232" y="296" width="94" height="31" rx="3" fill="#e5c0b2"><title>M=1, N=4096, K=12800: 1.979218×; torch wins 1/1 workloads; range 1.979218–1.979218×</title></rect>
+<text x="279" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.98×</text>
+<rect x="330" y="296" width="94" height="31" rx="3" fill="#e5c0b2"><title>M=7, N=4096, K=12800: 1.979167×; torch wins 1/1 workloads; range 1.979167–1.979167×</title></rect>
+<text x="377" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.98×</text>
+<rect x="428" y="296" width="94" height="31" rx="3" fill="#e5c0b2"><title>M=31, N=4096, K=12800: 1.982456×; torch wins 1/1 workloads; range 1.982456–1.982456×</title></rect>
+<text x="475" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.98×</text>
+<rect x="526" y="296" width="94" height="31" rx="3" fill="#e5c1b3"><title>M=96, N=4096, K=12800: 1.961114×; torch wins 1/1 workloads; range 1.961114–1.961114×</title></rect>
+<text x="573" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.96×</text>
+<rect x="624" y="296" width="94" height="31" rx="3" fill="#e8cabf"><title>M=257, N=4096, K=12800: 1.746486×; torch wins 1/1 workloads; range 1.746486–1.746486×</title></rect>
+<text x="671" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.75×</text>
+<rect x="722" y="296" width="94" height="31" rx="3" fill="#eed9d2"><title>M=1024, N=4096, K=12800: 1.449932×; torch wins 1/1 workloads; range 1.449932–1.449932×</title></rect>
+<text x="769" y="317" text-anchor="middle" font-size="14" fill="#18212b">1.45×</text>
+<text x="20.00" y="352.00" font-size="14" text-anchor="start">4096 × 14336</text>
+<rect x="232" y="331" width="94" height="31" rx="3" fill="#e4beb0"><title>M=1, N=4096, K=14336: 2.026077×; torch wins 1/1 workloads; range 2.026077–2.026077×</title></rect>
+<text x="279" y="352" text-anchor="middle" font-size="14" fill="#18212b">2.03×</text>
+<rect x="330" y="331" width="94" height="31" rx="3" fill="#e4beb0"><title>M=7, N=4096, K=14336: 2.018739×; torch wins 1/1 workloads; range 2.018739–2.018739×</title></rect>
+<text x="377" y="352" text-anchor="middle" font-size="14" fill="#18212b">2.02×</text>
+<rect x="428" y="331" width="94" height="31" rx="3" fill="#e4beb0"><title>M=31, N=4096, K=14336: 2.026981×; torch wins 1/1 workloads; range 2.026981–2.026981×</title></rect>
+<text x="475" y="352" text-anchor="middle" font-size="14" fill="#18212b">2.03×</text>
+<rect x="526" y="331" width="94" height="31" rx="3" fill="#e5bfb1"><title>M=96, N=4096, K=14336: 1.996764×; torch wins 1/1 workloads; range 1.996764–1.996764×</title></rect>
+<text x="573" y="352" text-anchor="middle" font-size="14" fill="#18212b">2.00×</text>
+<rect x="624" y="331" width="94" height="31" rx="3" fill="#e9ccc1"><title>M=257, N=4096, K=14336: 1.715794×; torch wins 1/1 workloads; range 1.715794–1.715794×</title></rect>
+<text x="671" y="352" text-anchor="middle" font-size="14" fill="#18212b">1.72×</text>
+<rect x="722" y="331" width="94" height="31" rx="3" fill="#f0e1db"><title>M=1024, N=4096, K=14336: 1.322578×; torch wins 1/1 workloads; range 1.322578–1.322578×</title></rect>
+<text x="769" y="352" text-anchor="middle" font-size="14" fill="#18212b">1.32×</text>
+<text x="20.00" y="387.00" font-size="14" text-anchor="start">4608 × 3584</text>
+<rect x="232" y="366" width="94" height="31" rx="3" fill="#e8c9bd"><title>M=1, N=4608, K=3584: 1.780415×; torch wins 1/1 workloads; range 1.780415–1.780415×</title></rect>
+<text x="279" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.78×</text>
+<rect x="330" y="366" width="94" height="31" rx="3" fill="#e7c6ba"><title>M=7, N=4608, K=3584: 1.839150×; torch wins 1/1 workloads; range 1.839150–1.839150×</title></rect>
+<text x="377" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.84×</text>
+<rect x="428" y="366" width="94" height="31" rx="3" fill="#e7c7bb"><title>M=31, N=4608, K=3584: 1.819820×; torch wins 1/1 workloads; range 1.819820–1.819820×</title></rect>
+<text x="475" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.82×</text>
+<rect x="526" y="366" width="94" height="31" rx="3" fill="#e7c7bc"><title>M=96, N=4608, K=3584: 1.809929×; torch wins 1/1 workloads; range 1.809929–1.809929×</title></rect>
+<text x="573" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.81×</text>
+<rect x="624" y="366" width="94" height="31" rx="3" fill="#ecd6ce"><title>M=257, N=4608, K=3584: 1.512415×; torch wins 1/1 workloads; range 1.512415–1.512415×</title></rect>
+<text x="671" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.51×</text>
+<rect x="722" y="366" width="94" height="31" rx="3" fill="#ebd3ca"><title>M=1024, N=4608, K=3584: 1.573061×; torch wins 1/1 workloads; range 1.573061–1.573061×</title></rect>
+<text x="769" y="387" text-anchor="middle" font-size="14" fill="#18212b">1.57×</text>
+<text x="20.00" y="422.00" font-size="14" text-anchor="start">6144 × 4096</text>
+<rect x="232" y="401" width="94" height="31" rx="3" fill="#ebd3ca"><title>M=1, N=6144, K=4096: 1.575593×; torch wins 2/2 workloads; range 1.551130–1.600442×</title></rect>
+<text x="279" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.58×</text>
+<rect x="330" y="401" width="94" height="31" rx="3" fill="#ebd2c9"><title>M=7, N=6144, K=4096: 1.585848×; torch wins 2/2 workloads; range 1.584430–1.587267×</title></rect>
+<text x="377" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.59×</text>
+<rect x="428" y="401" width="94" height="31" rx="3" fill="#ebd2c9"><title>M=31, N=6144, K=4096: 1.582432×; torch wins 2/2 workloads; range 1.576840–1.588043×</title></rect>
+<text x="475" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.58×</text>
+<rect x="526" y="401" width="94" height="31" rx="3" fill="#ebd0c7"><title>M=96, N=6144, K=4096: 1.618259×; torch wins 2/2 workloads; range 1.612487–1.624052×</title></rect>
+<text x="573" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.62×</text>
+<rect x="624" y="401" width="94" height="31" rx="3" fill="#eedbd5"><title>M=257, N=6144, K=4096: 1.415998×; torch wins 2/2 workloads; range 1.414808–1.417189×</title></rect>
+<text x="671" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.42×</text>
+<rect x="722" y="401" width="94" height="31" rx="3" fill="#ecd4cb"><title>M=1024, N=6144, K=4096: 1.556674×; torch wins 2/2 workloads; range 1.554948–1.558402×</title></rect>
+<text x="769" y="422" text-anchor="middle" font-size="14" fill="#18212b">1.56×</text>
+<text x="20.00" y="457.00" font-size="14" text-anchor="start">8192 × 3072</text>
+<rect x="232" y="436" width="94" height="31" rx="3" fill="#efddd6"><title>M=1, N=8192, K=3072: 1.393570×; torch wins 1/1 workloads; range 1.393570–1.393570×</title></rect>
+<text x="279" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.39×</text>
+<rect x="330" y="436" width="94" height="31" rx="3" fill="#eedcd5"><title>M=7, N=8192, K=3072: 1.411435×; torch wins 1/1 workloads; range 1.411435–1.411435×</title></rect>
+<text x="377" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.41×</text>
+<rect x="428" y="436" width="94" height="31" rx="3" fill="#eedbd4"><title>M=31, N=8192, K=3072: 1.426816×; torch wins 1/1 workloads; range 1.426816–1.426816×</title></rect>
+<text x="475" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.43×</text>
+<rect x="526" y="436" width="94" height="31" rx="3" fill="#eedad3"><title>M=96, N=8192, K=3072: 1.442731×; torch wins 1/1 workloads; range 1.442731–1.442731×</title></rect>
+<text x="573" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.44×</text>
+<rect x="624" y="436" width="94" height="31" rx="3" fill="#efddd6"><title>M=257, N=8192, K=3072: 1.391223×; torch wins 1/1 workloads; range 1.391223–1.391223×</title></rect>
+<text x="671" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.39×</text>
+<rect x="722" y="436" width="94" height="31" rx="3" fill="#eedcd5"><title>M=1024, N=8192, K=3072: 1.409246×; torch wins 1/1 workloads; range 1.409246–1.409246×</title></rect>
+<text x="769" y="457" text-anchor="middle" font-size="14" fill="#18212b">1.41×</text>
+<text x="20.00" y="492.00" font-size="14" text-anchor="start">9216 × 3072</text>
+<rect x="232" y="471" width="94" height="31" rx="3" fill="#f0dfd9"><title>M=1, N=9216, K=3072: 1.350716×; torch wins 1/1 workloads; range 1.350716–1.350716×</title></rect>
+<text x="279" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.35×</text>
+<rect x="330" y="471" width="94" height="31" rx="3" fill="#efdfd9"><title>M=7, N=9216, K=3072: 1.361768×; torch wins 1/1 workloads; range 1.361768–1.361768×</title></rect>
+<text x="377" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.36×</text>
+<rect x="428" y="471" width="94" height="31" rx="3" fill="#efdfd9"><title>M=31, N=9216, K=3072: 1.360122×; torch wins 1/1 workloads; range 1.360122–1.360122×</title></rect>
+<text x="475" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.36×</text>
+<rect x="526" y="471" width="94" height="31" rx="3" fill="#efddd6"><title>M=96, N=9216, K=3072: 1.396414×; torch wins 1/1 workloads; range 1.396414–1.396414×</title></rect>
+<text x="573" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.40×</text>
+<rect x="624" y="471" width="94" height="31" rx="3" fill="#f2e7e3"><title>M=257, N=9216, K=3072: 1.234350×; torch wins 1/1 workloads; range 1.234350–1.234350×</title></rect>
+<text x="671" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.23×</text>
+<rect x="722" y="471" width="94" height="31" rx="3" fill="#ecd5cd"><title>M=1024, N=9216, K=3072: 1.524525×; torch wins 1/1 workloads; range 1.524525–1.524525×</title></rect>
+<text x="769" y="492" text-anchor="middle" font-size="14" fill="#18212b">1.52×</text>
+<text x="20.00" y="527.00" font-size="14" text-anchor="start">12800 × 4096</text>
+<rect x="232" y="506" width="94" height="31" rx="3" fill="#f4ece9"><title>M=1, N=12800, K=4096: 1.157115×; torch wins 1/1 workloads; range 1.157115–1.157115×</title></rect>
+<text x="279" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.16×</text>
+<rect x="330" y="506" width="94" height="31" rx="3" fill="#f4ebe8"><title>M=7, N=12800, K=4096: 1.166340×; torch wins 1/1 workloads; range 1.166340–1.166340×</title></rect>
+<text x="377" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.17×</text>
+<rect x="428" y="506" width="94" height="31" rx="3" fill="#f4ece9"><title>M=31, N=12800, K=4096: 1.162925×; torch wins 1/1 workloads; range 1.162925–1.162925×</title></rect>
+<text x="475" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.16×</text>
+<rect x="526" y="506" width="94" height="31" rx="3" fill="#f3eae7"><title>M=96, N=12800, K=4096: 1.179020×; torch wins 1/1 workloads; range 1.179020–1.179020×</title></rect>
+<text x="573" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.18×</text>
+<rect x="624" y="506" width="94" height="31" rx="3" fill="#ebd3ca"><title>M=257, N=12800, K=4096: 1.577361×; torch wins 1/1 workloads; range 1.577361–1.577361×</title></rect>
+<text x="671" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.58×</text>
+<rect x="722" y="506" width="94" height="31" rx="3" fill="#efdfd9"><title>M=1024, N=12800, K=4096: 1.359948×; torch wins 1/1 workloads; range 1.359948–1.359948×</title></rect>
+<text x="769" y="527" text-anchor="middle" font-size="14" fill="#18212b">1.36×</text>
+<text x="20.00" y="562.00" font-size="14" text-anchor="start">14336 × 4096</text>
+<rect x="232" y="541" width="94" height="31" rx="3" fill="#f6f1ef"><title>M=1, N=14336, K=4096: 1.087903×; torch wins 1/1 workloads; range 1.087903–1.087903×</title></rect>
+<text x="279" y="562" text-anchor="middle" font-size="14" fill="#18212b">1.09×</text>
+<rect x="330" y="541" width="94" height="31" rx="3" fill="#f6f1f0"><title>M=7, N=14336, K=4096: 1.083382×; torch wins 1/1 workloads; range 1.083382–1.083382×</title></rect>
+<text x="377" y="562" text-anchor="middle" font-size="14" fill="#18212b">1.08×</text>
+<rect x="428" y="541" width="94" height="31" rx="3" fill="#f4edeb"><title>M=31, N=14336, K=4096: 1.136665×; torch wins 1/1 workloads; range 1.136665–1.136665×</title></rect>
+<text x="475" y="562" text-anchor="middle" font-size="14" fill="#18212b">1.14×</text>
+<rect x="526" y="541" width="94" height="31" rx="3" fill="#f4ece9"><title>M=96, N=14336, K=4096: 1.156641×; torch wins 1/1 workloads; range 1.156641–1.156641×</title></rect>
+<text x="573" y="562" text-anchor="middle" font-size="14" fill="#18212b">1.16×</text>
+<rect x="624" y="541" width="94" height="31" rx="3" fill="#e5bfb1"><title>M=257, N=14336, K=4096: 1.999452×; torch wins 1/1 workloads; range 1.999452–1.999452×</title></rect>
+<text x="671" y="562" text-anchor="middle" font-size="14" fill="#18212b">2.00×</text>
+<rect x="722" y="541" width="94" height="31" rx="3" fill="#efdcd6"><title>M=1024, N=14336, K=4096: 1.400906×; torch wins 1/1 workloads; range 1.400906–1.400906×</title></rect>
+<text x="769" y="562" text-anchor="middle" font-size="14" fill="#18212b">1.40×</text>
+<text x="20.00" y="597.00" font-size="14" text-anchor="start">18944 × 3584</text>
+<rect x="232" y="576" width="94" height="31" rx="3" fill="#f8f8f8"><title>M=1, N=18944, K=3584: 1.001563×; torch wins 1/1 workloads; range 1.001563–1.001563×</title></rect>
+<text x="279" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.00×</text>
+<rect x="330" y="576" width="94" height="31" rx="3" fill="#f8f8f8"><title>M=7, N=18944, K=3584: 1.003107×; torch wins 1/1 workloads; range 1.003107–1.003107×</title></rect>
+<text x="377" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.00×</text>
+<rect x="428" y="576" width="94" height="31" rx="3" fill="#f7f5f4"><title>M=31, N=18944, K=3584: 1.038422×; torch wins 1/1 workloads; range 1.038422–1.038422×</title></rect>
+<text x="475" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.04×</text>
+<rect x="526" y="576" width="94" height="31" rx="3" fill="#f6f1f0"><title>M=96, N=18944, K=3584: 1.085347×; torch wins 1/1 workloads; range 1.085347–1.085347×</title></rect>
+<text x="573" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.09×</text>
+<rect x="624" y="576" width="94" height="31" rx="3" fill="#eedad2"><title>M=257, N=18944, K=3584: 1.445393×; torch wins 1/1 workloads; range 1.445393–1.445393×</title></rect>
+<text x="671" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.45×</text>
+<rect x="722" y="576" width="94" height="31" rx="3" fill="#eedbd4"><title>M=1024, N=18944, K=3584: 1.420829×; torch wins 1/1 workloads; range 1.420829–1.420829×</title></rect>
+<text x="769" y="597" text-anchor="middle" font-size="14" fill="#18212b">1.42×</text>
+<text x="20.00" y="643.00" font-size="13" text-anchor="start">&lt;1×: Triton reference wins (blue) · &gt;1×: torch wins (orange)</text>
+<text x="20.00" y="663.00" font-size="12" text-anchor="start">Color saturates at ⅛× and 8×. Rounded 1.00× need not be a tie; tooltips give six decimals.</text>
+</g>
+</svg>
