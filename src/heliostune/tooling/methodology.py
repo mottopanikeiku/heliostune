@@ -1647,7 +1647,7 @@ def _parse_attempt_transitions(
             )
         states[cell_id] = status
 
-    terminal = {
+    terminal: dict[str, AttemptTransitionStatus] = {
         cell_id: status for cell_id, status in states.items() if status in {"success", "failure"}
     }
     return tuple(states), terminal, states, head
