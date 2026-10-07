@@ -1,37 +1,28 @@
-# Next experiment: fix the action set before testing transfer again
+# Next comparison: widen the actions before testing transfer again
 
-## Why
+## What the existing measurements settle
 
-The committed [H100 result](../benchmarks/results/parhelion-h100-final.json) gives `torch.matmul` an average score of 1.6103 against the curated Triton reference, versus 0.9503 for Parhelion and 0.9584 for cold Thompson. A better search policy over the same configurations cannot close that gap if the useful kernels are absent. The selected source-posterior strengths were zero; another transfer grid is not the first priority.
+I audited the committed H100 timing matrix. Torch's stored median is lower for all 96 workloads, even than the fastest curated configuration chosen on bank 2 itself. The independently selected reference-to-torch ratios range from 1.001563× to 2.329776×. [Audit numbers](../results/action-set-audit.json), [ratios by M](../results/action-set-by-m.svg), [individual shapes](../results/action-set-shapes.svg).
 
-This repository already tried a separate skinny-GEMV and Hopper-GEMM engineering expansion. Both stopped below their performance thresholds ([result](../benchmarks/results/hopper-h100-engineering-summary-v2.json), `global_decision` and `regimes`). Do not repeat that screen and call it a new experiment. First inspect its failed candidates and timing/precision contracts; a wider set needs a concrete reason to offer capabilities those candidates lacked.
+I also report the earlier L4/A10 and T4 validation collections separately in the audit's `by_gpu` overview. L4/A10 have mixed torch/Triton wins; the H100 action-set conclusion is not a universal claim about every GPU. The same nominal timing settings do not make different acquisition stages a pooled policy experiment.
 
-The new [comparison table](../results/tuner-comparison.md) makes this gap visible without collecting more data. Its scores are relative to the existing bank-1-selected, bank-2-scored reference. It is a summary of the original analyses, not a new measurement or policy replay.
+The bank-2 minimum is an optimistic in-sample diagnostic. It is not a recommendation selected independently of evaluation. It does show that no search policy can discover a faster-than-torch action within this fixed measured matrix. The near-tie at `(M,N,K)=(1,18944,3584)` saves only 0.096 µs; missing torch quantiles and paired raw samples prevent a significance claim.
 
-## The experiment
+The gap spans every measured M, not just decode. Larger relative gaps and larger absolute savings are different: the M=1024 group has the lowest geometric-mean ratio, 1.404365×, but the largest median saving, 40.856 µs. Repeated shapes across model families are not extra devices.
 
-Keep the existing H100 study unchanged. Run a separate action-space comparison only after an owner-approved hardware and spending decision:
+The [original H100 comparison](../benchmarks/results/parhelion-h100-final.json) selected zero posterior-transfer strengths. I cannot attribute the measured library gap to bandwidth, occupancy, launch overhead, or a particular instruction without profiling and a matched intervention. Tile geometry alone is not a causal explanation.
 
-1. Preserve the old configurations as a labeled subset. Add a broader tile/warp/stage search and suitable candidate implementations for the skinny and large GEMM shapes. Inspect the existing kernel constraints before declaring which candidates are valid.
-2. Treat `torch.matmul` as a first-class baseline and possible deployment fallback. Use the same input tensors, dtype, accumulation contract, tolerance, synchronization and timing regime for every arm. Do not mix a numerically weaker arm with a stronger reference without stating and testing the difference.
-3. Select new actions and policy settings on development hardware/workloads only. Keep source/target family and exact-shape exclusions. Collect independent timing banks for policy observations, reference selection and scoring; never select and score the best candidate on the same bank.
-4. Compare cold Thompson, nearest-shape reuse, retrieval-only and Parhelion on both the old subset and the expanded set. Report absolute latency, candidate/reference ratios, compile cost, invalid configurations, and the fraction of workloads where the best independently scored candidate beats `torch.matmul`.
-5. Stop searching for transfer gains if the expanded set still has no practical advantage over `torch.matmul`. If it does, test whether retrieval reduces probes to reach that advantage; avoid hiding an action-set improvement inside a policy comparison.
+I also retain the separate skinny-GEMV and Hopper-GEMM engineering expansion. Both stopped below their performance thresholds ([result](../benchmarks/results/hopper-h100-engineering-summary-v2.json)). A new candidate needs to offer something those failed candidates did not; a wider parameter grid is not evidence of a faster kernel.
 
-A useful success criterion is lower held-out latency than `torch.matmul` for a stated workload subset after accounting for tuning and compilation, not “near 100%” of a limited candidate reference. Choose the practical margin before timing begins.
+## A separate comparison
 
-## Cost and time
+I would keep the existing study unchanged and compare:
 
-**Work done now:** standard-library extraction of committed results, on local CPU, $0. No new GPU timing or paid service was used.
+1. The old configuration subset, broader candidate implementations, and `torch.matmul` as both baseline and possible fallback.
+2. Identical input tensors, layouts, output dtype, explicit accumulation settings, correctness tolerances and timing boundaries. The [historical collector](https://github.com/mottopanikeiku/heliostune/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) used a separate FP32-input correctness reference with TF32 disabled, converted to FP16; the timed comparator used FP16 inputs. I would not assume equal accumulation from passing that tolerance.
+3. Development-only candidate and policy selection, preserving family and exact-shape exclusions. Independent banks for observations, reference selection and scoring; raw paired timing blocks and device state for uncertainty estimates.
+4. Absolute latency, independently scored candidate-to-torch ratios, compilation and tuning cost, invalid configurations, and workload coverage. Cold Thompson, nearest-shape reuse, retrieval-only and Parhelion would run on both action sets.
 
-**Next no-cost work:** audit candidate constraints and draft the separate comparison inputs, approximately one working day of engineering (estimate, not measured). Dry-run parsing and candidate enumeration on CPU; this cannot establish correctness or speed of GPU kernels.
+Success would mean lower held-out latency than torch for a stated deployment subset, after tuning and compilation are amortized. A score near the limited Triton reference is not success against the library. I would choose the practical margin and workload weighting before collecting timings.
 
-**Measurement work:** requires an accessible NVIDIA GPU compatible with the chosen implementations. If the owner provides existing local access, incremental paid-service spend can remain $0; no such access is assumed here. Time and any rental cost remain unknown until a small owner-approved compile/timing pilot measures them. Do not dispatch cloud jobs to obtain that estimate without approval. The old measurements cannot answer how newly added actions perform.
-
-## Owner decisions
-
-- Is there already available, unpaid GPU access for a separate comparison?
-- Which numerical contract and real workload subset matter for deployment?
-- Is a `torch.matmul` fallback an acceptable outcome, including when compilation/tuning is not amortized?
-
-The existing data, published reports, negative H100 conclusion and separately labeled H200 engineering run remain unchanged.
+This audit needs only CPU analysis of existing data. The separate comparison needs compatible NVIDIA hardware and an explicit deployment/numerical contract. Its collection time and cost are unknown; the old measurements cannot establish the performance of new actions. I have not collected new GPU timings or dispatched a cloud job.

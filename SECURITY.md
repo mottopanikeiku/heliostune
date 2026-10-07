@@ -1,9 +1,9 @@
 # Security policy
 
-The latest [GitHub release](https://github.com/mottopanikeiku/heliostune/releases/latest) is supported for base and CPU-only functionality. Earlier releases are not supported. Security support means evaluating reports and issuing a new release when warranted; it does not guarantee response time or make this experiment suitable for a security boundary.
+I support base and CPU-only functionality in the latest [GitHub release](https://github.com/mottopanikeiku/heliostune/releases/latest), not earlier releases. I evaluate security reports and issue fixes when warranted. This experiment is not a security boundary, and I cannot guarantee a response time.
 
-Historical GPU dependency pins are reproduction inputs, not supported service dependencies. Use them only with trusted inputs in an isolated environment. Published benchmark files are retained unchanged; fixes ship as new code rather than rewriting old measurements.
+I retain historical GPU dependency pins for reproduction, not as supported service dependencies. They should run only with trusted inputs in an isolated environment. Fixes belong in new code, not rewritten benchmark measurements.
 
-`heliostune replay-bundle` runs only package-shipped analyzers selected from a fixed registry. It requires Linux isolation features and rejects a run when they are unavailable. Bounded inputs, namespace isolation and resource limits do not make installed malicious packages safe. A successful local replay demonstrates reproduction of declared output bytes, not the truth of the measurements or reproduction on another GPU. Detailed implementation boundaries are retained in the [historical security policy](docs/history/SECURITY.md).
+`heliostune replay-bundle` runs package-shipped analyzers from a fixed registry. It requires Linux isolation features and rejects a run when they are unavailable. Bounded inputs, namespace isolation and resource limits do not make malicious installed packages safe. A successful replay reproduces declared output bytes; it does not establish that the measurements are true or reproducible on another GPU. I retain the implementation boundaries in the [historical security policy](docs/history/SECURITY.md).
 
-Report vulnerabilities through GitHub's [private reporting form](https://github.com/mottopanikeiku/heliostune/security/advisories/new), including affected versions, impact and reproduction details. Do not publish an unaddressed vulnerability before private reporting.
+I accept vulnerability reports through GitHub's [private reporting form](https://github.com/mottopanikeiku/heliostune/security/advisories/new). Include affected versions, impact and reproduction details. Please report an unaddressed vulnerability privately before publishing it.

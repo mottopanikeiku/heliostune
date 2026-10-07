@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="528" viewBox="0 0 980 528" role="img" aria-labelledby="title desc">
+<title id="title">H100: where torch beats the curated Triton reference</title>
+<desc id="desc">Each dot is one workload. Diamonds are group geometric means. Reference selected on bank 1; both latencies scored on bank 2. Logarithmic ratio axis; above one favors torch. Ranges are workload spread, not uncertainty.</desc>
+<rect width="100%" height="100%" fill="#fff"/>
+<g font-family="sans-serif" fill="#18212b">
+<text x="24.00" y="32.00" font-size="21" text-anchor="start">H100: where torch beats the curated Triton reference</text>
+<text x="24.00" y="57.00" font-size="14" text-anchor="start">Bank-1 selection, bank-2 medians · one dot per workload · diamond = geometric mean</text>
+<path d="M 150.00 92 V 456" stroke="#dce2e8" stroke-dasharray="3 4"/>
+<text x="150.00" y="479.00" font-size="14" text-anchor="middle">0.5×</text>
+<path d="M 343.33 92 V 456" stroke="#18212b" stroke-dasharray="none"/>
+<text x="343.33" y="479.00" font-size="14" text-anchor="middle">1×</text>
+<path d="M 536.67 92 V 456" stroke="#dce2e8" stroke-dasharray="3 4"/>
+<text x="536.67" y="479.00" font-size="14" text-anchor="middle">2×</text>
+<path d="M 730.00 92 V 456" stroke="#dce2e8" stroke-dasharray="3 4"/>
+<text x="730.00" y="479.00" font-size="14" text-anchor="middle">4×</text>
+<text x="764.00" y="90.00" font-size="13" text-anchor="start">torch wins / workloads</text>
+<text x="24.00" y="122.00" font-size="14" text-anchor="start">M = 1</text>
+<path d="M 343.77 117 H 572.67" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="532.23" cy="111" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-decode-1-m1-n4096-k4096: 1.9685×; reference 41.952 µs, torch 21.312 µs</title></circle>
+<circle cx="465.78" cy="114" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-decode-1-m1-n6144-k4096: 1.5511×; reference 46.112 µs, torch 29.728 µs</title></circle>
+<circle cx="533.75" cy="117" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-decode-1-m1-n4096-k12800: 1.9792×; reference 103.616 µs, torch 52.352 µs</title></circle>
+<circle cx="384.04" cy="120" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-decode-1-m1-n12800-k4096: 1.1571×; reference 57.504 µs, torch 49.696 µs</title></circle>
+<circle cx="532.23" cy="123" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-decode-1-m1-n4096-k4096: 1.9685×; reference 41.952 µs, torch 21.312 µs</title></circle>
+<circle cx="474.50" cy="111" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-decode-1-m1-n6144-k4096: 1.6004×; reference 46.400 µs, torch 28.992 µs</title></circle>
+<circle cx="540.28" cy="114" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-decode-1-m1-n4096-k14336: 2.0261×; reference 114.368 µs, torch 56.448 µs</title></circle>
+<circle cx="366.83" cy="117" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-decode-1-m1-n14336-k4096: 1.0879×; reference 60.000 µs, torch 55.152 µs</title></circle>
+<circle cx="489.31" cy="120" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-decode-1-m1-n3072-k3072: 1.6877×; reference 30.784 µs, torch 18.240 µs</title></circle>
+<circle cx="427.19" cy="123" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-decode-1-m1-n9216-k3072: 1.3507×; reference 42.272 µs, torch 31.296 µs</title></circle>
+<circle cx="572.67" cy="111" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-decode-1-m1-n3072-k8192: 2.2756×; reference 71.872 µs, torch 31.584 µs</title></circle>
+<circle cx="435.90" cy="114" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-decode-1-m1-n8192-k3072: 1.3936×; reference 40.224 µs, torch 28.864 µs</title></circle>
+<circle cx="539.64" cy="117" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-decode-1-m1-n3584-k3584: 2.0214×; reference 36.224 µs, torch 17.920 µs</title></circle>
+<circle cx="504.23" cy="120" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-decode-1-m1-n4608-k3584: 1.7804×; reference 38.400 µs, torch 21.568 µs</title></circle>
+<circle cx="572.25" cy="123" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944: 2.2721×; reference 145.344 µs, torch 63.968 µs</title></circle>
+<circle cx="343.77" cy="111" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-decode-1-m1-n18944-k3584: 1.0016×; reference 61.536 µs, torch 61.440 µs</title></circle>
+<path d="M 482.16 110 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="122.00" font-size="14" text-anchor="start">16/16 · 1.645×</text>
+<text x="24.00" y="180.00" font-size="14" text-anchor="start">M = 7</text>
+<path d="M 344.20 175 H 570.42" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="534.77" cy="169" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-decode-7-m7-n4096-k4096: 1.9864×; reference 42.144 µs, torch 21.216 µs</title></circle>
+<circle cx="472.20" cy="172" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-decode-7-m7-n6144-k4096: 1.5873×; reference 46.272 µs, torch 29.152 µs</title></circle>
+<circle cx="533.75" cy="175" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-decode-7-m7-n4096-k12800: 1.9792×; reference 103.360 µs, torch 52.224 µs</title></circle>
+<circle cx="386.25" cy="178" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-decode-7-m7-n12800-k4096: 1.1663×; reference 57.216 µs, torch 49.056 µs</title></circle>
+<circle cx="536.03" cy="181" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-decode-7-m7-n4096-k4096: 1.9955×; reference 42.336 µs, torch 21.216 µs</title></circle>
+<circle cx="471.70" cy="169" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-decode-7-m7-n6144-k4096: 1.5844×; reference 46.240 µs, torch 29.184 µs</title></circle>
+<circle cx="539.27" cy="172" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-decode-7-m7-n4096-k14336: 2.0187×; reference 113.760 µs, torch 56.352 µs</title></circle>
+<circle cx="365.67" cy="175" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-decode-7-m7-n14336-k4096: 1.0834×; reference 59.872 µs, torch 55.264 µs</title></circle>
+<circle cx="488.63" cy="178" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-decode-7-m7-n3072-k3072: 1.6836×; reference 30.816 µs, torch 18.304 µs</title></circle>
+<circle cx="429.46" cy="181" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-decode-7-m7-n9216-k3072: 1.3618×; reference 42.400 µs, torch 31.136 µs</title></circle>
+<circle cx="570.42" cy="169" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-decode-7-m7-n3072-k8192: 2.2573×; reference 71.584 µs, torch 31.712 µs</title></circle>
+<circle cx="439.45" cy="172" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-decode-7-m7-n8192-k3072: 1.4114×; reference 40.288 µs, torch 28.544 µs</title></circle>
+<circle cx="538.88" cy="175" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-decode-7-m7-n3584-k3584: 2.0159×; reference 36.512 µs, torch 18.112 µs</title></circle>
+<circle cx="513.28" cy="178" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-decode-7-m7-n4608-k3584: 1.8392×; reference 38.784 µs, torch 21.088 µs</title></circle>
+<circle cx="569.78" cy="181" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944: 2.2521×; reference 144.928 µs, torch 64.352 µs</title></circle>
+<circle cx="344.20" cy="169" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-decode-7-m7-n18944-k3584: 1.0031×; reference 61.984 µs, torch 61.792 µs</title></circle>
+<path d="M 483.36 168 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="180.00" font-size="14" text-anchor="start">16/16 · 1.652×</text>
+<text x="24.00" y="238.00" font-size="14" text-anchor="start">M = 31</text>
+<path d="M 353.85 233 H 579.24" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="530.42" cy="227" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-mixed-31-m31-n4096-k4096: 1.9557×; reference 42.368 µs, torch 21.664 µs</title></circle>
+<circle cx="470.36" cy="230" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-mixed-31-m31-n6144-k4096: 1.5768×; reference 46.624 µs, torch 29.568 µs</title></circle>
+<circle cx="534.21" cy="233" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-mixed-31-m31-n4096-k12800: 1.9825×; reference 104.864 µs, torch 52.896 µs</title></circle>
+<circle cx="385.43" cy="236" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-mixed-31-m31-n12800-k4096: 1.1629×; reference 58.016 µs, torch 49.888 µs</title></circle>
+<circle cx="529.21" cy="239" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-mixed-31-m31-n4096-k4096: 1.9472×; reference 42.496 µs, torch 21.824 µs</title></circle>
+<circle cx="472.34" cy="227" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-mixed-31-m31-n6144-k4096: 1.5880×; reference 46.752 µs, torch 29.440 µs</title></circle>
+<circle cx="540.40" cy="230" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-mixed-31-m31-n4096-k14336: 2.0270×; reference 115.392 µs, torch 56.928 µs</title></circle>
+<circle cx="379.06" cy="233" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-mixed-31-m31-n14336-k4096: 1.1367×; reference 60.416 µs, torch 53.152 µs</title></circle>
+<circle cx="541.29" cy="236" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-mixed-31-m31-n3072-k3072: 2.0334×; reference 31.168 µs, torch 15.328 µs</title></circle>
+<circle cx="429.12" cy="239" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-mixed-31-m31-n9216-k3072: 1.3601×; reference 42.784 µs, torch 31.456 µs</title></circle>
+<circle cx="569.33" cy="227" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-mixed-31-m31-n3072-k8192: 2.2485×; reference 72.384 µs, torch 32.192 µs</title></circle>
+<circle cx="442.47" cy="230" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-mixed-31-m31-n8192-k3072: 1.4268×; reference 40.864 µs, torch 28.640 µs</title></circle>
+<circle cx="537.16" cy="233" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-mixed-31-m31-n3584-k3584: 2.0035×; reference 36.544 µs, torch 18.240 µs</title></circle>
+<circle cx="510.33" cy="236" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-mixed-31-m31-n4608-k3584: 1.8198×; reference 38.784 µs, torch 21.312 µs</title></circle>
+<circle cx="579.24" cy="239" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944: 2.3298×; reference 146.720 µs, torch 62.976 µs</title></circle>
+<circle cx="353.85" cy="227" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-mixed-31-m31-n18944-k3584: 1.0384×; reference 64.000 µs, torch 61.632 µs</title></circle>
+<path d="M 487.76 226 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="238.00" font-size="14" text-anchor="start">16/16 · 1.678×</text>
+<text x="24.00" y="296.00" font-size="14" text-anchor="start">M = 96</text>
+<path d="M 366.18 291 H 571.34" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="528.33" cy="285" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-mixed-96-m96-n4096-k4096: 1.9411×; reference 43.232 µs, torch 22.272 µs</title></circle>
+<circle cx="476.60" cy="288" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-mixed-96-m96-n6144-k4096: 1.6125×; reference 47.936 µs, torch 29.728 µs</title></circle>
+<circle cx="531.19" cy="291" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-mixed-96-m96-n4096-k12800: 1.9611×; reference 108.128 µs, torch 55.136 µs</title></circle>
+<circle cx="389.27" cy="294" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-mixed-96-m96-n12800-k4096: 1.1790×; reference 60.064 µs, torch 50.944 µs</title></circle>
+<circle cx="531.36" cy="297" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-mixed-96-m96-n4096-k4096: 1.9623×; reference 43.328 µs, torch 22.080 µs</title></circle>
+<circle cx="478.59" cy="285" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-mixed-96-m96-n6144-k4096: 1.6241×; reference 47.968 µs, torch 29.536 µs</title></circle>
+<circle cx="536.21" cy="288" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-mixed-96-m96-n4096-k14336: 1.9968×; reference 118.464 µs, torch 59.328 µs</title></circle>
+<circle cx="383.92" cy="291" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-mixed-96-m96-n14336-k4096: 1.1566×; reference 62.144 µs, torch 53.728 µs</title></circle>
+<circle cx="531.37" cy="294" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-mixed-96-m96-n3072-k3072: 1.9624×; reference 31.712 µs, torch 16.160 µs</title></circle>
+<circle cx="436.47" cy="297" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-mixed-96-m96-n9216-k3072: 1.3964×; reference 44.864 µs, torch 32.128 µs</title></circle>
+<circle cx="551.81" cy="285" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-mixed-96-m96-n3072-k8192: 2.1116×; reference 74.464 µs, torch 35.264 µs</title></circle>
+<circle cx="445.57" cy="288" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-mixed-96-m96-n8192-k3072: 1.4427×; reference 41.920 µs, torch 29.056 µs</title></circle>
+<circle cx="541.23" cy="291" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-mixed-96-m96-n3584-k3584: 2.0330×; reference 37.472 µs, torch 18.432 µs</title></circle>
+<circle cx="508.81" cy="294" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-mixed-96-m96-n4608-k3584: 1.8099×; reference 40.832 µs, torch 22.560 µs</title></circle>
+<circle cx="571.34" cy="297" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-mixed-96-m96-n3584-k18944: 2.2647×; reference 150.304 µs, torch 66.368 µs</title></circle>
+<circle cx="366.18" cy="285" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-mixed-96-m96-n18944-k3584: 1.0853×; reference 67.552 µs, torch 62.240 µs</title></circle>
+<path d="M 488.02 284 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="296.00" font-size="14" text-anchor="start">16/16 · 1.680×</text>
+<text x="24.00" y="354.00" font-size="14" text-anchor="start">M = 257</text>
+<path d="M 402.06 349 H 562.26" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="488.21" cy="343" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-prefill-257-m257-n4096-k4096: 1.6811×; reference 46.048 µs, torch 27.392 µs</title></circle>
+<circle cx="440.59" cy="346" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-prefill-257-m257-n6144-k4096: 1.4172×; reference 50.656 µs, torch 35.744 µs</title></circle>
+<circle cx="498.86" cy="349" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-prefill-257-m257-n4096-k12800: 1.7465×; reference 119.264 µs, torch 68.288 µs</title></circle>
+<circle cx="470.45" cy="352" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-prefill-257-m257-n12800-k4096: 1.5774×; reference 88.736 µs, torch 56.256 µs</title></circle>
+<circle cx="485.10" cy="355" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-prefill-257-m257-n4096-k4096: 1.6624×; reference 45.696 µs, torch 27.488 µs</title></circle>
+<circle cx="440.12" cy="343" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-prefill-257-m257-n6144-k4096: 1.4148×; reference 50.752 µs, torch 35.872 µs</title></circle>
+<circle cx="493.92" cy="346" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-prefill-257-m257-n4096-k14336: 1.7158×; reference 130.016 µs, torch 75.776 µs</title></circle>
+<circle cx="536.59" cy="349" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-prefill-257-m257-n14336-k4096: 1.9995×; reference 116.832 µs, torch 58.432 µs</title></circle>
+<circle cx="478.75" cy="352" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-prefill-257-m257-n3072-k3072: 1.6250×; reference 33.696 µs, torch 20.736 µs</title></circle>
+<circle cx="402.06" cy="355" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-prefill-257-m257-n9216-k3072: 1.2343×; reference 49.216 µs, torch 39.872 µs</title></circle>
+<circle cx="499.30" cy="343" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-prefill-257-m257-n3072-k8192: 1.7493×; reference 75.232 µs, torch 43.008 µs</title></circle>
+<circle cx="435.43" cy="346" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-prefill-257-m257-n8192-k3072: 1.3912×; reference 47.680 µs, torch 34.272 µs</title></circle>
+<circle cx="506.04" cy="349" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-prefill-257-m257-n3584-k3584: 1.7920×; reference 40.256 µs, torch 22.464 µs</title></circle>
+<circle cx="458.73" cy="352" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-prefill-257-m257-n4608-k3584: 1.5124×; reference 42.880 µs, torch 28.352 µs</title></circle>
+<circle cx="562.26" cy="355" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-prefill-257-m257-n3584-k18944: 2.1922×; reference 165.696 µs, torch 75.584 µs</title></circle>
+<circle cx="446.08" cy="343" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-prefill-257-m257-n18944-k3584: 1.4454×; reference 108.416 µs, torch 75.008 µs</title></circle>
+<path d="M 477.66 342 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="354.00" font-size="14" text-anchor="start">16/16 · 1.619×</text>
+<text x="24.00" y="412.00" font-size="14" text-anchor="start">M = 1024</text>
+<path d="M 394.54 407 H 469.69" stroke="#90a4b5" stroke-width="2"/>
+<circle cx="396.04" cy="401" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-out-prefill-1024-m1024-n4096-k4096: 1.2080×; reference 59.840 µs, torch 49.536 µs</title></circle>
+<circle cx="466.46" cy="404" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-attention-qkv-prefill-1024-m1024-n6144-k4096: 1.5549×; reference 113.648 µs, torch 73.088 µs</title></circle>
+<circle cx="446.96" cy="407" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-down-prefill-1024-m1024-n4096-k12800: 1.4499×; reference 204.800 µs, torch 141.248 µs</title></circle>
+<circle cx="429.09" cy="410" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>granite-3.1-8b-ffn-up-prefill-1024-m1024-n12800-k4096: 1.3599×; reference 232.736 µs, torch 171.136 µs</title></circle>
+<circle cx="394.54" cy="413" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-out-prefill-1024-m1024-n4096-k4096: 1.2015×; reference 59.904 µs, torch 49.856 µs</title></circle>
+<circle cx="467.08" cy="401" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-attention-qkv-prefill-1024-m1024-n6144-k4096: 1.5584×; reference 114.848 µs, torch 73.696 µs</title></circle>
+<circle cx="421.31" cy="404" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-down-prefill-1024-m1024-n4096-k14336: 1.3226×; reference 223.632 µs, torch 169.088 µs</title></circle>
+<circle cx="437.36" cy="407" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>mistral-7b-ffn-up-prefill-1024-m1024-n14336-k4096: 1.4009×; reference 252.432 µs, torch 180.192 µs</title></circle>
+<circle cx="432.08" cy="410" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-out-prefill-1024-m1024-n3072-k3072: 1.3746×; reference 43.680 µs, torch 31.776 µs</title></circle>
+<circle cx="460.95" cy="413" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-attention-qkv-prefill-1024-m1024-n9216-k3072: 1.5245×; reference 136.256 µs, torch 89.376 µs</title></circle>
+<circle cx="463.24" cy="401" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-down-prefill-1024-m1024-n3072-k8192: 1.5371×; reference 109.984 µs, torch 71.552 µs</title></circle>
+<circle cx="439.02" cy="404" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>phi-3-mini-ffn-up-prefill-1024-m1024-n8192-k3072: 1.4092×; reference 105.344 µs, torch 74.752 µs</title></circle>
+<circle cx="396.05" cy="407" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-out-prefill-1024-m1024-n3584-k3584: 1.2080×; reference 52.032 µs, torch 43.072 µs</title></circle>
+<circle cx="469.69" cy="410" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-attention-qkv-prefill-1024-m1024-n4608-k3584: 1.5731×; reference 83.712 µs, torch 53.216 µs</title></circle>
+<circle cx="447.63" cy="413" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944: 1.4535×; reference 293.760 µs, torch 202.112 µs</title></circle>
+<circle cx="441.30" cy="401" r="3.5" fill="#b04a27" fill-opacity="0.75"><title>qwen2.5-7b-ffn-up-prefill-1024-m1024-n18944-k3584: 1.4208×; reference 299.488 µs, torch 210.784 µs</title></circle>
+<path d="M 438.05 400 l 6 7 l -6 7 l -6 -7 Z" fill="#18212b" stroke="#fff"/>
+<text x="764.00" y="412.00" font-size="14" text-anchor="start">16/16 · 1.404×</text>
+<text x="440.00" y="506.00" font-size="14" text-anchor="middle">Reference latency / torch.matmul latency (log₂ axis)</text>
+<text x="754.00" y="506.00" font-size="12" text-anchor="start">&lt;1 Triton wins · &gt;1 torch wins</text>
+</g>
+</svg>
