@@ -257,7 +257,7 @@ def pilot_collect(source_commit: str, plan_commit: str, collector_sha256: str) -
     gpu="H100!",
     cpu=1,
     memory=4096,
-    timeout=1380,
+    timeout=1620,
     max_containers=1,
     volumes={"/data": volume},
 )
