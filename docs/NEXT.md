@@ -1,28 +1,25 @@
-# Next comparison: widen the actions before testing transfer again
+# Next comparison: test policies on the expanded actions
 
-## What the existing measurements settle
+## What I measured
 
-I audited the committed H100 timing matrix. Torch's stored median is lower for all 96 workloads, even than the fastest curated configuration chosen on bank 2 itself. The independently selected reference-to-torch ratios range from 1.001563× to 2.329776×. [Audit numbers](../results/action-set-audit.json), [ratios by M](../results/action-set-by-m.svg), [individual shapes](../results/action-set-shapes.svg).
+I collected a separate H100 comparison after committing the [action-expansion plan](action-expansion-plan.md). Ten new configurations cover larger tiles, deeper pipelines, persistent TMA and split-K; I did not change the original 36 configurations. All 96 named workloads have complete selection and scoring banks, including same-session torch. The [raw data](../results/action-expansion-raw.json), [summary](../results/action-expansion-summary.json) and [figure](../results/action-expansion.svg) report the result.
 
-I also report the earlier L4/A10 and T4 validation collections separately in the audit's `by_gpu` overview. L4/A10 have mixed torch/Triton wins; the H100 action-set conclusion is not a universal claim about every GPU. The same nominal timing settings do not make different acquisition stages a pooled policy experiment.
+The new bank's fixed bank-1 winners beat torch on 9 workloads, tie once and lose on 86. The old bank loses on all 96. New/torch geometric-mean latency is 1.174062, versus old/torch 1.608227; new/old is 0.730035. New beats old on 95 workloads. This is a substantial reduction in the measured action-set gap, not a general victory over the library.
 
-The bank-2 minimum is an optimistic in-sample diagnostic. It is not a recommendation selected independently of evaluation. It does show that no search policy can discover a faster-than-torch action within this fixed measured matrix. The near-tie at `(M,N,K)=(1,18944,3584)` saves only 0.096 µs; missing torch quantiles and paired raw samples prevent a significance claim.
+Six nominal torch wins use split-K and three use larger ordinary tiles. The largest latency reduction is 5.55% at `(M,N,K)=(1,3584,18944)`. Five of the nine margins are below 1%; no result establishes statistical significance. Persistent TMA is selected for 16 workloads, but none beats torch. No selected new action wins at M=31,257,1024. These facts do not establish which hardware resource caused a gap.
 
-The gap spans every measured M, not just decode. Larger relative gaps and larger absolute savings are different: the M=1024 group has the lowest geometric-mean ratio, 1.404365×, but the largest median saving, 40.856 µs. Repeated shapes across model families are not extra devices.
+## What remains unchanged
 
-The [original H100 comparison](../benchmarks/results/parhelion-h100-final.json) selected zero posterior-transfer strengths. I cannot attribute the measured library gap to bandwidth, occupancy, launch overhead, or a particular instruction without profiling and a matched intervention. Tile geometry alone is not a causal explanation.
+The [historical audit](../results/action-set-audit.json) still reports torch below every stored H100 Triton candidate, including the optimistic same-bank minimum. L4/A10 have mixed wins, so neither the historical H100 gap nor this expansion is a universal GPU claim. I do not pool acquisition stages or device types.
 
-I also retain the separate skinny-GEMV and Hopper-GEMM engineering expansion. Both stopped below their performance thresholds ([result](../benchmarks/results/hopper-h100-engineering-summary-v2.json)). A new candidate needs to offer something those failed candidates did not; a wider parameter grid is not evidence of a faster kernel.
+The [original transfer comparison](../results/tuner-comparison.md) favored cold Thompson over Parhelion and selected zero posterior-transfer strengths. I have not rerun those policies on the expanded bank. A better kernel bank cannot retroactively establish a transfer gain.
 
-## A separate comparison
+The new correctness reference has FP16 inputs and FP32 output with TF32 disabled. The [historical collector](https://github.com/mottopanikeiku/heliostune/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) instead used separate FP32-input reference tensors, converted to FP16. The tolerance and nominal timing windows are unchanged, but that does not make the two collections the same numerical experiment. I compare old and new actions only within the new collection.
 
-I would keep the existing study unchanged and compare:
+## The next question
 
-1. The old configuration subset, broader candidate implementations, and `torch.matmul` as both baseline and possible fallback.
-2. Identical input tensors, layouts, output dtype, explicit accumulation settings, correctness tolerances and timing boundaries. The [historical collector](https://github.com/mottopanikeiku/heliostune/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) used a separate FP32-input correctness reference with TF32 disabled, converted to FP16; the timed comparator used FP16 inputs. I would not assume equal accumulation from passing that tolerance.
-3. Development-only candidate and policy selection, preserving family and exact-shape exclusions. Independent banks for observations, reference selection and scoring; raw paired timing blocks and device state for uncertainty estimates.
-4. Absolute latency, independently scored candidate-to-torch ratios, compilation and tuning cost, invalid configurations, and workload coverage. Cold Thompson, nearest-shape reuse, retrieval-only and Parhelion would run on both action sets.
+I would compare cold Thompson, nearest-shape reuse, retrieval-only and Parhelion on both the old bank and the expanded union, including torch as a possible deployment fallback. I would retain development-only policy selection, exact-shape and family exclusions, and independent scoring. Bank-1 latency chooses the old/new union winner; bank-2 latency does not select a policy or candidate.
 
-Success would mean lower held-out latency than torch for a stated deployment subset, after tuning and compilation are amortized. A score near the limited Triton reference is not success against the library. I would choose the practical margin and workload weighting before collecting timings.
+Before collecting more data, I would choose a deployment workload weighting and practical performance margin. The next acquisition should retain paired timing blocks and device state, and repeat on independent sessions or devices. Quantiles in this run describe timing spread, not uncertainty in a population mean.
 
-This audit needs only CPU analysis of existing data. The separate comparison needs compatible NVIDIA hardware and an explicit deployment/numerical contract. Its collection time and cost are unknown; the old measurements cannot establish the performance of new actions. I have not collected new GPU timings or dispatched a cloud job.
+Success would mean lower held-out deployment latency after amortizing compilation and tuning, under a stated numerical contract. Warmed allocating matmul medians include split-K workspace and reduction but not startup, compilation or serving costs. The [cloud estimate](../results/action-expansion-cost.json) includes the failed startup and pilot separately; it is not a provider invoice. The full collection completed in one session without checkpoint recovery.
