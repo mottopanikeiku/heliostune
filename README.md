@@ -1,79 +1,65 @@
 # HeliosTune
 
-HeliosTune is my small GPU matrix-multiplication tuning experiment using nearby-shape retrieval and Bayesian linear Thompson sampling.
+HeliosTune is my small GPU matrix-multiplication tuning experiment.
 
-**Result: the action set is the larger problem.** I audited the existing H100 measurements: `torch.matmul` has lower stored median latency on **all 96 workloads, covering 84 unique matrix shapes**, even against the fastest of the **36 Triton configurations** on the scoring bank. Against the independently selected reference, its geometric-mean advantage is **1.610016×**, with a **18.304 µs median saving**. These are descriptions of old measurements, not new GPU timings or significance claims. [Audit numbers and definitions](results/action-set-audit.json).
+**Question:** is the search policy the problem, or is its kernel bank too limited? I added ten Hopper-aware actions: larger tiles, deeper pipelines, persistent TMA and tensor-core split-K. The persistent path builds on [Triton's pinned tutorial](https://github.com/triton-lang/triton/blob/v3.4.0/python/tutorials/09-persistent-matmul.py); my split-K path is in [`action_expansion.py`](src/heliostune/action_expansion.py).
 
-**Question:** can measurements from other GPU models reduce target-GPU probes? This audit asks whether a better search over existing actions could erase the measured library gap.
+**New H100 result:** bank-1-selected new actions beat `torch.matmul` on **9/96 named workloads**, versus **0/96** for the original 36 actions. There is **one exact median tie and 86 losses**. The new bank improves on the old bank on **95/96**, but torch still wins most workloads. These are descriptive medians, not significance claims. [Full summary](results/action-expansion-summary.json).
 
-## Where torch wins
+## What changed
 
-I select the reference using bank 1 and score it and torch on bank 2. The ratio is **reference latency / torch latency**; above one favors torch. The denominator is a curated reference, not a hardware ceiling. Each row below contains the same number of workloads; repeated shapes across models are not independent devices. All numbers come from [`by_m` in the audit JSON](results/action-set-audit.json).
+I committed the [fixed action set and analysis plan](docs/action-expansion-plan.md) at [`adf5eb4`](https://github.com/mottopanikeiku/heliostune/commit/adf5eb4a854f8fd37ea888280861bead9024df77) before collecting data. Six new configurations apply everywhere; four split-K configurations apply only at M=1,7,31. Split-K computes FP32 partial tiles and reduces them in a second Triton kernel, converting once to FP16. Allocation, workspace and both launches are timed—not just the partial kernel.
 
-| M in A[M,K] @ B[K,N] | Torch wins / workloads | Geometric-mean ratio | Median saving (µs) |
-|---:|---:|---:|---:|
-| 1 | 16 / 16 | 1.644996 | 17.120 |
-| 7 | 16 / 16 | 1.652062 | 17.408 |
-| 31 | 16 / 16 | 1.678362 | 17.392 |
-| 96 | 16 / 16 | 1.679876 | 18.352 |
-| 257 | 16 / 16 | 1.618626 | 18.432 |
-| 1024 | 16 / 16 | 1.404365 | 40.856 |
+I remeasured all **96 workloads / 84 unique shapes** on one H100. Bank 1 selects the lowest valid median separately from the old and new sets; bank 2 scores only those fixed winners and same-session torch. No scoring-bank minimum chooses an action. The expanded union also chooses old versus new on bank 1. [`Collector`](modal_action_expansion.py), [`CPU manifest`](src/heliostune/action_configs.py), [`raw measurements`](results/action-expansion-raw.json).
 
-![H100 reference-to-torch ratios by M](results/action-set-by-m.svg)
+| Bank-2 result | Old 36 | New actions | Expanded union |
+|---|---:|---:|---:|
+| Wins against torch | 0 | 9 | 9 |
+| Exact ties | 0 | 1 | 1 |
+| Geometric-mean latency / torch | 1.608227 | 1.174062 | 1.173017 |
 
-The [shape figure](results/action-set-shapes.svg) separates N and K. In the [per-workload records](results/action-set-audit.json), Qwen FFN-down `(M,N,K)=(31,3584,18944)` is **2.329776×**: reference **146.720 µs**, torch **62.976 µs**. Qwen FFN-up `(1,18944,3584)` is nearly tied: **1.001563×**, only **0.096 µs** saved. Torch's within-run quantiles were not stored, so I cannot call that near-tie statistically significant.
+The geometric mean of **new / old latency is 0.730035**, a **27.0% reduction**. All **4,608 measurement rows** passed their numerical and timing checks; no candidate failed. [Definitions and per-workload records](results/action-expansion-summary.json).
 
-Even choosing each workload's fastest configuration *on bank 2 itself* leaves torch ahead everywhere: **1.608716×** geometric mean. This is an optimistic, in-sample diagnostic, not an independently evaluated selection policy. Within this fixed timing matrix, changing only the search policy cannot find a faster-than-torch action. It does not identify a hardware bottleneck or prove that broader Triton kernels would lose.
+## Where Triton beats torch
 
-## Separate GPU overview
+Ratio means **new / torch**; lower is better. These are all nine nominal wins from the [summary](results/action-expansion-summary.json). Five margins are below 1%; none is a statistical-significance claim.
 
-I also audited the earlier L4/A10 and T4 validation collections in the same archive. These are within-GPU comparisons, not pooled policy results. [`by_gpu` records their numbers and source contracts](results/action-set-audit.json):
+| Model / projection | (M,N,K) | New / torch (µs) | Ratio |
+|---|---|---:|---:|
+| Granite / FFN-down | (1,4096,12800) | 52.928 / 53.056 | 0.997587 |
+| Mistral / FFN-down | (1,4096,14336) | 56.768 / 56.992 | 0.996070 |
+| Mistral / FFN-up | (1,14336,4096) | 53.952 / 54.336 | 0.992933 |
+| Phi / attention-out | (1,3072,3072) | 17.664 / 18.272 | 0.966725 |
+| Qwen / FFN-down | (1,3584,18944) | 63.456 / 67.184 | 0.944511 |
+| Mistral / FFN-up | (7,14336,4096) | 54.560 / 54.944 | 0.993011 |
+| Phi / attention-out | (7,3072,3072) | 18.048 / 18.432 | 0.979167 |
+| Qwen / FFN-down | (7,3584,18944) | 64.256 / 67.712 | 0.948960 |
+| Granite / FFN-up | (96,12800,4096) | 51.712 / 52.032 | 0.993850 |
 
-| GPU | Torch / Triton wins / ties | Geometric-mean ratio |
-|---|---:|---:|
-| L4 | 31 / 65 / 0 | 0.986193 |
-| A10 | 31 / 63 / 2 | 1.021201 |
-| T4 | 94 / 2 / 0 | 3.840388 |
-| H100 | 96 / 0 / 0 | 1.610016 |
+Six wins use split-K; three use larger ordinary tiles; none uses persistent TMA. The largest saving is **5.55%** on Qwen's M=1 FFN-down. No selected new action beats torch at M=31,257,1024.
 
-L4/A10 are mixed; their action sets are not uniformly dominated.
+![Old and new independently scored ratios for all workloads](results/action-expansion.svg)
 
-## The transfer result
-
-The [original H100 result](benchmarks/results/parhelion-h100-final.json) and [comparison table](results/tuner-comparison.md) report mean reference-relative scores over probe budgets:
-
-| Method | Mean score over budgets 1–8 |
-|---|---:|
-| Cold Thompson | 0.958434 |
-| Parhelion | 0.950259 |
-| `torch.matmul` | 1.610259 |
-
-This aggregation averages model-family geometric means, unlike the audit's single workload geometric mean. Torch is evaluation-only, outside the tuner action set. Both selected transfer strengths were zero ([T4 selection](benchmarks/results/parhelion-t4-selection.json)). Parhelion still uses a retrieval anchor and source features; this does not show retrieval is useless.
-
-I build retrieval features in [`retrieval.py`](src/heliostune/retrieval.py), update the posterior in [`bandit.py`](src/heliostune/bandit.py), and compare policies in [`multisource_engine.py`](src/heliostune/multisource_engine.py). The separate Hopper candidate follows [Triton's persistent-matmul tutorial](https://github.com/triton-lang/triton/blob/v3.4.0/python/tutorials/09-persistent-matmul.py), attributed in [`hopper_kernel.py`](src/heliostune/hopper_kernel.py).
-
-## Reproduce on CPU
+## Reproduce
 
 ```sh
-uv sync --locked --extra dev
-nice -n 19 uv run --locked python scripts/audit_matmul_action_set.py
-nice -n 19 python3 scripts/summarize_tuner_results.py
+uv sync --python 3.13 --locked --extra dev --extra modal
+uv run python scripts/analyze_action_expansion.py
+uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py
 ```
 
-These commands regenerate the JSON, both SVGs and the comparison table from committed files. They need no GPU or paid service and collect no new timings. I test reference selection, aggregation and deterministic outputs in [`test_matmul_audit.py`](tests/test_matmul_audit.py).
+The second command regenerates the summary and figure on CPU. The third starts or resumes an H100 collection from a clean commit; completed workload units are reused. `--pilot` measures four workloads separately. [Fresh-repeat instructions](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
 
-## Limits and next comparison
+## Limits and history
 
-- One fixed corpus and collected GPU instances; no hardware-causal or new-device inference.
-- The [historical collector](https://github.com/mottopanikeiku/heliostune/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) timed allocating FP16 callables. Correctness used a separate FP32-input reference with TF32 disabled, converted to FP16; timed torch accumulation settings were not fully recorded.
-- Warmed medians omit compilation, policy computation and serving overhead. Missing torch spreads prevent paired uncertainty estimates.
-- Probe budgets replay exhaustive measurements, not reduced physical acquisition cost.
-- Earlier L4/A10 and later H200 studies use separate protocols; I do not pool them.
+- One H100 collection, not a device-replication study. Repeated shapes are not independent devices.
+- Quantiles describe spread, not confidence intervals; individual timing samples are not retained.
+- The FP32-output reference uses FP16 inputs with TF32 disabled. Passing atol=rtol=0.01 does not prove identical arithmetic; torch's reduced-FP16 reduction flag was enabled and recorded.
+- Warmed medians omit compilation, acquisition and serving cost. I did not rerun transfer policies on the expanded bank.
+- Ten new actions do not establish a hardware optimum or exhaust all possible Triton kernels.
 
-I would compare a wider action set and a torch fallback under matched numerical and timing contracts, before trying another transfer grid. [Next comparison](docs/NEXT.md); [historical study documents](docs/history/INDEX.md).
+The [earlier audit](results/action-set-audit.json) remains unchanged. The [original transfer comparison](results/tuner-comparison.md) favored cold Thompson over Parhelion; selected posterior transfer strengths were zero. Retrieval and posterior code remain in [`retrieval.py`](src/heliostune/retrieval.py) and [`bandit.py`](src/heliostune/bandit.py). [Next comparison](docs/NEXT.md).
 
-## Prior work
-
-I build on [AutoTVM](https://arxiv.org/abs/1805.08166), [nearest-dataset initialization](https://ojs.aaai.org/index.php/AAAI/article/view/9354), [linear Thompson sampling](https://proceedings.mlr.press/v28/agrawal13.html), [RGPE](https://arxiv.org/abs/1802.02219), and [Transfer-Tuning](https://arxiv.org/abs/2201.05587). MIT [license](LICENSE).
+I build on [AutoTVM](https://arxiv.org/abs/1805.08166), [linear Thompson sampling](https://proceedings.mlr.press/v28/agrawal13.html), [RGPE](https://arxiv.org/abs/1802.02219) and [Transfer-Tuning](https://arxiv.org/abs/2201.05587). MIT [license](LICENSE).
 
 Written with AI coding assistance.
