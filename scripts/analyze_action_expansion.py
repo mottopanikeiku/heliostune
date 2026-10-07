@@ -53,8 +53,9 @@ _NOTE = (
     "Selection uses only bank 1 (minimum valid median, then config-key tie-break); "
     "scoring uses only the fixed winners and same-workload torch from bank 2. "
     "Expanded union is selected on bank 1, never the faster bank-2 arm. "
-    "Quantiles describe timing spread, not confidence intervals. This single-device "
-    "session establishes neither statistical significance nor a hardware-cause claim. "
+    "Quantiles describe timing spread, not confidence intervals. Each scored workload "
+    "uses torch from its unit's session; these measurements establish neither "
+    "statistical significance nor a hardware-cause claim. "
     "Named workloads are counted separately even when shapes coincide."
 )
 
@@ -170,7 +171,7 @@ def analyze(
     raw = exact_object(data, context="action expansion artifact")
     metadata: dict[str, Any] = {
         field: raw[field]
-        for field in ("pilot", "precision", "source_commit", "cloud")
+        for field in ("pilot", "precision", "source_commit", "cloud", "sessions")
         if field in raw
     }
     raw = exact_fields(
@@ -195,6 +196,11 @@ def analyze(
         exact_object(metadata["precision"], context="precision")
     if "source_commit" in metadata:
         nonblank_string(metadata["source_commit"], context="source_commit")
+    if "sessions" in metadata:
+        if type(metadata["sessions"]) is not list:
+            raise ValueError("sessions must be a list")
+        for session in metadata["sessions"]:
+            exact_object(session, context="session")
     if "cloud" in metadata:
         cloud = exact_object(metadata["cloud"], context="cloud")
         for field in ("gpu", "note"):

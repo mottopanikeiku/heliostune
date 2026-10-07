@@ -491,3 +491,19 @@ def test_cloud_known_scalars_are_validated(field: str, value: object) -> None:
     data["cloud"] = {field: value}
     with pytest.raises(ValueError, match="cloud"):
         _analyze(data)
+
+
+def test_collection_sessions_are_preserved_without_changing_selection() -> None:
+    data = _artifact()
+    baseline = _analyze(data)
+    data["sessions"] = [{"id": "session-a", "units": [[1, _WORKLOADS[0].key]]}]
+    summary = _analyze(data)
+    assert summary["sessions"] == data["sessions"]
+    assert {k: v for k, v in summary.items() if k != "sessions"} == baseline
+
+
+def test_collection_sessions_must_be_objects_in_a_list() -> None:
+    data = _artifact()
+    data["sessions"] = ["session-a"]
+    with pytest.raises(ValueError, match="session"):
+        _analyze(data)

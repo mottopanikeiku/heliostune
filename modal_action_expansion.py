@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -13,14 +14,22 @@ from modal_bench import build_image, configured_modal_wheel
 
 app = modal.App("heliostune-day-actions")
 volume = modal.Volume.from_name("heliostune-day-actions", create_if_missing=True)
-image = build_image(configured_modal_wheel()).env({"TRITON_CACHE_DIR": "/data/triton-cache"})
+image = (
+    build_image(configured_modal_wheel())
+    .env({"TRITON_CACHE_DIR": "/data/triton-cache"})
+    .add_local_file("modal_bench.py", remote_path="/root/modal_bench.py")
+)
 
 
-def collect(plan_commit: str, pilot: bool) -> dict[str, Any]:
+def collect(
+    source_commit: str, plan_commit: str, collector_sha256: str, pilot: bool
+) -> dict[str, Any]:
     import importlib.metadata
     import math
+    import os
     import random
     import time
+    import uuid
     from functools import partial
 
     import torch
@@ -44,6 +53,7 @@ def collect(plan_commit: str, pilot: bool) -> dict[str, Any]:
     result: dict[str, Any] = {
         "schema_version": 1,
         "plan_commit": plan_commit,
+        "source_commit": source_commit,
         "pilot": pilot,
         "hardware": hardware.to_dict(),
         "software": {
@@ -84,12 +94,41 @@ def collect(plan_commit: str, pilot: bool) -> dict[str, Any]:
         "rows": [],
         "selected": {},
         "duration_seconds": 0.0,
+        "sessions": [],
     }
+    wheel_manifest = json.loads(
+        Path(os.environ["HELIOSTUNE_MODAL_WHEEL_MANIFEST"]).read_text(encoding="utf-8")
+    )
+    result["software"]["source_sha256"] = wheel_manifest["source_sha256"]
+    result["software"]["collector_sha256"] = collector_sha256
+    target = Path("/data/pilot-checkpoint.json" if pilot else "/data/full-checkpoint.json")
+    completed: set[tuple[int, str]] = set()
+    if target.exists():
+        checkpoint = json.loads(target.read_text(encoding="utf-8"))
+        saved = checkpoint["data"]
+        for field in ("pilot", "plan_commit", "software", "precision", "protocol", "action_set"):
+            if saved[field] != result[field]:
+                raise ValueError(f"checkpoint differs in {field}; do not mix experiments")
+        result = saved
+        completed = {(int(bank), str(key)) for bank, key in checkpoint["completed_units"]}
+    if all((bank, w.key) in completed for bank in (1, 2) for w in workloads):
+        return result
+    prior_duration = result["duration_seconds"]
+    session: dict[str, Any] = {
+        "id": str(uuid.uuid4()),
+        "source_commit": source_commit,
+        "hardware": hardware.to_dict(),
+        "units": [],
+        "duration_seconds": 0.0,
+    }
+    result["sessions"].append(session)
     row_list: list[dict[str, Any]] = result["rows"]
     for bank in (1, 2):
         order = list(workloads)
         random.Random(bank).shuffle(order)
         for index, workload in enumerate(order):
+            if (bank, workload.key) in completed:
+                continue
             torch.manual_seed(bank * 10000 + index)
             a = torch.empty((workload.m, workload.k), device=device, dtype=torch.float16)
             b = torch.empty((workload.k, workload.n), device=device, dtype=torch.float16)
@@ -182,11 +221,17 @@ def collect(plan_commit: str, pilot: bool) -> dict[str, Any]:
                     )
                 result["selected"][workload.key] = selection
             del difference, expected, b, a, candidates
-            result["duration_seconds"] = time.monotonic() - started
-            if (index + 1) % 8 == 0 or index + 1 == len(order):
-                target = Path("/data/pilot.json" if pilot else "/data/full.json")
-                target.write_text(json.dumps(result, allow_nan=False), encoding="utf-8")
-                volume.commit()
+            session["units"].append([bank, workload.key])
+            session["duration_seconds"] = time.monotonic() - started
+            result["duration_seconds"] = prior_duration + session["duration_seconds"]
+            completed.add((bank, workload.key))
+            temporary = target.with_suffix(".tmp")
+            temporary.write_text(
+                json.dumps({"data": result, "completed_units": sorted(completed)}, allow_nan=False),
+                encoding="utf-8",
+            )
+            temporary.replace(target)
+            volume.commit()
             print(
                 f"bank={bank} completed={index + 1}/{len(order)} workload={workload.key}",
                 flush=True,
@@ -203,8 +248,8 @@ def collect(plan_commit: str, pilot: bool) -> dict[str, Any]:
     max_containers=1,
     volumes={"/data": volume},
 )
-def pilot_collect(plan_commit: str) -> dict[str, Any]:
-    return collect(plan_commit, True)
+def pilot_collect(source_commit: str, plan_commit: str, collector_sha256: str) -> dict[str, Any]:
+    return collect(source_commit, plan_commit, collector_sha256, True)
 
 
 @app.function(
@@ -212,12 +257,12 @@ def pilot_collect(plan_commit: str) -> dict[str, Any]:
     gpu="H100!",
     cpu=1,
     memory=4096,
-    timeout=1680,
+    timeout=1380,
     max_containers=1,
     volumes={"/data": volume},
 )
-def full_collect(plan_commit: str) -> dict[str, Any]:
-    return collect(plan_commit, False)
+def full_collect(source_commit: str, plan_commit: str, collector_sha256: str) -> dict[str, Any]:
+    return collect(source_commit, plan_commit, collector_sha256, False)
 
 
 @app.local_entrypoint()
@@ -233,14 +278,18 @@ def main(pilot: bool = False, output: str = "results/action-expansion-raw.json")
     commit = subprocess.run(
         ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
     ).stdout.strip()
-    result = pilot_collect.remote(commit) if pilot else full_collect.remote(commit)
-    result["source_commit"] = commit
-    result["plan_commit"] = subprocess.run(
+    plan_commit = subprocess.run(
         ["git", "log", "-1", "--format=%H", "--", "docs/action-expansion-plan.md"],
         check=True,
         capture_output=True,
         text=True,
     ).stdout.strip()
+    collector_sha256 = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    result = (
+        pilot_collect.remote(commit, plan_commit, collector_sha256)
+        if pilot
+        else full_collect.remote(commit, plan_commit, collector_sha256)
+    )
     destination = Path(output)
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n", encoding="utf-8")
