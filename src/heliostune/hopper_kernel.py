@@ -344,7 +344,7 @@ def _skinny_gemv_kernel(  # type: ignore[no-untyped-def]
         # Arithmetic intensity here is below one, so the FP32 broadcast-reduce
         # costs nothing that the B stream is not already paying for.
         products = a.to(tl.float32)[:, :, None] * b.to(tl.float32)[None, :, :]
-        accumulator += tl.sum(products, axis=1)  # type: ignore[attr-defined]
+        accumulator += tl.sum(products, axis=1)
         a_ptrs += BLOCK_K * stride_ak
         b_ptrs += BLOCK_K * stride_bk
 

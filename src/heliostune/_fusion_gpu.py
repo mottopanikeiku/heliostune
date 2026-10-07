@@ -64,7 +64,7 @@ def _residual_rmsnorm_kernel(  # type: ignore[no-untyped-def]
     x = tl.load(x_ptr + row_offsets, mask=mask, other=0.0).to(tl.float32)
     residual = tl.load(residual_ptr + row_offsets, mask=mask, other=0.0).to(tl.float32)
     z = x + residual
-    sum_squares = tl.sum(z * z, axis=0, dtype=tl.float32)  # type: ignore[attr-defined]
+    sum_squares = tl.sum(z * z, axis=0, dtype=tl.float32)
     inverse_rms = tl.rsqrt(  # type: ignore[attr-defined]
         sum_squares * (1.0 / N_COLS) + 1e-5
     )
