@@ -108,6 +108,7 @@ class AttemptSpec:
         return _REPOSITORY / self.output_relative
 
 
+# These paths reproduce historical publication records byte for byte, not live defaults.
 _SPECS = (
     AttemptSpec(
         "gated-mlp-01-unresolved",
