@@ -39,7 +39,7 @@ jobs:
         run: |
           uv pip install --python .venv/bin/python --no-deps \
             "https://files.pythonhosted.org/packages/5a/63/4fdc45a0304536e75a5e1b1bbfb1b56dd0e2743c48ee83ca729f7ce44162/torch-2.8.0-cp311-cp311-manylinux_2_28_x86_64.whl#sha256=c12fa219f51a933d5f80eeb3a7a5d0cbe9168c0a14bbb4055f1979431660879b"
-      - run: uv run mypy src/heliostune modal_bench.py modal_precision_probe.py scripts
+      - run: uv run mypy src/heliostune modal_bench.py modal_precision_probe.py modal_action_expansion.py scripts
 
   coverage-fast:
     name: Coverage Fast

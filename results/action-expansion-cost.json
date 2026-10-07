@@ -1,0 +1,39 @@
+{
+  "allocation_usd": 2.8,
+  "gpu": "H100",
+  "cpu_cores": 1,
+  "host_memory_gib": 4,
+  "gpu_rate_usd_per_hour": 3.9492,
+  "cpu_core_rate_usd_per_hour": 0.04716,
+  "memory_gib_rate_usd_per_hour": 0.007992,
+  "estimate_margin": 1.1,
+  "note": "Conservative elapsed cloud wall-time estimate, including image setup; not a provider invoice. The original $2.50 allocation increased to $2.80 after the failed collector startup and measured pilot rate.",
+  "attempts": [
+    {
+      "kind": "failed_startup",
+      "source_commit": "adf5eb4a854f8fd37ea888280861bead9024df77",
+      "wall_minutes": 6.02,
+      "cost_upper_usd": 0.4443,
+      "measurement_rows": 0,
+      "outcome": "Remote import of the reused collector helper failed before measurement. I fixed the helper mount."
+    },
+    {
+      "kind": "pilot",
+      "source_commit": "884f845c7ecfcb428607c5c3460325586702b2bc",
+      "wall_minutes": 2.47,
+      "cost_upper_usd": 0.1821,
+      "measurement_rows": 196,
+      "outcome": "Completed all four pilot workloads in both banks, with no failed candidates."
+    },
+    {
+      "kind": "full",
+      "source_commit": "318187e3b71ad77fc98293292291b8473d000357",
+      "wall_minutes": 19.49,
+      "cost_upper_usd": 1.4391,
+      "measurement_rows": 4608,
+      "outcome": "Completed all 96 named workloads in both banks."
+    }
+  ],
+  "total_wall_minutes": 27.98,
+  "total_cost_upper_usd": 2.0655
+}

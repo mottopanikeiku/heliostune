@@ -1,0 +1,6538 @@
+{
+  "schema_version": 1,
+  "plan_commit": "adf5eb4a854f8fd37ea888280861bead9024df77",
+  "source_commit": "884f845c7ecfcb428607c5c3460325586702b2bc",
+  "pilot": true,
+  "hardware": {
+    "gpu": "H100",
+    "device_name": "NVIDIA H100 80GB HBM3",
+    "compute_capability": [
+      9,
+      0
+    ],
+    "multiprocessor_count": 132,
+    "total_memory_gb": 79.1788330078125,
+    "cuda_version": "12.8",
+    "torch_version": "2.8.0+cu128",
+    "triton_version": "3.4.0"
+  },
+  "software": {
+    "torch": "2.8.0",
+    "triton": "3.4.0",
+    "numpy": "2.4.6",
+    "source_sha256": "511e8dab974a05426cf73b3eef13cf72441ef304df95288ac2ce0dd1c96f5c7f",
+    "collector_sha256": "5eece6f4e43e4c3cea5381ded6bd0dfc52de6237ce68b77c3b209a9243357d0d"
+  },
+  "precision": {
+    "allow_tf32": false,
+    "allow_fp16_reduced_precision_reduction": true,
+    "float32_matmul_precision": "highest"
+  },
+  "protocol": {
+    "warmup_ms": 25,
+    "rep_ms": 100,
+    "quantiles": [
+      0.2,
+      0.5,
+      0.8
+    ],
+    "atol": 0.01,
+    "rtol": 0.01,
+    "selection_bank": 1,
+    "scoring_bank": 2,
+    "selection": "minimum correct bank-1 median, then config-key tie-break",
+    "reference": "FP16 operands; torch.mm out_dtype=float32, TF32 disabled only for reference",
+    "timed_calls": "allocating CUDA FP16 calls; split-K workspace/reduction included",
+    "tensor_seed": "bank * 10000 + index in that bank's shuffled workload order",
+    "workload_order_seed": "bank",
+    "config_order_seed": "bank * 10000 + workload index + 70000"
+  },
+  "action_set": {
+    "old": [
+      {
+        "family": "old",
+        "config_key": "m16n32k32-w4s3g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n64k32-w4s3g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n128k32-w4s3g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n32k32-w4s3g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n64k32-w4s3g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n128k32-w4s3g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n32k32-w4s3g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n64k32-w4s3g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n128k32-w8s3g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n32k32-w4s3g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n64k32-w8s3g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n128k32-w8s3g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n32k64-w4s2g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 32,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n64k64-w4s2g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n128k64-w4s2g8",
+        "config": {
+          "block_m": 16,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n32k64-w4s2g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 32,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n64k64-w4s2g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n128k64-w4s2g8",
+        "config": {
+          "block_m": 32,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n32k64-w4s2g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 32,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n64k64-w4s2g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n128k64-w8s2g8",
+        "config": {
+          "block_m": 64,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n32k64-w4s2g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 32,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n64k64-w8s2g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n128k64-w8s2g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 2,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n32k32-w4s4g4",
+        "config": {
+          "block_m": 16,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n64k32-w4s4g4",
+        "config": {
+          "block_m": 16,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m16n128k32-w4s4g4",
+        "config": {
+          "block_m": 16,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n32k32-w4s4g4",
+        "config": {
+          "block_m": 32,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n64k32-w4s4g4",
+        "config": {
+          "block_m": 32,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m32n128k32-w4s4g4",
+        "config": {
+          "block_m": 32,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n32k32-w4s4g4",
+        "config": {
+          "block_m": 64,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n64k32-w4s4g4",
+        "config": {
+          "block_m": 64,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m64n128k32-w8s4g4",
+        "config": {
+          "block_m": 64,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n32k32-w4s4g4",
+        "config": {
+          "block_m": 128,
+          "block_n": 32,
+          "block_k": 32,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n64k32-w8s4g4",
+        "config": {
+          "block_m": 128,
+          "block_n": 64,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      },
+      {
+        "family": "old",
+        "config_key": "m128n128k32-w8s4g4",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 32,
+          "num_warps": 8,
+          "num_stages": 4,
+          "group_m": 4
+        }
+      }
+    ],
+    "new": [
+      {
+        "family": "persistent",
+        "config_key": "persistent:hopper-m128n128k64-w4s4g8-sub0-ws0",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 4,
+          "group_m": 8,
+          "epilogue_subtile": false,
+          "warp_specialize": false
+        }
+      },
+      {
+        "family": "persistent",
+        "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+        "config": {
+          "block_m": 128,
+          "block_n": 256,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 3,
+          "group_m": 8,
+          "epilogue_subtile": false,
+          "warp_specialize": false
+        }
+      },
+      {
+        "family": "split_k",
+        "config_key": "split_k:m16n128k64-w4s3-split16",
+        "config": {
+          "block_m": 16,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 3,
+          "split_k": 16
+        }
+      },
+      {
+        "family": "split_k",
+        "config_key": "split_k:m16n128k64-w4s3-split4",
+        "config": {
+          "block_m": 16,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 3,
+          "split_k": 4
+        }
+      },
+      {
+        "family": "split_k",
+        "config_key": "split_k:m16n64k64-w4s3-split16",
+        "config": {
+          "block_m": 16,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 3,
+          "split_k": 16
+        }
+      },
+      {
+        "family": "split_k",
+        "config_key": "split_k:m16n64k64-w4s3-split4",
+        "config": {
+          "block_m": 16,
+          "block_n": 64,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 3,
+          "split_k": 4
+        }
+      },
+      {
+        "family": "tile",
+        "config_key": "tile:m128n128k128-w8s3g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 128,
+          "num_warps": 8,
+          "num_stages": 3,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "tile",
+        "config_key": "tile:m128n128k64-w4s5g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 4,
+          "num_stages": 5,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "tile",
+        "config_key": "tile:m128n256k64-w8s4g8",
+        "config": {
+          "block_m": 128,
+          "block_n": 256,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 4,
+          "group_m": 8
+        }
+      },
+      {
+        "family": "tile",
+        "config_key": "tile:m256n128k64-w8s4g8",
+        "config": {
+          "block_m": 256,
+          "block_n": 128,
+          "block_k": 64,
+          "num_warps": 8,
+          "num_stages": 4,
+          "group_m": 8
+        }
+      }
+    ]
+  },
+  "rows": [
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.19554559886455536,
+      "median_ms": 0.19595199823379517,
+      "p80_ms": 0.19672960340976714,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.101211159,
+      "timing_seconds": 0.3685225680000004
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.3830847978591919,
+      "median_ms": 0.3893439918756485,
+      "p80_ms": 0.3996799886226654,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.9728200319999996,
+      "timing_seconds": 0.12590582000000072
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.6392319917678833,
+      "median_ms": 0.6469440162181854,
+      "p80_ms": 0.6624128103256226,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.32559782800000026,
+      "timing_seconds": 0.13059074899999956
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2733184039592743,
+      "median_ms": 0.27508799731731415,
+      "p80_ms": 0.2766848087310791,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2887408479999998,
+      "timing_seconds": 0.12577095100000069
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.5517119765281677,
+      "median_ms": 0.554064005613327,
+      "p80_ms": 0.558463990688324,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.25815957399999956,
+      "timing_seconds": 0.1266160359999997
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k64-w4s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7562496066093445,
+      "median_ms": 0.7818720042705536,
+      "p80_ms": 0.8137087941169738,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.31737864000000027,
+      "timing_seconds": 0.12736668299999998
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k64-w4s5g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 5,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2896000146865845,
+      "median_ms": 0.29475200176239014,
+      "p80_ms": 0.29850239157676695,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.8654635109999997,
+      "timing_seconds": 0.1254134709999999
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.8707327961921693,
+      "median_ms": 0.892192006111145,
+      "p80_ms": 0.9072063803672791,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2129102930000002,
+      "timing_seconds": 0.12716291999999996
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.2930432319641114,
+      "median_ms": 1.4135519862174988,
+      "p80_ms": 1.418406367301941,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.230949132000001,
+      "timing_seconds": 0.14061807100000043
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.1852992057800293,
+      "median_ms": 1.1893119812011719,
+      "p80_ms": 1.1933696269989014,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.26238683500000093,
+      "timing_seconds": 0.1305984300000009
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7233856081962585,
+      "median_ms": 0.7251520156860352,
+      "p80_ms": 0.7266560196876526,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2984091089999996,
+      "timing_seconds": 0.1275567449999997
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.6818047881126403,
+      "median_ms": 0.6951360106468201,
+      "p80_ms": 0.7066047787666321,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.28991133399999924,
+      "timing_seconds": 0.12889649300000092
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7958080172538757,
+      "median_ms": 0.810399979352951,
+      "p80_ms": 0.8199999928474426,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2912707309999991,
+      "timing_seconds": 0.1327033000000011
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.3299520015716553,
+      "median_ms": 0.3357439935207367,
+      "p80_ms": 0.33987200260162354,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.3329361560000006,
+      "timing_seconds": 0.1254196409999988
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.286848020553589,
+      "median_ms": 1.3142080307006836,
+      "p80_ms": 1.330899214744568,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2148678439999987,
+      "timing_seconds": 0.13343835899999945
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.1942143440246582,
+      "median_ms": 1.1981439590454102,
+      "p80_ms": 1.2023296117782594,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.21341481600000023,
+      "timing_seconds": 0.13038412099999874
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m256n128k64-w8s4g8",
+      "config": {
+        "block_m": 256,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2353920042514801,
+      "median_ms": 0.24563199281692505,
+      "p80_ms": 0.2504192113876343,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.5824876759999995,
+      "timing_seconds": 0.12591899699999942
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n256k64-w8s4g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20185600221157074,
+      "median_ms": 0.213919997215271,
+      "p80_ms": 0.21491199731826782,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.5448775890000004,
+      "timing_seconds": 0.12673155499999922
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.2677760124206543,
+      "median_ms": 1.281599998474121,
+      "p80_ms": 1.2898175954818725,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2538413530000003,
+      "timing_seconds": 0.13186529499999897
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k64-w8s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.5277503967285156,
+      "median_ms": 0.535040020942688,
+      "p80_ms": 0.5373695850372314,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.24876820600000116,
+      "timing_seconds": 0.1267018869999994
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.9438079595565796,
+      "median_ms": 2.0251359939575195,
+      "p80_ms": 2.0417856693267824,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.20107303800000054,
+      "timing_seconds": 0.13993022200000027
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.4265600025653839,
+      "median_ms": 0.4291839897632599,
+      "p80_ms": 0.43147519826889036,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.22803587699999994,
+      "timing_seconds": 0.1258430569999991
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n128k64-w4s4g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.229407998919487,
+      "median_ms": 0.23625600337982178,
+      "p80_ms": 0.2400127977132797,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.9883009850000004,
+      "timing_seconds": 0.12586080499999852
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k128-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 128,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.3116735994815827,
+      "median_ms": 0.31273600459098816,
+      "p80_ms": 0.31527678966522216,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.46114265499999973,
+      "timing_seconds": 0.1265169859999986
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.5970240235328674,
+      "median_ms": 0.6032640039920807,
+      "p80_ms": 0.6097599864006042,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.3154555600000002,
+      "timing_seconds": 0.12855689999999953
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.8718592047691345,
+      "median_ms": 0.8760319948196411,
+      "p80_ms": 0.8803584218025207,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.231287162000001,
+      "timing_seconds": 0.12800580300000064
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.44064640402793886,
+      "median_ms": 0.4436799883842468,
+      "p80_ms": 0.44677760601043703,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.28337341800000004,
+      "timing_seconds": 0.1259339009999998
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.5443840026855469,
+      "median_ms": 0.5465759932994843,
+      "p80_ms": 0.5482751846313476,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2507945460000016,
+      "timing_seconds": 0.12658081099999663
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7096319794654846,
+      "median_ms": 0.7182720005512238,
+      "p80_ms": 0.7271680235862732,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.24539818699999927,
+      "timing_seconds": 0.1293339600000003
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20792959928512572,
+      "median_ms": 0.21116800606250763,
+      "p80_ms": 0.21187199652194977,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.6968314759999998,
+      "timing_seconds": 0.12607427800000082
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.2209152221679687,
+      "median_ms": 1.2379519939422607,
+      "p80_ms": 1.2487807750701905,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.22722733099999814,
+      "timing_seconds": 0.13029553699999852
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.1427264213562012,
+      "median_ms": 1.151695966720581,
+      "p80_ms": 1.1787392139434816,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.21598461900000032,
+      "timing_seconds": 0.13240948400000008
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.9441471815109255,
+      "median_ms": 1.969983994960785,
+      "p80_ms": 1.9713343620300292,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.20845460500000002,
+      "timing_seconds": 0.1348725470000005
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2706240117549896,
+      "median_ms": 0.27452799677848816,
+      "p80_ms": 0.27852800488471985,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.32672252100000065,
+      "timing_seconds": 0.12436756399999993
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.1312639713287354,
+      "median_ms": 1.1404800415039062,
+      "p80_ms": 1.162943959236145,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2221738629999983,
+      "timing_seconds": 0.13114634399999758
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.84999680519104,
+      "median_ms": 0.8776320219039917,
+      "p80_ms": 0.9129535794258117,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.23966613199999998,
+      "timing_seconds": 0.12835387700000211
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.117568016052246,
+      "median_ms": 1.1231840252876282,
+      "p80_ms": 1.1342399835586547,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.24377484300000063,
+      "timing_seconds": 0.13007922300000274
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7344511866569519,
+      "median_ms": 0.7372159957885742,
+      "p80_ms": 0.740396785736084,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2763172419999975,
+      "timing_seconds": 0.12584618900000066
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7623936176300048,
+      "median_ms": 0.7897440195083618,
+      "p80_ms": 0.835923182964325,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.2638611470000001,
+      "timing_seconds": 0.12764723899999808
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.5817279815673828,
+      "median_ms": 0.584527999162674,
+      "p80_ms": 0.5873472094535828,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.258802953,
+      "timing_seconds": 0.12734105699999887
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.46483200788497925,
+      "median_ms": 0.466592013835907,
+      "p80_ms": 0.4688255965709686,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.25482252200000133,
+      "timing_seconds": 0.12690541999999994
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.7513151884078979,
+      "median_ms": 0.8109599947929382,
+      "p80_ms": 0.8389440178871155,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.23045444099999912,
+      "timing_seconds": 0.13420194800000118
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 1.6017343997955322,
+      "median_ms": 1.6148639917373657,
+      "p80_ms": 1.627712035179138,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.22627776499999896,
+      "timing_seconds": 0.1322781820000003
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06313599646091461,
+      "median_ms": 0.06435199826955795,
+      "p80_ms": 0.06588800251483917,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.0033377560000005246,
+      "timing_seconds": 0.11657783200000083
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14739200472831726,
+      "median_ms": 0.1480959951877594,
+      "p80_ms": 0.1488640010356903,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.5059896820000027,
+      "timing_seconds": 0.12055590900000013
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.17053439617156985,
+      "median_ms": 0.1712000072002411,
+      "p80_ms": 0.1719360053539276,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2750038410000002,
+      "timing_seconds": 0.12012256700000279
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.0631679967045784,
+      "median_ms": 0.06390400230884552,
+      "p80_ms": 0.06470400094985962,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.8676635570000002,
+      "timing_seconds": 0.11850554899999821
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14699519872665406,
+      "median_ms": 0.14771200716495514,
+      "p80_ms": 0.14854399859905243,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.21496080200000023,
+      "timing_seconds": 0.12094615599999514
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23731200397014618,
+      "median_ms": 0.23825599998235703,
+      "p80_ms": 0.23932799696922302,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.22618690300000566,
+      "timing_seconds": 0.12237818300000214
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14796799421310425,
+      "median_ms": 0.14876799285411835,
+      "p80_ms": 0.1496960073709488,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.23450908699999928,
+      "timing_seconds": 0.12068862800000346
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15916800498962402,
+      "median_ms": 0.15987199544906616,
+      "p80_ms": 0.1605760008096695,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.24474682700000017,
+      "timing_seconds": 0.12140783299999924
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21929599344730377,
+      "median_ms": 0.2200320065021515,
+      "p80_ms": 0.22084480226039888,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2517605409999959,
+      "timing_seconds": 0.12234714599999563
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2385600060224533,
+      "median_ms": 0.23932799696922302,
+      "p80_ms": 0.24012799561023712,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.30068888099999924,
+      "timing_seconds": 0.12257861199999809
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14771200716495514,
+      "median_ms": 0.1483840048313141,
+      "p80_ms": 0.14918400347232819,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.23820192699999865,
+      "timing_seconds": 0.12081767899999818
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2696959972381592,
+      "median_ms": 0.2704960107803345,
+      "p80_ms": 0.27132800221443176,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.24420958000000326,
+      "timing_seconds": 0.12335207200000298
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k64-w8s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.262688010931015,
+      "median_ms": 0.26345598697662354,
+      "p80_ms": 0.264441591501236,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.27124571499999917,
+      "timing_seconds": 0.12271210800000176
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06492800265550613,
+      "median_ms": 0.06585600227117538,
+      "p80_ms": 0.06697600334882736,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.4108388120000015,
+      "timing_seconds": 0.11706096599999682
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06531199812889099,
+      "median_ms": 0.06604799628257751,
+      "p80_ms": 0.06684800237417221,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.22072198700000456,
+      "timing_seconds": 0.12293163999999734
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15699200332164764,
+      "median_ms": 0.1576640009880066,
+      "p80_ms": 0.1584320068359375,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2698207799999963,
+      "timing_seconds": 0.12103685900000016
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22071040272712705,
+      "median_ms": 0.22144000232219696,
+      "p80_ms": 0.22224000096321106,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2471860570000004,
+      "timing_seconds": 0.12195515300000181
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06268800050020218,
+      "median_ms": 0.06355199962854385,
+      "p80_ms": 0.06438399851322174,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.22117856500000244,
+      "timing_seconds": 0.11731390099999572
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20483200252056122,
+      "median_ms": 0.20563200116157532,
+      "p80_ms": 0.2064639925956726,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.20881270999999657,
+      "timing_seconds": 0.12164933100000042
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n128k64-w4s4g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.12332800030708313,
+      "median_ms": 0.12459200248122215,
+      "p80_ms": 0.1257600039243698,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.8820720350000002,
+      "timing_seconds": 0.11976857599999846
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21526400744915009,
+      "median_ms": 0.21595200151205063,
+      "p80_ms": 0.21689599752426147,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.22649854900000577,
+      "timing_seconds": 0.1217151439999995
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1565759927034378,
+      "median_ms": 0.15721599757671356,
+      "p80_ms": 0.1579200029373169,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2551345789999999,
+      "timing_seconds": 0.12030367200000569
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n256k64-w8s4g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.174112007021904,
+      "median_ms": 0.1746239960193634,
+      "p80_ms": 0.17563520073890687,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.6182755309999948,
+      "timing_seconds": 0.1215657280000002
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23974399268627167,
+      "median_ms": 0.2407359927892685,
+      "p80_ms": 0.24172799289226532,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.21928124400000115,
+      "timing_seconds": 0.12288661499999876
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2104831963777542,
+      "median_ms": 0.21119999885559082,
+      "p80_ms": 0.21210880279541017,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.21569663700000063,
+      "timing_seconds": 0.12206866799999716
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1648000031709671,
+      "median_ms": 0.1653759926557541,
+      "p80_ms": 0.16598400473594666,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2733275309999996,
+      "timing_seconds": 0.12020156900000245
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k64-w4s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2497087985277176,
+      "median_ms": 0.250575989484787,
+      "p80_ms": 0.2517311990261078,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.26772526899999605,
+      "timing_seconds": 0.12292645899999854
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23836800456047058,
+      "median_ms": 0.23907199501991272,
+      "p80_ms": 0.23980799317359924,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.24736984399999784,
+      "timing_seconds": 0.12306483600000462
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23084799945354462,
+      "median_ms": 0.23188800364732742,
+      "p80_ms": 0.23296000063419342,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.211239704999997,
+      "timing_seconds": 0.12223792099999997
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.3059775948524475,
+      "median_ms": 0.30687999725341797,
+      "p80_ms": 0.30810879468917846,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.3261876260000065,
+      "timing_seconds": 0.12357883299999628
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2576960027217865,
+      "median_ms": 0.25862398743629456,
+      "p80_ms": 0.259552001953125,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2598706980000003,
+      "timing_seconds": 0.12299198500000585
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15353600680828094,
+      "median_ms": 0.1541759967803955,
+      "p80_ms": 0.155008003115654,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2413157969999986,
+      "timing_seconds": 0.12082685699999729
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.17123199999332428,
+      "median_ms": 0.17183999717235565,
+      "p80_ms": 0.17244799435138702,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.31772248800000114,
+      "timing_seconds": 0.12040069700000089
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2741439938545227,
+      "median_ms": 0.2752159982919693,
+      "p80_ms": 0.2762880027294159,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.31556184500000484,
+      "timing_seconds": 0.12313326000000302
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k128-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 128,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14035199582576752,
+      "median_ms": 0.14102399349212646,
+      "p80_ms": 0.14176000654697418,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.5015878520000001,
+      "timing_seconds": 0.12138126800000038
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.233024001121521,
+      "median_ms": 0.23375999927520752,
+      "p80_ms": 0.23449599742889404,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.27780368499999497,
+      "timing_seconds": 0.12327968799999667
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2383359968662262,
+      "median_ms": 0.23921599984169006,
+      "p80_ms": 0.24035200476646423,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.25913142200000294,
+      "timing_seconds": 0.12129050899999783
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.17932799458503723,
+      "median_ms": 0.17987200617790222,
+      "p80_ms": 0.18051199615001678,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.6324773540000024,
+      "timing_seconds": 0.12169155699999834
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14527360200881959,
+      "median_ms": 0.14608000218868256,
+      "p80_ms": 0.14682239890098572,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.20802551500000277,
+      "timing_seconds": 0.12033137299999908
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20608000457286835,
+      "median_ms": 0.20688000321388245,
+      "p80_ms": 0.2077759951353073,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.21216587499999662,
+      "timing_seconds": 0.12233135299999987
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21254399418830872,
+      "median_ms": 0.21329600363969803,
+      "p80_ms": 0.2141440063714981,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.24710551599999775,
+      "timing_seconds": 0.12671332200000052
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k64-w4s5g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 5,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.12956799566745758,
+      "median_ms": 0.13040000200271606,
+      "p80_ms": 0.131071999669075,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.6127442890000054,
+      "timing_seconds": 0.121006524000002
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2557951986789703,
+      "median_ms": 0.2566399872303009,
+      "p80_ms": 0.2577599883079529,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.25588748800000616,
+      "timing_seconds": 0.12367269800000003
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23270399868488312,
+      "median_ms": 0.23372800648212433,
+      "p80_ms": 0.23472000658512115,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.23756636099999895,
+      "timing_seconds": 0.12243494500000196
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20841600000858307,
+      "median_ms": 0.20924800634384155,
+      "p80_ms": 0.21014399826526642,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.2156372180000048,
+      "timing_seconds": 0.12189128099999635
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22229759991168976,
+      "median_ms": 0.22297599911689758,
+      "p80_ms": 0.22394240498542783,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.25480734900000357,
+      "timing_seconds": 0.12269862000000131
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m256n128k64-w8s4g8",
+      "config": {
+        "block_m": 256,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2266560047864914,
+      "median_ms": 0.22703999280929565,
+      "p80_ms": 0.22732800245285034,
+      "max_abs_error": 0.060699462890625,
+      "compile_seconds": 0.5641556999999935,
+      "timing_seconds": 0.12283664200000288
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06294400244951248,
+      "median_ms": 0.06387200206518173,
+      "p80_ms": 0.06521599739789963,
+      "max_abs_error": 0.0624847412109375,
+      "compile_seconds": 0.002699739000000534,
+      "timing_seconds": 0.11757558499999732
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22019200026988983,
+      "median_ms": 0.22099199891090393,
+      "p80_ms": 0.22179199755191803,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2460051189999959,
+      "timing_seconds": 0.12212529100000324
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15388800203800201,
+      "median_ms": 0.1544959992170334,
+      "p80_ms": 0.15521920025348665,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2266130639999986,
+      "timing_seconds": 0.11992424099999965
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2429951995611191,
+      "median_ms": 0.24380800127983093,
+      "p80_ms": 0.24474879801273347,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2628927710000042,
+      "timing_seconds": 0.12281083899999601
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23846399784088135,
+      "median_ms": 0.23942400515079498,
+      "p80_ms": 0.240447998046875,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.24753403300000087,
+      "timing_seconds": 0.12287059500000197
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14934399724006653,
+      "median_ms": 0.1502079963684082,
+      "p80_ms": 0.1509760022163391,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.23141397100000205,
+      "timing_seconds": 0.12101267099999546
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06697600334882736,
+      "median_ms": 0.06774400174617767,
+      "p80_ms": 0.0687360018491745,
+      "max_abs_error": 0.063446044921875,
+      "compile_seconds": 0.4253729010000029,
+      "timing_seconds": 0.11448372099999915
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20582400262355804,
+      "median_ms": 0.20656000077724457,
+      "p80_ms": 0.20742399990558624,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.20205457600000187,
+      "timing_seconds": 0.12674268299999625
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.07643520087003708,
+      "median_ms": 0.07788799703121185,
+      "p80_ms": 0.07894399762153625,
+      "max_abs_error": 0.0634613037109375,
+      "compile_seconds": 0.2849851190000052,
+      "timing_seconds": 0.11844985700000166
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.16659200191497803,
+      "median_ms": 0.1671999990940094,
+      "p80_ms": 0.16793599724769592,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2600026129999975,
+      "timing_seconds": 0.1209883769999962
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k128-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 128,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14537599682807922,
+      "median_ms": 0.14604799449443817,
+      "p80_ms": 0.14663040041923525,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.4346403649999999,
+      "timing_seconds": 0.12122210100000075
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m256n128k64-w8s4g8",
+      "config": {
+        "block_m": 256,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22941439747810366,
+      "median_ms": 0.22991999983787537,
+      "p80_ms": 0.23030400276184082,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.544608260000004,
+      "timing_seconds": 0.12776337700000084
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.25508480072021483,
+      "median_ms": 0.25596800446510315,
+      "p80_ms": 0.25699201226234436,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2598211170000013,
+      "timing_seconds": 0.1228696229999997
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15481600165367126,
+      "median_ms": 0.1555200070142746,
+      "p80_ms": 0.15622399747371674,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.26039889100000124,
+      "timing_seconds": 0.12088467400000269
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.16892799735069275,
+      "median_ms": 0.1696159988641739,
+      "p80_ms": 0.1703999936580658,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.28895857300000216,
+      "timing_seconds": 0.12108784100000491
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k64-w4s5g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 5,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14262400567531586,
+      "median_ms": 0.14336000382900238,
+      "p80_ms": 0.14403200149536133,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.6727383399999951,
+      "timing_seconds": 0.12114355699999635
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14812800288200378,
+      "median_ms": 0.14892800152301788,
+      "p80_ms": 0.14982399344444275,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2382637239999994,
+      "timing_seconds": 0.12110199900000396
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23615999519824982,
+      "median_ms": 0.2369920015335083,
+      "p80_ms": 0.23785600066184998,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2969624010000018,
+      "timing_seconds": 0.12254966099999365
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23852159976959228,
+      "median_ms": 0.23958399891853333,
+      "p80_ms": 0.2407039999961853,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2391767990000062,
+      "timing_seconds": 0.12322385399998836
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k64-w8s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2648960053920746,
+      "median_ms": 0.2659200131893158,
+      "p80_ms": 0.2669120132923126,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2659015539999956,
+      "timing_seconds": 0.12323358500000836
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2502207934856415,
+      "median_ms": 0.2508639991283417,
+      "p80_ms": 0.2518720030784607,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.23751445300000285,
+      "timing_seconds": 0.12258121600000038
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2197760045528412,
+      "median_ms": 0.22044800221920013,
+      "p80_ms": 0.22130559980869294,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2626578089999896,
+      "timing_seconds": 0.12200826400000153
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22729599475860596,
+      "median_ms": 0.22809599339962006,
+      "p80_ms": 0.22899200022220612,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2372360859999958,
+      "timing_seconds": 0.12249509299999772
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14694400131702423,
+      "median_ms": 0.1477919965982437,
+      "p80_ms": 0.14860799908638,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.22559234199999878,
+      "timing_seconds": 0.11868333900000039
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14777599275112152,
+      "median_ms": 0.14847999811172485,
+      "p80_ms": 0.14927999675273895,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2132408570000024,
+      "timing_seconds": 0.12028388599999573
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.26476800441741943,
+      "median_ms": 0.2656959891319275,
+      "p80_ms": 0.2666879892349243,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.29204995400000655,
+      "timing_seconds": 0.12306916999999373
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06911999732255936,
+      "median_ms": 0.06995200365781784,
+      "p80_ms": 0.0708480030298233,
+      "max_abs_error": 0.063446044921875,
+      "compile_seconds": 0.27238286300000425,
+      "timing_seconds": 0.1173230840000059
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1802240014076233,
+      "median_ms": 0.1809920072555542,
+      "p80_ms": 0.1815679967403412,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.6270844729999965,
+      "timing_seconds": 0.12236552900000675
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21740800142288208,
+      "median_ms": 0.21830399334430695,
+      "p80_ms": 0.21932800114154816,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.24371077300000366,
+      "timing_seconds": 0.1225350560000038
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.07039999961853027,
+      "median_ms": 0.07132799923419952,
+      "p80_ms": 0.07242880016565323,
+      "max_abs_error": 0.0634613037109375,
+      "compile_seconds": 0.22794191100000205,
+      "timing_seconds": 0.11844692100000032
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2096319943666458,
+      "median_ms": 0.21035200357437134,
+      "p80_ms": 0.2112320065498352,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2299210649999992,
+      "timing_seconds": 0.12246373000000688
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21264000236988068,
+      "median_ms": 0.21350400149822235,
+      "p80_ms": 0.21430400013923645,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.24574758299999644,
+      "timing_seconds": 0.12201051200000279
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n256k64-w8s4g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1755712002515793,
+      "median_ms": 0.1759680062532425,
+      "p80_ms": 0.17635199427604675,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.6176379630000071,
+      "timing_seconds": 0.12264313000000016
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20908799767494202,
+      "median_ms": 0.2099519968032837,
+      "p80_ms": 0.21094399690628052,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.22362594299998761,
+      "timing_seconds": 0.12239944499999922
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n128k64-w4s4g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.11990399658679962,
+      "median_ms": 0.12108799815177917,
+      "p80_ms": 0.12218239903450012,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.7165158230000088,
+      "timing_seconds": 0.12156210000000556
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k64-w4s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2736639976501465,
+      "median_ms": 0.27452799677848816,
+      "p80_ms": 0.27561599016189575,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2810704059999978,
+      "timing_seconds": 0.12313343300000668
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23657600581645966,
+      "median_ms": 0.23766399919986725,
+      "p80_ms": 0.23875199258327484,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.22555974299999093,
+      "timing_seconds": 0.12275542000000428
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2407039999961853,
+      "median_ms": 0.24160000681877136,
+      "p80_ms": 0.2425920069217682,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.21780662500000858,
+      "timing_seconds": 0.12247001299999738
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.30377599596977234,
+      "median_ms": 0.3057920038700104,
+      "p80_ms": 0.30720001459121704,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.32097257399999535,
+      "timing_seconds": 0.12314743299999975
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2524479925632477,
+      "median_ms": 0.2533760070800781,
+      "p80_ms": 0.2544575989246368,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2547153170000058,
+      "timing_seconds": 0.12298442099999818
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23478400707244873,
+      "median_ms": 0.23548799753189087,
+      "p80_ms": 0.2362111985683441,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.2636425580000008,
+      "timing_seconds": 0.12302810699999611
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14867199957370758,
+      "median_ms": 0.1494400054216385,
+      "p80_ms": 0.15022720098495485,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.25994811200000356,
+      "timing_seconds": 0.12061319299999695
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.17078399658203125,
+      "median_ms": 0.17139199376106262,
+      "p80_ms": 0.1720000058412552,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.24990355300001,
+      "timing_seconds": 0.12177716800000837
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1563776046037674,
+      "median_ms": 0.15692800283432007,
+      "p80_ms": 0.1576640009880066,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.26411621799999807,
+      "timing_seconds": 0.12061739499999646
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2079743981361389,
+      "median_ms": 0.2088319957256317,
+      "p80_ms": 0.2099200040102005,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.21907496500000434,
+      "timing_seconds": 0.12244358199998828
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15619200468063354,
+      "median_ms": 0.1568640023469925,
+      "p80_ms": 0.1576319932937622,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.25983301000000836,
+      "timing_seconds": 0.12126642599999116
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23292799293994904,
+      "median_ms": 0.2341119945049286,
+      "p80_ms": 0.23532800376415253,
+      "max_abs_error": 0.0640869140625,
+      "compile_seconds": 0.21628572999999562,
+      "timing_seconds": 0.12220875699999567
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.0634239986538887,
+      "median_ms": 0.06470400094985962,
+      "p80_ms": 0.06640639901161194,
+      "max_abs_error": 0.0624237060546875,
+      "compile_seconds": 0.0008189020000060054,
+      "timing_seconds": 0.11745950699999241
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1695999950170517,
+      "median_ms": 0.17031999677419662,
+      "p80_ms": 0.17103999853134155,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003391080000056945,
+      "timing_seconds": 0.1221230160000033
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k128-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 128,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1424960047006607,
+      "median_ms": 0.14297600090503693,
+      "p80_ms": 0.14351999759674072,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00026353799999867533,
+      "timing_seconds": 0.12094702599999607
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1444736033678055,
+      "median_ms": 0.14528000354766846,
+      "p80_ms": 0.14604799449443817,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002620540000037863,
+      "timing_seconds": 0.12079534500000477
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.24874239563941958,
+      "median_ms": 0.2494720071554184,
+      "p80_ms": 0.2504895985126495,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00032393800000818374,
+      "timing_seconds": 0.12379703500000971
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m256n128k64-w8s4g8",
+      "config": {
+        "block_m": 256,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22630399465560913,
+      "median_ms": 0.2266560047864914,
+      "p80_ms": 0.2269439995288849,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00042853799999420517,
+      "timing_seconds": 0.1234615469999909
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.25432959794998167,
+      "median_ms": 0.25519999861717224,
+      "p80_ms": 0.2560960054397583,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00040020699999843146,
+      "timing_seconds": 0.12324291200000914
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15248000621795654,
+      "median_ms": 0.15308800339698792,
+      "p80_ms": 0.1538047969341278,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002886369999970384,
+      "timing_seconds": 0.1240334200000035
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15622399747371674,
+      "median_ms": 0.1568319946527481,
+      "p80_ms": 0.15753600001335144,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00030822200000102384,
+      "timing_seconds": 0.12138482000000295
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2339775949716568,
+      "median_ms": 0.23510399460792542,
+      "p80_ms": 0.23635839819908142,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00037862199999949553,
+      "timing_seconds": 0.12322839699999122
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n128k64-w4s5g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 5,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14105600118637085,
+      "median_ms": 0.14140799641609192,
+      "p80_ms": 0.14185599982738495,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00028040899999837166,
+      "timing_seconds": 0.12230110000000138
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21866880059242247,
+      "median_ms": 0.21939200162887573,
+      "p80_ms": 0.22021119594573973,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00029562400000315847,
+      "timing_seconds": 0.12311337200000594
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n128k64-w4s4g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.12252800166606903,
+      "median_ms": 0.1236800029873848,
+      "p80_ms": 0.12469760328531265,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00022131499999034077,
+      "timing_seconds": 0.12156794300000229
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20297600328922272,
+      "median_ms": 0.20371200144290924,
+      "p80_ms": 0.204614394903183,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00032289900001103433,
+      "timing_seconds": 0.12283617399999969
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20745599269866943,
+      "median_ms": 0.20825600624084473,
+      "p80_ms": 0.2091392010450363,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002937959999940176,
+      "timing_seconds": 0.12233585799999958
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06543999910354614,
+      "median_ms": 0.06630399823188782,
+      "p80_ms": 0.0671359971165657,
+      "max_abs_error": 0.0624237060546875,
+      "compile_seconds": 0.00019271399999354344,
+      "timing_seconds": 0.11876490199999523
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23759999871253967,
+      "median_ms": 0.23862400650978088,
+      "p80_ms": 0.2399040013551712,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003584050000000616,
+      "timing_seconds": 0.12335102599999459
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k64-w4s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23689599335193634,
+      "median_ms": 0.2378239929676056,
+      "p80_ms": 0.23878400027751923,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00032829199999184766,
+      "timing_seconds": 0.12260652300000174
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k64-w4s2g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2630400061607361,
+      "median_ms": 0.26393601298332214,
+      "p80_ms": 0.26495999097824097,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003336249999961183,
+      "timing_seconds": 0.12380532600001004
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14790399372577667,
+      "median_ms": 0.14870400726795197,
+      "p80_ms": 0.1494079977273941,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00024007800000447332,
+      "timing_seconds": 0.12056787999999585
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.15398399531841278,
+      "median_ms": 0.1547199934720993,
+      "p80_ms": 0.15546240508556367,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00027470899999570975,
+      "timing_seconds": 0.12107387800000424
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.30345600843429565,
+      "median_ms": 0.30454400181770325,
+      "p80_ms": 0.3057279884815216,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00045034100000407307,
+      "timing_seconds": 0.12452817899999502
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1480640023946762,
+      "median_ms": 0.14870400726795197,
+      "p80_ms": 0.14953599870204926,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00028238899999166733,
+      "timing_seconds": 0.1213613680000094
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k64-w8s2g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2631167948246002,
+      "median_ms": 0.26414400339126587,
+      "p80_ms": 0.26499199867248535,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00036722000000111166,
+      "timing_seconds": 0.12353027199999644
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1557055950164795,
+      "median_ms": 0.15651200711727142,
+      "p80_ms": 0.15715839862823489,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00023810499999399326,
+      "timing_seconds": 0.12155137999999965
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2351360023021698,
+      "median_ms": 0.23577600717544556,
+      "p80_ms": 0.2364799976348877,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00030257900000663085,
+      "timing_seconds": 0.12336915400000237
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2056639939546585,
+      "median_ms": 0.20659199357032776,
+      "p80_ms": 0.20742399990558624,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002968639999920697,
+      "timing_seconds": 0.12312580999999057
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n128k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1687680035829544,
+      "median_ms": 0.16940799355506897,
+      "p80_ms": 0.1701119989156723,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002905019999985825,
+      "timing_seconds": 0.122159393000004
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n128k32-w8s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2194560021162033,
+      "median_ms": 0.22008000314235687,
+      "p80_ms": 0.22089600563049316,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00033530999999697997,
+      "timing_seconds": 0.1228726189999918
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n128k32-w4s3g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2407359927892685,
+      "median_ms": 0.24131199717521667,
+      "p80_ms": 0.24223999679088593,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003426230000087571,
+      "timing_seconds": 0.12361118199999055
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n32k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.20838400721549988,
+      "median_ms": 0.20931200683116913,
+      "p80_ms": 0.21007999777793884,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003550140000072588,
+      "timing_seconds": 0.12214155100001278
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23129600286483765,
+      "median_ms": 0.23199999332427979,
+      "p80_ms": 0.2327679991722107,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003026639999887948,
+      "timing_seconds": 0.12305761999999731
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s4g4",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14828799664974213,
+      "median_ms": 0.14905600249767303,
+      "p80_ms": 0.14985600113868713,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00022234499999740365,
+      "timing_seconds": 0.12147652999999536
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n128k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.16393600404262543,
+      "median_ms": 0.16457599401474,
+      "p80_ms": 0.1653759926557541,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002539350000034801,
+      "timing_seconds": 0.12265909799999974
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n64k32-w4s3g8",
+      "config": {
+        "block_m": 32,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22351999580860138,
+      "median_ms": 0.22431999444961548,
+      "p80_ms": 0.22521600127220154,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00034824799999455536,
+      "timing_seconds": 0.12316592999999898
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n64k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.23894399404525757,
+      "median_ms": 0.2396160066127777,
+      "p80_ms": 0.24062080383300782,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00036175500000013017,
+      "timing_seconds": 0.12296763499999486
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n64k64-w8s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.25548800826072693,
+      "median_ms": 0.25622400641441345,
+      "p80_ms": 0.2572160065174103,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003906490000105123,
+      "timing_seconds": 0.12332680500000492
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06691200286149979,
+      "median_ms": 0.06769600138068199,
+      "p80_ms": 0.06851200014352798,
+      "max_abs_error": 0.0624237060546875,
+      "compile_seconds": 0.00020398200000215638,
+      "timing_seconds": 0.118607922999999
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m16n32k64-w4s2g8",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.22972799837589264,
+      "median_ms": 0.2309279963374138,
+      "p80_ms": 0.2321343958377838,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003201709999984814,
+      "timing_seconds": 0.12338930399999981
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n128k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 128,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.063680000603199,
+      "median_ms": 0.06451199948787689,
+      "p80_ms": 0.06537599861621857,
+      "max_abs_error": 0.06292724609375,
+      "compile_seconds": 0.00015070299998853898,
+      "timing_seconds": 0.11910105500000157
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m32n32k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1454080045223236,
+      "median_ms": 0.14611199498176575,
+      "p80_ms": 0.14694400131702423,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0002444470000000365,
+      "timing_seconds": 0.12153935300000285
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k32-w4s3g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21686400473117828,
+      "median_ms": 0.21766400337219238,
+      "p80_ms": 0.21859200298786163,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.000323566000005826,
+      "timing_seconds": 0.12271857000000352
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m128n32k64-w4s2g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 32,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 2,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.27267199754714966,
+      "median_ms": 0.27347201108932495,
+      "p80_ms": 0.2743360102176666,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0004095259999985501,
+      "timing_seconds": 0.12413132599999699
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.17882240414619446,
+      "median_ms": 0.17926399409770966,
+      "p80_ms": 0.1796479970216751,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.00034816900000578244,
+      "timing_seconds": 0.12293588699999702
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "tile",
+      "config_key": "tile:m128n256k64-w8s4g8",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.1732800006866455,
+      "median_ms": 0.173567995429039,
+      "p80_ms": 0.1738560050725937,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.0003106949999960307,
+      "timing_seconds": 0.12303846199999668
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "old",
+      "config_key": "m64n64k32-w4s3g8",
+      "config": {
+        "block_m": 64,
+        "block_n": 64,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 3,
+        "group_m": 8
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.211776003241539,
+      "median_ms": 0.2126079946756363,
+      "p80_ms": 0.21347199380397797,
+      "max_abs_error": 0.0635986328125,
+      "compile_seconds": 0.000297334999999066,
+      "timing_seconds": 0.12255842199999734
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 1,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06326399743556976,
+      "median_ms": 0.06409599632024765,
+      "p80_ms": 0.06489600241184235,
+      "max_abs_error": 0.06292724609375,
+      "compile_seconds": 0.00015365000000144846,
+      "timing_seconds": 0.11917939600000693
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 2,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06387200206518173,
+      "median_ms": 0.06518399715423584,
+      "p80_ms": 0.06665600091218948,
+      "max_abs_error": 0.0620880126953125,
+      "compile_seconds": 0.00011850399999957517,
+      "timing_seconds": 0.11789533099999971
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 2,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.144896000623703,
+      "median_ms": 0.1456640064716339,
+      "p80_ms": 0.1464959979057312,
+      "max_abs_error": 0.0641937255859375,
+      "compile_seconds": 0.0002997469999996838,
+      "timing_seconds": 0.12151143399999853
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944",
+      "workload": {
+        "m": 7,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-7"
+      },
+      "bank": 2,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06323199719190598,
+      "median_ms": 0.06403200328350067,
+      "p80_ms": 0.0647680014371872,
+      "max_abs_error": 0.0620880126953125,
+      "compile_seconds": 0.00015764599999101847,
+      "timing_seconds": 0.11864959899999405
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 2,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06294400244951248,
+      "median_ms": 0.06393600255250931,
+      "p80_ms": 0.06543999910354614,
+      "max_abs_error": 0.0621490478515625,
+      "compile_seconds": 0.00011606600000391154,
+      "timing_seconds": 0.11751338700000247
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 2,
+      "family": "old",
+      "config_key": "m32n32k32-w4s4g4",
+      "config": {
+        "block_m": 32,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14695039987564087,
+      "median_ms": 0.14771200716495514,
+      "p80_ms": 0.1486976057291031,
+      "max_abs_error": 0.063629150390625,
+      "compile_seconds": 0.00030741800000555486,
+      "timing_seconds": 0.12200607399999797
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944",
+      "workload": {
+        "m": 31,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "mixed-31"
+      },
+      "bank": 2,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split4",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06691200286149979,
+      "median_ms": 0.06774400174617767,
+      "p80_ms": 0.06854400038719177,
+      "max_abs_error": 0.0633544921875,
+      "compile_seconds": 0.0002016889999936211,
+      "timing_seconds": 0.11732425399999613
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 2,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.19625599682331085,
+      "median_ms": 0.20399999618530273,
+      "p80_ms": 0.20505599677562714,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.0002636110000082681,
+      "timing_seconds": 0.12343086999999286
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 2,
+      "family": "old",
+      "config_key": "m128n128k32-w8s4g4",
+      "config": {
+        "block_m": 128,
+        "block_n": 128,
+        "block_k": 32,
+        "num_warps": 8,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.2722879946231842,
+      "median_ms": 0.2752319872379303,
+      "p80_ms": 0.27895678877830504,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.00045637399999520767,
+      "timing_seconds": 0.12423754699999279
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944",
+      "workload": {
+        "m": 1024,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "prefill-1024"
+      },
+      "bank": 2,
+      "family": "persistent",
+      "config_key": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0",
+      "config": {
+        "block_m": 128,
+        "block_n": 256,
+        "block_k": 64,
+        "num_warps": 8,
+        "num_stages": 3,
+        "group_m": 8,
+        "epilogue_subtile": false,
+        "warp_specialize": false
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.21447039544582366,
+      "median_ms": 0.21872000396251678,
+      "p80_ms": 0.22466560304164887,
+      "max_abs_error": 0.0625,
+      "compile_seconds": 0.0003602609999973083,
+      "timing_seconds": 0.12335648300000912
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 2,
+      "family": "torch",
+      "config_key": "torch",
+      "config": null,
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.06300800293684006,
+      "median_ms": 0.06425599753856659,
+      "p80_ms": 0.06595200300216675,
+      "max_abs_error": 0.06036376953125,
+      "compile_seconds": 0.00011811699999952907,
+      "timing_seconds": 0.11612143899999694
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 2,
+      "family": "old",
+      "config_key": "m16n32k32-w4s4g4",
+      "config": {
+        "block_m": 16,
+        "block_n": 32,
+        "block_k": 32,
+        "num_warps": 4,
+        "num_stages": 4,
+        "group_m": 4
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.14556799829006195,
+      "median_ms": 0.14635200053453445,
+      "p80_ms": 0.14716799557209015,
+      "max_abs_error": 0.06463623046875,
+      "compile_seconds": 0.0002937430000002905,
+      "timing_seconds": 0.1212403570000049
+    },
+    {
+      "workload_key": "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944",
+      "workload": {
+        "m": 1,
+        "n": 3584,
+        "k": 18944,
+        "model": "qwen2.5-7b",
+        "projection": "ffn-down",
+        "regime": "decode-1"
+      },
+      "bank": 2,
+      "family": "split_k",
+      "config_key": "split_k:m16n64k64-w4s3-split16",
+      "config": {
+        "block_m": 16,
+        "block_n": 64,
+        "block_k": 64,
+        "num_warps": 4,
+        "num_stages": 3,
+        "split_k": 16
+      },
+      "correct": true,
+      "error": null,
+      "p20_ms": 0.0626240000128746,
+      "median_ms": 0.06339199841022491,
+      "p80_ms": 0.06412799656391144,
+      "max_abs_error": 0.06036376953125,
+      "compile_seconds": 0.00017552900000339378,
+      "timing_seconds": 0.11792481800000587
+    }
+  ],
+  "selected": {
+    "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944": {
+      "old": "m128n128k32-w8s4g4",
+      "new": "persistent:hopper-m128n256k64-w8s3g8-sub0-ws0"
+    },
+    "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944": {
+      "old": "m16n32k32-w4s4g4",
+      "new": "split_k:m16n64k64-w4s3-split16"
+    },
+    "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944": {
+      "old": "m32n32k32-w4s4g4",
+      "new": "split_k:m16n64k64-w4s3-split4"
+    },
+    "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944": {
+      "old": "m16n32k32-w4s4g4",
+      "new": "split_k:m16n64k64-w4s3-split16"
+    }
+  },
+  "duration_seconds": 108.696539024,
+  "sessions": [
+    {
+      "id": "2c562c96-39df-4a95-b07c-94a8d3e66ead",
+      "source_commit": "884f845c7ecfcb428607c5c3460325586702b2bc",
+      "hardware": {
+        "gpu": "H100",
+        "device_name": "NVIDIA H100 80GB HBM3",
+        "compute_capability": [
+          9,
+          0
+        ],
+        "multiprocessor_count": 132,
+        "total_memory_gb": 79.1788330078125,
+        "cuda_version": "12.8",
+        "torch_version": "2.8.0+cu128",
+        "triton_version": "3.4.0"
+      },
+      "units": [
+        [
+          1,
+          "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944"
+        ],
+        [
+          1,
+          "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944"
+        ],
+        [
+          1,
+          "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944"
+        ],
+        [
+          1,
+          "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944"
+        ],
+        [
+          2,
+          "qwen2.5-7b-ffn-down-decode-7-m7-n3584-k18944"
+        ],
+        [
+          2,
+          "qwen2.5-7b-ffn-down-mixed-31-m31-n3584-k18944"
+        ],
+        [
+          2,
+          "qwen2.5-7b-ffn-down-prefill-1024-m1024-n3584-k18944"
+        ],
+        [
+          2,
+          "qwen2.5-7b-ffn-down-decode-1-m1-n3584-k18944"
+        ]
+      ],
+      "duration_seconds": 108.696539024
+    }
+  ],
+  "cloud": {
+    "gpu": "H100",
+    "cpu_cores": 1,
+    "host_memory_gib": 4,
+    "wall_minutes": 2.47,
+    "cost_upper_usd": 0.1821,
+    "gpu_rate_usd_per_hour": 3.9492,
+    "note": "Conservative wall-time estimate, not a provider invoice"
+  }
+}
