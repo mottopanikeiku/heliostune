@@ -66,7 +66,7 @@ These results exclude the held-out model family, but do not use the final H100 p
 - H100 AUC: [parhelion-h100-final.json](../benchmarks/results/parhelion-h100-final.json), `auc.<method>`; budget ratios and intervals: `methods.<method>[budget == b].mean_fraction_oracle`, `ci95_low`, `ci95_high`. The paired difference is `headline.paired_auc_delta_vs_primary`.
 - Earlier AUC: [l4-to-a10.json](../benchmarks/results/l4-to-a10.json) and [a10-to-l4.json](../benchmarks/results/a10-to-l4.json), `primary_metrics.fraction_reference_auc.<method>`; budget ratios: `methods.<method>[budget == 8].mean_fraction_oracle`.
 - Method names come from each input's `method_labels`. Retrieval-only is `multisource_retrieval`; it probes source-ranked actions and returns the best measured incumbent without Thompson posterior adaptation.
-- H100 stochastic budget intervals use seed variation after equal-fold averaging; deterministic intervals use fold variation. The paired primary AUC interval uses Student-t. These are different summaries, not interchangeable error bars.
+- H100 budget intervals are mean ± 1.96 standard errors, a normal approximation: across seeds after equal-fold averaging for stochastic methods and across folds for deterministic ones. The paired primary AUC interval uses Student-t. These are different summaries, not interchangeable error bars.
 - The curated action set is not all legal Triton configurations. Timings omit compilation, end-to-end serving overhead, and production interference.
 - Target budgets simulate online selection from already collected exhaustive timing matrices. Source acquisition and reference/evaluation banks are outside that budget; this table does not claim a physical collection cost reduction.
 
