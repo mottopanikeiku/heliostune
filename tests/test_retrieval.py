@@ -129,6 +129,99 @@ def test_source_gpus_are_balanced_and_emit_four_finite_features() -> None:
     )
 
 
+def test_source_gpu_agreement_counts_sign_votes() -> None:
+    configs = _configs()
+    source = _workload("source")
+    target = _workload("target")
+    split_vote = RetrievalIndex(
+        (
+            *_row(source, "a10", configs, (1.0, 4.0)),
+            *_row(source, "l4", configs, (1.0, 2.0)),
+            *_row(source, "t4", configs, (2.0, 1.0)),
+        ),
+        k=1,
+    )
+    assert split_vote.score(target, configs[0]).source_gpu_agreement == pytest.approx(1 / 3)
+
+    unanimous = RetrievalIndex(
+        (
+            *_row(source, "a10", configs, (1.0, 4.0)),
+            *_row(source, "l4", configs, (1.0, 2.0)),
+        ),
+        k=1,
+    )
+    assert unanimous.score(target, configs[0]).source_gpu_agreement == 1.0
+
+    indifferent = RetrievalIndex(
+        (
+            *_row(source, "a10", configs, (3.0, 3.0)),
+            *_row(source, "l4", configs, (2.0, 2.0)),
+        ),
+        k=1,
+    )
+    assert indifferent.score(target, configs[0]).source_gpu_agreement == 1.0
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"k": 0}, "k must be a positive integer"),
+        ({"k": True}, "k must be a positive integer"),
+        ({"k": 1.0}, "k must be a positive integer"),
+        ({"temperature": 0.0}, "temperature must be finite and positive"),
+        ({"temperature": math.nan}, "temperature must be finite and positive"),
+        ({"temperature": math.inf}, "temperature must be finite and positive"),
+    ],
+)
+def test_index_rejects_invalid_neighbor_parameters(kwargs: dict[str, object], message: str) -> None:
+    observations = _row(_workload("source"), "a10", _configs(), (1.0, 2.0))
+    with pytest.raises(ValueError, match=message):
+        RetrievalIndex(observations, **kwargs)  # type: ignore[arg-type]
+
+
+def test_index_rejects_empty_or_duplicate_archives() -> None:
+    with pytest.raises(ValueError, match="archive must not be empty"):
+        RetrievalIndex(())
+    source = _workload("source")
+    config = _configs()[0]
+    duplicate = (
+        ArchiveObservation(source, config, "a10", 1.0),
+        ArchiveObservation(source, config, "a10", 2.0),
+    )
+    with pytest.raises(ValueError, match="duplicate archive action"):
+        RetrievalIndex(duplicate)
+    with pytest.raises(ValueError, match="source_gpu must not be empty"):
+        ArchiveObservation(source, config, "", 1.0)
+
+
+def test_scoring_rejects_unknown_actions_duplicates_and_same_family_only_archives() -> None:
+    configs = _configs()
+    source = _workload("source")
+    index = RetrievalIndex(_row(source, "a10", configs, (1.0, 2.0)), k=1)
+    with pytest.raises(ValueError, match="not present in the retrieval archive"):
+        index.score(_workload("target"), KernelConfig(64, 64, 32, 4, 2))
+    with pytest.raises(ValueError, match="configs must contain unique actions"):
+        index.rank(_workload("target"), (configs[0], configs[0]))
+    with pytest.raises(ValueError, match="no eligible retrieval neighbor"):
+        index.score(_workload("source", projection="other"), configs[0])
+
+
+@pytest.mark.parametrize(
+    ("values", "message"),
+    [
+        ((math.nan, 0.0, 0.0, 1.0), "must be finite"),
+        ((0.0, -1.0, 0.0, 1.0), "weighted_variance must not be negative"),
+        ((0.0, 0.0, -1.0, 1.0), "normalized_neighbor_distance must not be negative"),
+        ((0.0, 0.0, 0.0, 1.5), "source_gpu_agreement must be between zero and one"),
+    ],
+)
+def test_retrieval_stats_reject_out_of_range_values(
+    values: tuple[float, float, float, float], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        RetrievalStats(*values)
+
+
 class _Archive(NamedTuple):
     """A schema-valid archive together with a permutation of the same rows."""
 
