@@ -165,9 +165,10 @@ def build_summary(repo: Path = _REPO) -> str:
         "- Method names come from each input's `method_labels`. Retrieval-only is "
         "`multisource_retrieval`; it probes source-ranked actions and returns the best "
         "measured incumbent without Thompson posterior adaptation.",
-        "- H100 stochastic budget intervals use seed variation after equal-fold averaging; "
-        "deterministic intervals use fold variation. The paired primary AUC interval "
-        "uses Student-t. These are different summaries, not interchangeable error bars.",
+        "- H100 budget intervals are mean ± 1.96 standard errors, a normal approximation: "
+        "across seeds after equal-fold averaging for stochastic methods and across folds "
+        "for deterministic ones. The paired primary AUC interval uses Student-t. These "
+        "are different summaries, not interchangeable error bars.",
         "- The curated action set is not all legal Triton configurations. Timings omit "
         "compilation, end-to-end serving overhead, and production interference.",
         "- Target budgets simulate online selection from already collected exhaustive "
