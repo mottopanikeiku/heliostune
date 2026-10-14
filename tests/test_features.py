@@ -13,6 +13,7 @@ from heliostune.features import (
     V2_FEATURE_NAMES,
     V3_FEATURE_NAMES,
     v2_joint_features,
+    v3_feature_rank,
     v3_joint_features,
 )
 from heliostune.schema import HardwareProfile
@@ -94,15 +95,17 @@ def test_profile_aware_fold_ranks_are_exactly_18_19_20() -> None:
             if workload.model != heldout_model
             and (workload.m, workload.n, workload.k) not in heldout_shapes
         )
-        ranks = []
-        for profile_count in (2, 3, 4):
-            matrix = np.stack(
-                [
-                    v3_joint_features(workload, config, profile)
-                    for profile in _PROFILES[:profile_count]
-                    for workload in eligible
-                    for config in PARHELION_V3_CANDIDATE_CONFIGS
-                ]
-            )
-            ranks.append(int(np.linalg.matrix_rank(matrix)))
+        ranks = [
+            v3_feature_rank(eligible, PARHELION_V3_CANDIDATE_CONFIGS, _PROFILES[:profile_count])
+            for profile_count in (2, 3, 4)
+        ]
         assert ranks == [18, 19, 20]
+
+
+@pytest.mark.parametrize("empty", range(3))
+def test_feature_rank_rejects_an_empty_design(empty: int) -> None:
+    workloads = () if empty == 0 else DEFAULT_WORKLOADS[:1]
+    configs = () if empty == 1 else DEFAULT_CONFIGS[:1]
+    profiles = () if empty == 2 else _PROFILES[:1]
+    with pytest.raises(ValueError, match="requires workloads, configs, and hardware"):
+        v3_feature_rank(workloads, configs, profiles)
