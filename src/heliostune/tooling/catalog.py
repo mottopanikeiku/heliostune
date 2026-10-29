@@ -974,7 +974,9 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
         historical["present_artifacts"], context="present historical artifacts"
     ).items():
         facts = exact_object(raw_facts, context=f"historical artifact {relative}")
-        _require_equal(_sha256(historical_artifact_path(root, relative)), facts.get("sha256"), context=relative)
+        _require_equal(
+            _sha256(historical_artifact_path(root, relative)), facts.get("sha256"), context=relative
+        )
 
     studies = catalog["studies"]
     if not isinstance(studies, Sequence) or isinstance(studies, (str, bytes)):

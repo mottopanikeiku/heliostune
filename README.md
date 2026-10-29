@@ -4,7 +4,7 @@ This is my small GPU matrix-multiplication tuning experiment, formerly HeliosTun
 
 **Question:** is the search policy the problem, or is its kernel bank too limited? I added ten Hopper-aware actions: larger tiles, deeper pipelines, persistent TMA and tensor-core split-K. The persistent path builds on [Triton's pinned tutorial](https://github.com/triton-lang/triton/blob/v3.4.0/python/tutorials/09-persistent-matmul.py); my split-K path is in [`action_expansion.py`](src/heliostune/action_expansion.py).
 
-**New H100 result:** bank-1-selected new actions beat `torch.matmul` on **9/96 named workloads**, versus **0/96** for the original 36 actions. There is **one exact median tie and 86 losses**. The new bank improves on the old bank on **95/96**, but torch still wins most workloads. These are descriptive medians, not significance claims. [Full summary](results/action-expansion-summary.json).
+**New H100 result:** bank-1-selected new actions beat `torch.matmul` on **9/96 named workloads**, versus **0/96** for the original 36 actions. There is **one exact median tie and 86 losses**. The new bank improves on the old bank on **95/96**, but torch still wins most workloads. These are descriptive medians, not significance claims. [Full summary](results/action-expansion-summary.json) · [report](https://mottopanikeiku.github.io/quartet/).
 
 ## What changed
 
@@ -36,19 +36,26 @@ Ratio means **new / torch**; lower is better. These are all nine nominal wins fr
 | Qwen / FFN-down | (7,3584,18944) | 64.256 / 67.712 | 0.948960 |
 | Granite / FFN-up | (96,12800,4096) | 51.712 / 52.032 | 0.993850 |
 
-Six wins use split-K; three use larger ordinary tiles; none uses persistent TMA. The largest saving is **5.55%** on Qwen's M=1 FFN-down. No selected new action beats torch at M=31,257,1024.
+Six wins use split-K; three use larger ordinary tiles; none uses persistent TMA. The largest saving is **5.55%** on Qwen's M=1 FFN-down. No selected new action beats torch at M=31,257,1024. At M=96 and M=257 the new bank is still **1.378×** and **1.373×** torch.
 
 ![Old and new independently scored ratios for all workloads](results/action-expansion.svg)
+
+## Bank or selection?
+
+I re-read every stored action matrix on CPU. In the original 36-action H100 archive, the exhaustive minimum from an earlier bank, scored on a later bank, is at most **0.13%** slower than that bank's in-sample minimum; that minimum is **1.608–1.609×** torch. In all **19 multi-bank views**, earlier-bank selection stays within **0.83%** of the in-sample minimum, which ranges from **0.936×** to **3.828×** torch. Several views are overlapping copies of the same cells, so I report each separately and pool none. Choosing within these banks costs little; where the bank's best action is slower than torch, selection cannot recover it.
+
+This is exhaustive earlier-bank selection, not a Thompson or transfer replay. The expansion's bank 2 holds only finalists, so I cannot compute its full-bank regret or winner stability. An analytical dossier counts programs, masked rows and split-K workspace for Qwen's FFN-down at every M; it is a prediction, not profiler evidence. At M=96 the selected persistent action launches **28 programs on 132 SMs**. [Diagnosis](results/kernel-bank-diagnosis.json) · [report](https://mottopanikeiku.github.io/quartet/).
 
 ## Reproduce
 
 ```sh
 uv sync --python 3.13 --locked --extra dev --extra modal
 uv run python scripts/analyze_action_expansion.py
+uv run python scripts/diagnose_kernel_bank.py && uv run python scripts/build_site.py
 uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py
 ```
 
-The second command regenerates the summary and figure on CPU. The third starts or resumes an H100 collection from a clean commit; completed workload units are reused. `--pilot` measures four workloads separately. [Fresh-repeat instructions](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
+The second command regenerates the summary and figure on CPU. The third rebuilds the cross-archive diagnosis and the [Pages report](site/index.html) from committed files; `--check` on either script verifies the committed bytes. The fourth starts or resumes an H100 collection from a clean commit; completed workload units are reused. `--pilot` measures four workloads separately. [Fresh-repeat instructions](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
 
 ## Limits and history
 
@@ -58,7 +65,7 @@ The second command regenerates the summary and figure on CPU. The third starts o
 - Warmed medians omit compilation, acquisition and serving cost. I did not rerun transfer policies on the expanded bank.
 - Ten new actions do not establish a hardware optimum or exhaust all possible Triton kernels.
 
-The [earlier audit](results/action-set-audit.json) remains unchanged. The [original transfer comparison](results/tuner-comparison.md) favored cold Thompson over Parhelion; selected posterior transfer strengths were zero. Retrieval and posterior code remain in [`retrieval.py`](src/heliostune/retrieval.py) and [`bandit.py`](src/heliostune/bandit.py). [Next comparison](docs/NEXT.md).
+The [earlier audit](results/action-set-audit.json) remains unchanged. The [original transfer comparison](results/tuner-comparison.md) favored cold Thompson over Parhelion; selected posterior transfer strengths were zero. Its [report](https://mottopanikeiku.github.io/quartet/transfer.html) is preserved byte-for-byte. Retrieval and posterior code remain in [`retrieval.py`](src/heliostune/retrieval.py) and [`bandit.py`](src/heliostune/bandit.py). [Next comparison](docs/NEXT.md).
 
 I build on [AutoTVM](https://arxiv.org/abs/1805.08166), [linear Thompson sampling](https://proceedings.mlr.press/v28/agrawal13.html), [RGPE](https://arxiv.org/abs/1802.02219) and [Transfer-Tuning](https://arxiv.org/abs/2201.05587). MIT [license](LICENSE).
 

@@ -72,6 +72,10 @@ jobs:
             --output "${RUNNER_TEMP}/h100-final-summary.json"
           cmp "${RUNNER_TEMP}/h100-final-summary.json" benchmarks/results/parhelion-h100-final.json
       - run: uv run heliostune verify-catalog benchmarks/research-artifact-manifest.json
+      - name: Reproduce the kernel-bank diagnosis and Pages landing page
+        run: |
+          uv run python scripts/diagnose_kernel_bank.py --check
+          uv run python scripts/build_site.py --check
       - name: Replay immutable v0.5.0 H200 derivation
         run: |
           test "$(git rev-parse 'v0.5.0^{commit}')" = "53a0e22ea140ce841e874284827232a7e050ce1c"
