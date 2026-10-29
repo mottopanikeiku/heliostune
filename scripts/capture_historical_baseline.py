@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Final
 
-from heliostune.tooling.artifacts import write_text_atomic
+from heliostune.tooling.artifacts import historical_artifact_path, write_text_atomic
 
 _REPO: Final = Path(__file__).resolve().parents[1]
 _DEFAULT_OUTPUT: Final = _REPO / "benchmarks/historical-artifact-baseline.json"
@@ -94,7 +94,7 @@ def _sha256(path: Path) -> str:
 def capture(repo: Path = _REPO) -> dict[str, object]:
     present: dict[str, object] = {}
     for relative in _PRESENT_ARTIFACTS:
-        path = repo / relative
+        path = historical_artifact_path(repo, relative)
         if not path.is_file():
             raise FileNotFoundError(f"historical artifact is missing: {relative}")
         present[relative] = {
@@ -111,7 +111,7 @@ def capture(repo: Path = _REPO) -> dict[str, object]:
     ) in _ABSENT_ALIASES.items():
         if (repo / alias).exists():
             raise ValueError(f"freeze-only alias unexpectedly exists: {alias}")
-        published = repo / published_path
+        published = historical_artifact_path(repo, published_path)
         if not published.is_file():
             raise FileNotFoundError(f"published replacement is missing: {published_path}")
         actual_sha256 = _sha256(published)

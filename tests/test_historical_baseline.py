@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from types import ModuleType
 
+from heliostune.tooling.artifacts import historical_artifact_path
+
 _REPO = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO / "scripts/capture_historical_baseline.py"
 _BASELINE = _REPO / "benchmarks/historical-artifact-baseline.json"
@@ -34,6 +36,6 @@ def test_absent_aliases_bind_published_replacements() -> None:
     for alias, binding in baseline["absent_freeze_aliases"].items():
         assert not (_REPO / alias).exists()
         assert binding["status"] == "not_present_at_audited_commit"
-        replacement = _REPO / binding["published_replacement"]
+        replacement = historical_artifact_path(_REPO, binding["published_replacement"])
         assert replacement.is_file()
         assert _sha256(replacement) == binding["published_replacement_sha256"]

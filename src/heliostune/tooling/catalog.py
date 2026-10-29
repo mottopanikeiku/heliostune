@@ -14,7 +14,7 @@ from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, MODEL_SPECS
 from heliostune.errors import ArtifactError, ProtocolError, SchemaError
 from heliostune.multisource import compare_multisource
 from heliostune.replay import BenchmarkTable
-from heliostune.tooling.artifacts import read_json, read_measurements
+from heliostune.tooling.artifacts import historical_artifact_path, read_json, read_measurements
 from heliostune.validation import exact_fields, exact_int, exact_object, nonblank_string
 
 _MODEL_CONFIG_SHA256 = {
@@ -624,7 +624,7 @@ def build_research_catalog(root: str | Path) -> dict[str, object]:
                 "result_links": {
                     "selection": "benchmarks/results/parhelion-t4-selection.json",
                     "final": "benchmarks/results/parhelion-h100-final.json",
-                    "report": "site/index.html",
+                    "report": "site/transfer.html",
                 },
             },
             {
@@ -871,7 +871,7 @@ def _verify_aliases(root: Path, aliases: Mapping[str, object]) -> None:
         binding = _mapping_alias(raw_binding, alias)
         if (root / alias).exists():
             raise ProtocolError(f"historical freeze-only alias unexpectedly exists: {alias}")
-        replacement = root / binding["published_replacement"]
+        replacement = historical_artifact_path(root, binding["published_replacement"])
         _require_equal(
             _sha256(replacement),
             binding["published_replacement_sha256"],
@@ -974,7 +974,7 @@ def verify_research_catalog(path: str | Path) -> dict[str, int]:
         historical["present_artifacts"], context="present historical artifacts"
     ).items():
         facts = exact_object(raw_facts, context=f"historical artifact {relative}")
-        _require_equal(_sha256(root / relative), facts.get("sha256"), context=relative)
+        _require_equal(_sha256(historical_artifact_path(root, relative)), facts.get("sha256"), context=relative)
 
     studies = catalog["studies"]
     if not isinstance(studies, Sequence) or isinstance(studies, (str, bytes)):
