@@ -26,7 +26,7 @@ An actively maintained retrieval-first GPU autotuning and evidence-control/repla
 > authorized spend remains **$0**; this roadmap authorizes no GPU execution and
 > never rewrites frozen evidence.
 
-**Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/heliostune/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/heliostune/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/heliostune/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
+**Published evidence:** [Parhelion v3 H200 engineering report](site/parhelion-v3-engineering.html) · [Parhelion L4+A10+T4 → H100 report](https://mottopanikeiku.github.io/quartet/) · [post-hoc v2 causal addendum](https://mottopanikeiku.github.io/quartet/parhelion-v2-addendum.html) · [v3 pilot failure evidence](benchmarks/parhelion-v3-validation-failure.json) · [artifact catalog](benchmarks/research-artifact-manifest.json) · [v1 L4 ↔ A10 report](https://mottopanikeiku.github.io/quartet/v1.html) · [post-run chain of custody](benchmarks/parhelion-v2-post-run-manifest.json)
 
 **Engineering evidence:** Hopper H100 [report](site/hopper-h100-engineering.html), hardened [v2 summary](benchmarks/results/hopper-h100-engineering-summary-v2.json), and [v2 publication manifest](benchmarks/hopper-h100-engineering-manifest-v2.json) · H100 precision [report](site/h100-precision-probe.html), [summary](benchmarks/results/h100-precision-probe-summary.json), and [publication manifest](benchmarks/h100-precision-probe-manifest.json)
 
@@ -127,7 +127,7 @@ The H100 values in the first table are fractions of a bank-1-selected, bank-2-sc
 
 ## What changed from v1
 
-The [v1 bidirectional study](https://mottopanikeiku.github.io/heliostune/v1.html) measured 20,736 L4/A10 rows. The original transferred linear posterior improved over cold start but lost to nearest-shape reuse:
+The [v1 bidirectional study](https://mottopanikeiku.github.io/quartet/v1.html) measured 20,736 L4/A10 rows. The original transferred linear posterior improved over cold start but lost to nearest-shape reuse:
 
 
 | Direction | Cold Thompson | Helios transfer | Nearest shape |

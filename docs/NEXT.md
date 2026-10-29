@@ -14,7 +14,7 @@ The [historical audit](../results/action-set-audit.json) still reports torch bel
 
 The [original transfer comparison](../results/tuner-comparison.md) favored cold Thompson over Parhelion and selected zero posterior-transfer strengths. I have not rerun those policies on the expanded bank. A better kernel bank cannot retroactively establish a transfer gain.
 
-The new correctness reference has FP16 inputs and FP32 output with TF32 disabled. The [historical collector](https://github.com/mottopanikeiku/heliostune/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) instead used separate FP32-input reference tensors, converted to FP16. The tolerance and nominal timing windows are unchanged, but that does not make the two collections the same numerical experiment. I compare old and new actions only within the new collection.
+The new correctness reference has FP16 inputs and FP32 output with TF32 disabled. The [historical collector](https://github.com/mottopanikeiku/quartet/blob/fe5beda065f6afb5b2c9ddd9a58e1d2b573b6abd/src/heliostune/kernel.py) instead used separate FP32-input reference tensors, converted to FP16. The tolerance and nominal timing windows are unchanged, but that does not make the two collections the same numerical experiment. I compare old and new actions only within the new collection.
 
 ## The next question
 
