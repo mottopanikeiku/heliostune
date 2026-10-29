@@ -1,6 +1,6 @@
-# HeliosTune
+# quartet
 
-HeliosTune is my small GPU matrix-multiplication tuning experiment.
+This is my small GPU matrix-multiplication tuning experiment, formerly HeliosTune; the Python package and CLI keep that name.
 
 **Question:** is the search policy the problem, or is its kernel bank too limited? I added ten Hopper-aware actions: larger tiles, deeper pipelines, persistent TMA and tensor-core split-K. The persistent path builds on [Triton's pinned tutorial](https://github.com/triton-lang/triton/blob/v3.4.0/python/tutorials/09-persistent-matmul.py); my split-K path is in [`action_expansion.py`](src/heliostune/action_expansion.py).
 
@@ -8,7 +8,7 @@ HeliosTune is my small GPU matrix-multiplication tuning experiment.
 
 ## What changed
 
-I committed the [fixed action set and analysis plan](docs/action-expansion-plan.md) at [`adf5eb4`](https://github.com/mottopanikeiku/heliostune/commit/adf5eb4a854f8fd37ea888280861bead9024df77) before collecting data. Six new configurations apply everywhere; four split-K configurations apply only at M=1,7,31. Split-K computes FP32 partial tiles and reduces them in a second Triton kernel, converting once to FP16. Allocation, workspace and both launches are timed—not just the partial kernel.
+I committed the [fixed action set and analysis plan](docs/action-expansion-plan.md) at [`adf5eb4`](https://github.com/mottopanikeiku/quartet/commit/adf5eb4a854f8fd37ea888280861bead9024df77) before collecting data. Six new configurations apply everywhere; four split-K configurations apply only at M=1,7,31. Split-K computes FP32 partial tiles and reduces them in a second Triton kernel, converting once to FP16. Allocation, workspace and both launches are timed—not just the partial kernel.
 
 I remeasured all **96 workloads / 84 unique shapes** on one H100. Bank 1 selects the lowest valid median separately from the old and new sets; bank 2 scores only those fixed winners and same-session torch. No scoring-bank minimum chooses an action. The expanded union also chooses old versus new on bank 1. [`Collector`](modal_action_expansion.py), [`CPU manifest`](src/heliostune/action_configs.py), [`raw measurements`](results/action-expansion-raw.json).
 

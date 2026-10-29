@@ -28,9 +28,9 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/mottopanikeiku/heliostune"
-Issues = "https://github.com/mottopanikeiku/heliostune/issues"
-Results = "https://mottopanikeiku.github.io/heliostune/"
+Repository = "https://github.com/mottopanikeiku/quartet"
+Issues = "https://github.com/mottopanikeiku/quartet/issues"
+Results = "https://mottopanikeiku.github.io/quartet/"
 
 [project.optional-dependencies]
 gpu = [
