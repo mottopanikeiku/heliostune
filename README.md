@@ -52,10 +52,11 @@ This is exhaustive earlier-bank selection, not a replay of Thompson sampling or 
 uv sync --python 3.13 --locked --extra dev --extra modal
 uv run python scripts/analyze_action_expansion.py
 uv run python scripts/diagnose_kernel_bank.py && uv run python scripts/build_site.py
-uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py
+uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py --run-id h100-repeat-1
+uv run python scripts/collect_action_expansion.py --run-id a100-repeat-1 --gpu A100-80GB --dry-run
 ```
 
-The second command regenerates the summary and figure on CPU. The third rebuilds the cross-archive diagnosis and the [Pages report](site/index.html) from committed files; `--check` on either script verifies the committed bytes. The fourth starts or resumes an H100 collection from a clean commit; completed workload units are reused. `--pilot` measures four workloads separately. [Fresh-repeat instructions](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
+The second command regenerates the summary and figure on CPU. The third rebuilds the cross-archive diagnosis and the [Pages report](site/index.html) from committed files; `--check` on either script verifies the committed bytes. The fourth starts or resumes an H100 collection on Modal from a clean commit. The fifth plans the same collection for a local CUDA machine; without `--dry-run`, and with the `gpu` extra installed, it runs it there. Each run ID has its own checkpoint, and a resume reuses completed units only if the plan, hardware profile, code and protocol all match. `--pilot` measures four workloads separately. [Collection details](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
 
 ## Limits and history
 
