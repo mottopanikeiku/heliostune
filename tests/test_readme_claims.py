@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,12 @@ _NEXT = (_REPO / "docs/NEXT.md").read_text(encoding="utf-8")
 _SUMMARY: dict[str, Any] = json.loads(
     (_REPO / "results/action-expansion-summary.json").read_text(encoding="utf-8")
 )
+_SPEC = importlib.util.spec_from_file_location(
+    "_test_readme_build_site", Path(__file__).resolve().parents[1] / "scripts/build_site.py"
+)
+assert _SPEC is not None and _SPEC.loader is not None
+_BUILD_SITE = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_BUILD_SITE)
 _SHORT_MODEL = {
     "granite-3.1-8b": "Granite",
     "mistral-7b": "Mistral",
@@ -151,14 +159,19 @@ def test_bank_or_selection_numbers_match_the_diagnosis() -> None:
     pairs = _full_pairs(h100)
     worst = max(p["policy_oracle_ratio"]["named"] for p in pairs)
     oracle = [p["oracle_torch_ratio"]["named"] for p in pairs]
-    assert f"at most **{(worst - 1) * 100:.2f}%** slower" in _README
+    bound = _BUILD_SITE.bound_pct(worst - 1, upper=True)
+    assert f"at most **{bound}** slower" in _README
+    # An "at most" bound must not understate the exact value.
+    assert Decimal(bound.rstrip("%")) >= Decimal(worst - 1) * 100
     assert f"**{min(oracle):.3f}–{max(oracle):.3f}×** torch" in _README
     views = [d for d in _DIAGNOSIS["datasets"] if _full_pairs(d)]
     every = [p for d in views for p in _full_pairs(d)]
     worst_all = max(p["policy_oracle_ratio"]["named"] for p in every)
     oracles = [p["oracle_torch_ratio"]["named"] for p in every]
     assert f"In all **{len(views)} multi-bank views**" in _README
-    assert f"within **{(worst_all - 1) * 100:.2f}%**" in _README
+    bound_all = _BUILD_SITE.bound_pct(worst_all - 1, upper=True)
+    assert f"within **{bound_all}**" in _README
+    assert Decimal(bound_all.rstrip("%")) >= Decimal(worst_all - 1) * 100
     assert f"from **{min(oracles):.3f}×** to **{max(oracles):.3f}×** torch" in _README
     assert _DIAGNOSIS["shared_cells"], "the README says views overlap"
 

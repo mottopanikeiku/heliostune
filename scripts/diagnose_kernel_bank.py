@@ -236,13 +236,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     result = build()
-    rendered = strict_json_dumps(result)
+    payload = strict_json_dumps(result).encode("utf-8")
     if args.check:
-        if args.output.read_text(encoding="utf-8") != rendered:
+        # Compare raw bytes: text mode would hide CRLF or other newline rewrites.
+        if not args.output.is_file() or args.output.read_bytes() != payload:
             raise SystemExit(f"{args.output} is stale; rerun scripts/diagnose_kernel_bank.py")
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered, encoding="utf-8")
+        args.output.write_bytes(payload)
     print(
         f"Kernel-bank diagnosis: {len(result['inputs'])} input artifacts; "
         f"{len(result['datasets'])} separate matrix/profile views; "

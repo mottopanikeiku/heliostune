@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import math
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, localcontext
 from html import escape
 from pathlib import Path
 from typing import Any, cast
@@ -118,14 +119,19 @@ th { color: var(--muted); font-size: 0.8rem; font-weight: 700; }
 .text { text-align: left; }
 td.text:first-child { white-space: nowrap; }
 tbody tr:last-child td { border-bottom: 0; }
-dl { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.35rem 1.25rem; max-width: 62rem; }
+dl { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 0.35rem 1.25rem; max-width: 62rem; }
 dt { color: var(--muted); }
+dt, dd { min-width: 0; overflow-wrap: anywhere; }
 dd { margin: 0; }
 code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.85em; overflow-wrap: anywhere; }
 figure { margin: 1.5rem 0; }
 figcaption { color: var(--muted); font-size: 0.875rem; max-width: 52rem; }
 svg { max-width: 100%; height: auto; background: var(--surface); border: 0.0625rem solid var(--line); border-radius: 0.5rem; }
 footer { margin: 4rem 0 2rem; padding-top: 1rem; border-top: 0.0625rem solid var(--line); color: var(--muted); font-size: 0.875rem; }
+@media (max-width: 40rem) {
+  dl { grid-template-columns: minmax(0, 1fr); gap: 0 0; }
+  dd { margin-bottom: 0.6rem; }
+}
 """
 
 
@@ -155,6 +161,22 @@ def _us(value: float | None) -> str:
 
 def _pct(value: float) -> str:
     return f"{value * 100:.1f}%"
+
+
+def bound_pct(value: float, *, upper: bool, digits: int = 2) -> str:
+    """Format a fraction as a percentage bound that never understates its side.
+
+    "At most"/"within" bounds round up and "at least" bounds round down. Rounding
+    uses the float's exact binary value, so no decimal artefact can cross the bound.
+    """
+    if not math.isfinite(value):
+        raise ValueError("a percentage bound must be finite")
+    # A double's exact decimal expansion has at most 767 significant digits.
+    with localcontext(prec=1100):
+        step = Decimal(1).scaleb(-digits)
+        percent = Decimal(value) * 100
+        rounded = percent.quantize(step, ROUND_CEILING if upper else ROUND_FLOOR)
+    return f"{rounded}%"
 
 
 def _span(values: Sequence[float], render: Callable[[float], str]) -> str:
@@ -595,10 +617,10 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
 <p>For each pair of banks in each stored archive, I pick every workload's fastest valid action on the earlier bank
 and score that fixed action on the later one, against the later bank's retrospective minimum (an optimistic
 in-sample oracle). In all {len(multi)} multi-bank views (several are overlapping copies of the same cells), the
-earlier-bank pick is at most {_pct(worst)} slower than that oracle (named geometric mean, per bank pair). The oracle
-itself ranges from {_ratio(min(oracles))} to {_ratio(max(oracles))} torch. My reading: on these measurements,
-choosing within a stored bank costs little; where the bank's best action is slower than torch, a better selector
-cannot close that gap.</p>
+earlier-bank pick is at most {bound_pct(worst, upper=True)} slower than that oracle (named geometric mean, per bank
+pair). The oracle itself ranges from {_ratio(min(oracles))} to {_ratio(max(oracles))} torch. My reading: on these
+measurements, choosing within a stored bank costs little on average; where the bank's best action is slower than
+torch, a better selector cannot close that gap.</p>
 <p class="callout"><strong>Not policy replay.</strong> {_e(diagnosis["definitions"]["policy"])}
 {_e(diagnosis["definitions"]["overlap"])}</p>
 {multi_table}
@@ -857,13 +879,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     page = build()
+    payload = page.encode("utf-8")
     if args.check:
-        if args.output.read_text(encoding="utf-8") != page:
+        # Compare raw bytes: text mode would hide CRLF or other newline rewrites.
+        if not args.output.is_file() or args.output.read_bytes() != payload:
             raise SystemExit(f"{args.output} is stale; rerun scripts/build_site.py")
     else:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(page, encoding="utf-8")
-    print(f"Landing page: {len(page.encode())} bytes; {'byte-exact' if args.check else 'written'}")
+        args.output.write_bytes(payload)
+    print(f"Landing page: {len(payload)} bytes; {'byte-exact' if args.check else 'written'}")
     return 0
 
 

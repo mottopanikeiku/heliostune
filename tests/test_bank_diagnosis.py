@@ -314,3 +314,34 @@ def test_check_mode_rejects_a_stale_diagnosis(
     output.write_text("{}\n", encoding="utf-8")
     with pytest.raises(SystemExit, match="stale"):
         script.main(["--output", str(output), "--check"])
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(lambda b: b.replace(b"\n", b"\r\n"), id="crlf"),
+        pytest.param(lambda b: b.replace(b"\n", b"\r\n", 1), id="one-crlf"),
+        pytest.param(lambda b: b + b"\n", id="trailing-newline"),
+        pytest.param(lambda b: b + b" ", id="trailing-space"),
+        pytest.param(lambda b: b"\xef\xbb\xbf" + b, id="utf8-bom"),
+        pytest.param(lambda b: b[:-1], id="truncated"),
+        # Text mode reads a final "\r" as "\n", so only a raw-byte check sees this.
+        pytest.param(lambda b: b[:-1] + b"\r", id="final-cr"),
+        pytest.param(lambda b: b + b"\r", id="trailing-cr"),
+        pytest.param(None, id="missing"),
+    ],
+)
+def test_check_mode_compares_raw_bytes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mutate: Any
+) -> None:
+    script = _load_script(monkeypatch)
+    built: dict[str, list[Any]] = {"inputs": [], "datasets": [], "shared_cells": []}
+    monkeypatch.setattr(script, "build", lambda: built)
+    exact = script.strict_json_dumps(built).encode("utf-8")
+    assert b"\n" in exact
+    output = tmp_path / "diagnosis.json"
+    if mutate is not None:
+        output.write_bytes(mutate(exact))
+        assert output.read_bytes() != exact
+    with pytest.raises(SystemExit, match="stale"):
+        script.main(["--output", str(output), "--check"])

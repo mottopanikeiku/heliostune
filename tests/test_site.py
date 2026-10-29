@@ -6,8 +6,10 @@ import copy
 import hashlib
 import importlib.util
 import json
+import math
 import re
 import sys
+from decimal import Decimal, localcontext
 from html.parser import HTMLParser
 from pathlib import Path
 from types import ModuleType
@@ -15,6 +17,8 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import pytest
+from hypothesis import given
+from hypothesis import strategies as st
 
 _REPO = Path(__file__).resolve().parents[1]
 _SITE = _REPO / "site"
@@ -104,6 +108,81 @@ def test_committed_page_is_byte_identical_to_a_fresh_build(
     output.write_text(_PAGE.replace("1.174", "1.000", 1), encoding="utf-8")
     with pytest.raises(SystemExit, match="stale"):
         _BUILDER.main(["--output", str(output), "--check"])
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        pytest.param(lambda b: b.replace(b"\n", b"\r\n"), id="crlf"),
+        pytest.param(lambda b: b.replace(b"\n", b"\r\n", 1), id="one-crlf"),
+        pytest.param(lambda b: b + b"\n", id="trailing-newline"),
+        pytest.param(lambda b: b + b" ", id="trailing-space"),
+        pytest.param(lambda b: b"\xef\xbb\xbf" + b, id="utf8-bom"),
+        pytest.param(lambda b: b[:-1], id="truncated"),
+        # Text mode reads a final "\r" as "\n", so only a raw-byte check sees this.
+        pytest.param(lambda b: b[:-1] + b"\r", id="final-cr"),
+        pytest.param(lambda b: b + b"\r", id="trailing-cr"),
+    ],
+)
+def test_check_compares_raw_bytes(tmp_path: Path, mutate: Any) -> None:
+    committed = (_SITE / "index.html").read_bytes()
+    output = tmp_path / "index.html"
+    output.write_bytes(mutate(committed))
+    assert output.read_bytes() != committed
+    with pytest.raises(SystemExit, match="stale"):
+        _BUILDER.main(["--output", str(output), "--check"])
+
+
+def test_check_rejects_a_missing_page(tmp_path: Path) -> None:
+    with pytest.raises(SystemExit, match="stale"):
+        _BUILDER.main(["--output", str(tmp_path / "absent.html"), "--check"])
+
+
+@pytest.mark.parametrize(
+    ("value", "upper", "expected"),
+    [
+        (0.0013095868, True, "0.14%"),  # H100 archive worst bank pair
+        (0.0082674012, True, "0.83%"),  # every multi-bank view
+        (0.0013095868, False, "0.13%"),
+        (0.25, True, "25.00%"),  # exactly representable: no spurious step up
+        (0.0, True, "0.00%"),
+    ],
+)
+def test_bound_pct_rounds_towards_the_safe_side(value: float, upper: bool, expected: str) -> None:
+    assert _BUILDER.bound_pct(value, upper=upper) == expected
+
+
+@given(
+    st.floats(min_value=-10, max_value=10, allow_nan=False, allow_infinity=False),
+    st.integers(min_value=0, max_value=4),
+)
+def test_bound_pct_never_understates_an_upper_or_overstates_a_lower_bound(
+    value: float, digits: int
+) -> None:
+    with localcontext(prec=1100):
+        exact = Decimal(value) * 100  # exact: no context rounding
+    upper = Decimal(_BUILDER.bound_pct(value, upper=True, digits=digits).removesuffix("%"))
+    lower = Decimal(_BUILDER.bound_pct(value, upper=False, digits=digits).removesuffix("%"))
+    step = Decimal(1).scaleb(-digits)
+    assert lower <= exact <= upper
+    assert upper - lower <= step
+
+
+def test_bound_pct_rejects_non_finite_values() -> None:
+    with pytest.raises(ValueError, match="finite"):
+        _BUILDER.bound_pct(math.nan, upper=True)
+
+
+def test_page_states_the_rounded_up_selection_bound() -> None:
+    picks = [
+        p["full_roster"]["overall"]["policy_oracle_ratio"]["named"]
+        for d in _DIAGNOSIS["datasets"]
+        for p in d["bank_pairs"]
+        if p["full_roster"]["overall"]["named_count"]
+    ]
+    bound = _BUILDER.bound_pct(max(picks) - 1, upper=True)
+    assert bound == "0.83%"
+    assert f"at most {bound} slower" in _PAGE
 
 
 def test_render_is_deterministic_and_binds_input_digests() -> None:
