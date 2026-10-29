@@ -41,8 +41,9 @@ DEFINITIONS = {
     ),
     "overlap": (
         "Combined archives, raw/canonical validation and component acquisitions repeat "
-        "identical cells (counted in shared_cells). They are alternative views, never "
-        "independent replicates; do not sum rows or pool their statistics."
+        "identical normalized cells (workload, bank, action, family, failure, candidate and "
+        "torch medians in microseconds; counted in shared_cells). They are alternative views, "
+        "never independent replicates, so I do not sum their rows or pool their statistics."
     ),
     "policy": (
         "Exhaustive earlier-bank selection, then fixed-action later-bank scoring. This is "

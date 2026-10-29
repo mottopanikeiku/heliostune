@@ -204,7 +204,7 @@ def build_dossier(summary: Mapping[str, Any]) -> dict[str, Any]:
             "Persistent program count is not achieved occupancy; masked rows are not measured wasted time.",
             "Logical traffic is not HBM traffic: caching/reloads, spills, descriptor scratch and allocation are unmodelled.",
             "Pipeline stages and warp counts change scheduling/resources but not these source-level tensor byte counts.",
-            "A prediction beside a measurement is a juxtaposition, not a causal explanation of that measurement.",
+            "Putting a prediction next to a measurement does not explain that measurement.",
         ],
         "predictions": predictions,
     }

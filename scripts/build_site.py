@@ -31,35 +31,36 @@ ARCHIVE: tuple[tuple[str, str, str], ...] = (
     (
         "transfer.html",
         "Parhelion L4 + A10 + T4 → H100 transfer report",
-        "The former landing page, byte-for-byte. Cold Thompson beat Parhelion transfer; "
-        "selected posterior transfer strengths were zero.",
+        "This was the landing page before; its bytes are unchanged. Cold Thompson beat "
+        "Parhelion transfer, and the selected posterior transfer strengths were zero.",
     ),
     (
         "parhelion-v2-addendum.html",
         "Post-hoc v2 causal addendum",
-        "Exploratory follow-up to the transfer report, bound to its own manifest.",
+        "An exploratory follow-up to the transfer report, with its own manifest.",
     ),
-    ("v1.html", "v1 L4 → A10 transfer report", "The first bidirectional study."),
-    ("a10-to-l4.html", "v1 A10 → L4 transfer report", "The reverse direction of v1."),
+    ("v1.html", "v1 L4 → A10 transfer report", "My first study, in one direction."),
+    ("a10-to-l4.html", "v1 A10 → L4 transfer report", "The same study in the other direction."),
     (
         "parhelion-v3-engineering.html",
         "Parhelion v3 H200 engineering report",
-        "Operator-authorized engineering chain after the stopped v3 campaign.",
+        "The engineering run I did, with the operator's approval, after the v3 campaign stopped.",
     ),
     (
         "hopper-h100-engineering.html",
         "Hopper H100 engineering gate",
-        "Earlier single-bank persistent/skinny-GEMV screen; also re-read in section 5.",
+        "An earlier single-bank screen of persistent and skinny-GEMV kernels; section 5 "
+        "re-reads it.",
     ),
     (
         "h100-precision-probe.html",
         "H100 FP16 reduction diagnostic",
-        "Fixed configurations under arithmetic settings; not an action bank.",
+        "Fixed configurations under different arithmetic settings; not an action bank.",
     ),
     (
         "fusion-remote-exploratory.html",
         "H100 fusion remote receipts",
-        "A different operator; exploratory.",
+        "An exploratory run on a different operator.",
     ),
     ("native-rmsnorm-h100.html", "Native RMSNorm H100 stage gate", "A different operator."),
 )
@@ -318,16 +319,17 @@ def _result_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) ->
     comparison = overall["old_new_comparison"]
     return f"""
 <section id="result" aria-labelledby="result-title">
-<h2 id="result-title">1 · Held-out result</h2>
-<p>The new actions are much faster than the original 36 and still slower than <code>torch.matmul</code> on most
-workloads. New/old geometric-mean latency is <strong>{comparison["geometric_mean_new_to_old"]:.3f}</strong>; the new arm
-is faster than the old on {comparison["new_faster_count"]}/{overall["named_workload_count"]} named workloads.
-Ratios are geometric means of per-workload bank-2 medians over same-session torch; lower is faster.
-“Named” weights each model projection equally; “unique shape” first averages aliases of the same (M,N,K).
-Microsecond columns are arithmetic means.</p>
+<h2 id="result-title">1 · Results on the scoring bank</h2>
+<p>The new actions are much faster than my original 36, but <code>torch.matmul</code> is still faster on most
+workloads. The geometric mean of new/old latency is <strong>{comparison["geometric_mean_new_to_old"]:.3f}</strong>, and
+the new actions are faster than the old ones on {comparison["new_faster_count"]}/{overall["named_workload_count"]} named
+workloads. Each ratio is a geometric mean of per-workload bank-2 medians divided by torch from the same session, so
+lower is faster. “Named” gives each model projection equal weight. “Unique shape” first averages the projections that
+share an (M,N,K) shape. The microsecond columns are arithmetic means.</p>
 {table}
-<p class="note">{below} of the {len(wins)} wins have margins below 1%. Timing quantiles describe spread, not
-confidence intervals, and individual samples were not retained. None of these is a significance claim.</p>
+<p class="note">{below} of the {len(wins)} wins are by less than 1%. The timing quantiles describe spread, not
+confidence intervals, and I did not keep the individual samples. I am not claiming any of these wins is
+significant.</p>
 {wins_table}
 </section>"""
 
@@ -341,18 +343,17 @@ def _split_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) -> 
     split = sum(a["family"] == "split_k" for a in actions["new"])
     return f"""
 <section id="split" aria-labelledby="split-title">
-<h2 id="split-title">2 · Selection and scoring are separate banks</h2>
-<p>Bank 1 timed every applicable action: all {len(actions["old"])} original configurations,
-{len(actions["new"]) - split} new ordinary/persistent actions, and {split} split-K actions when M ≤ 31
-({banks[1]["observed_cells"]:,} candidate cells). It selected the lowest valid median separately for the old set,
-the new set and their union, breaking ties by configuration key. Bank 2 then timed only those fixed finalists
-({banks[2]["observed_cells"]} candidate cells). Each bank also timed torch once per workload. No bank-2 minimum
-chooses an action. The action set and analysis plan were committed at {_commit_link(summary["plan_commit"])}
-before collection ({_repo_link("docs/action-expansion-plan.md", "plan")}).</p>
-<p class="callout"><strong>What bank 2 cannot identify.</strong> {_e(diagnosis["expansion"]["missing_reason"])}
-Among the two finalists only, the bank-1 union choice was also the faster finalist on bank 2 for
-{agreed}/{same["named_covered"]} workloads; with a large old/new gap that agreement is easy, and it is not evidence
-of full-bank winner stability.</p>
+<h2 id="split-title">2 · How I selected and scored actions</h2>
+<p>On bank 1 I timed every applicable action: all {len(actions["old"])} original configurations,
+{len(actions["new"]) - split} new ordinary and persistent actions, and {split} split-K actions when M ≤ 31
+({banks[1]["observed_cells"]:,} candidate cells). For each workload I picked the lowest valid median separately from
+the old set, the new set and their union, breaking ties by configuration key. On bank 2 I timed only those fixed
+picks ({banks[2]["observed_cells"]} candidate cells). Both banks also timed torch once per workload. Nothing measured on
+bank 2 chooses an action. I committed the action set and analysis plan at {_commit_link(summary["plan_commit"])}
+before collecting ({_repo_link("docs/action-expansion-plan.md", "plan")}).</p>
+<p class="callout">{_e(diagnosis["expansion"]["missing_reason"])} Comparing just the two finalists, the union's bank-1
+pick was also the faster one on bank 2 for {agreed}/{same["named_covered"]} workloads. The gap between old and new is
+large, so this agreement is expected, and it says nothing about winner stability across the full bank.</p>
 </section>"""
 
 
@@ -409,9 +410,9 @@ def _contract_section(summary: Mapping[str, Any]) -> str:
     ]
     return f"""
 <section id="contract" aria-labelledby="contract-title">
-<h2 id="contract-title">3 · Numerical and timing contract</h2>
-<p>Each candidate is checked against the reference before it is timed. Passing the tolerance does not prove identical
-arithmetic: torch's reduced-precision FP16 reduction flag was enabled and recorded.</p>
+<h2 id="contract-title">3 · Numerical and timing setup</h2>
+<p>I checked each candidate against the reference before timing it. Passing the tolerance does not prove the
+arithmetic is identical: torch's reduced-precision FP16 reduction flag was on, and I recorded it.</p>
 {_dl(items)}
 </section>"""
 
@@ -524,19 +525,21 @@ def _regime_section(diagnosis: Mapping[str, Any]) -> str:
 
     return f"""
 <section id="regimes" aria-labelledby="regimes-title">
-<h2 id="regimes-title">4 · Where the gap remains, by M</h2>
-<p>Where split-K applies, bank 1 selected it for {split_count}/{split_total} workloads, and new/torch is
-{_e(ratios(split))}. Without split-K it is {_e(ratios(rest))}. Persistent TMA was selected on bank 1 for
-{expansion["new_winner_families"].get("persistent", 0)} workloads and won none.</p>
+<h2 id="regimes-title">4 · Results by M</h2>
+<p>For M ≤ 31, where split-K applies, bank 1 picked split-K for {split_count}/{split_total} workloads. There,
+new/torch is {_e(ratios(split))}. At the larger M values without split-K it is {_e(ratios(rest))}. Bank 1 picked
+persistent TMA for {expansion["new_winner_families"].get("persistent", 0)} workloads, and it beat torch on none of
+them.</p>
 <figure>{_regime_chart(regimes)}
-<figcaption>Named-workload geometric means by M; exact values, unique-shape means and absolute microseconds are in
-the table below.</figcaption></figure>
+<figcaption>Named-workload geometric means by M. The table below has the exact values, the unique-shape means and
+the absolute microseconds.</figcaption></figure>
 {table}
-<p class="note">The last two columns come from {_repo_link(H100_ARCHIVE, "the original H100 archive")}: the same
-device model, Torch and Triton versions, but a different session and correctness reference, so I do not compare its
-values with the expansion's old arm cell by cell. They are ranges over its {len(pairs)} bank pairs. “Oracle” is the
-retrospective minimum over the 36 old actions on the scoring bank; “pick / oracle” scores each workload's exhaustive
-earlier-bank minimum on the later bank.</p>
+<p class="note">The last two columns come from {_repo_link(H100_ARCHIVE, "the original H100 archive")}. It used the
+same device model and the same Torch and Triton versions, but a different session and a different correctness
+reference, so I don't compare its numbers cell by cell with the old actions here. Each entry is a range over its
+{len(pairs)} bank pairs. “Oracle” is the fastest of the 36 old actions on the scoring bank, chosen after the fact.
+“Pick / oracle” takes each workload's fastest action on the earlier bank, reads its time on the later bank, and
+divides by the oracle.</p>
 </section>"""
 
 
@@ -583,7 +586,7 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
             )
     multi_table = _table(
         "bank-pairs",
-        "Every stored multi-bank matrix with a full shared action roster; ranges are over that view's bank pairs",
+        "Every stored multi-bank archive whose banks share the full action set; ranges are over that view's bank pairs",
         (
             "View",
             "Banks",
@@ -598,7 +601,7 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
     )
     single_table = _table(
         "single-bank",
-        "Single-bank views: in-sample minima only, no held-out claim",
+        "Single-bank views: fastest action in the same bank only, so nothing is held out",
         (
             "View",
             "Bank",
@@ -613,21 +616,27 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
     worst = max(picks) - 1
     return f"""
 <section id="bank" aria-labelledby="bank-title">
-<h2 id="bank-title">5 · Bank or selection? Every stored matrix</h2>
-<p>For each pair of banks in each stored archive, I pick every workload's fastest valid action on the earlier bank
-and score that fixed action on the later one, against the later bank's retrospective minimum (an optimistic
-in-sample oracle). In all {len(multi)} multi-bank views (several are overlapping copies of the same cells), the
-earlier-bank pick is at most {bound_pct(worst, upper=True)} slower than that oracle (named geometric mean, per bank
-pair). The oracle itself ranges from {_ratio(min(oracles))} to {_ratio(max(oracles))} torch. My reading: on these
-measurements, choosing within a stored bank costs little on average; where the bank's best action is slower than
-torch, a better selector cannot close that gap.</p>
-<p class="callout"><strong>Not policy replay.</strong> {_e(diagnosis["definitions"]["policy"])}
-{_e(diagnosis["definitions"]["overlap"])}</p>
+<h2 id="bank-title">5 · Selection loss in the stored measurements</h2>
+<p>To see whether choosing actions or the actions themselves limit the tuner, I went back to every archive with more
+than one bank. For each pair of banks, I take each workload's fastest valid action on the earlier bank and look up
+its time on the later bank. I compare that with the fastest action on the later bank, chosen after the fact. This
+“oracle” is optimistic because it is picked and scored on the same bank. In all {len(multi)} multi-bank views, the
+earlier-bank pick is at most {bound_pct(worst, upper=True)} slower than the oracle, as a named geometric mean for each
+bank pair (the bound is rounded up). Several views are overlapping copies of the same measurements. The oracle itself
+ranges from {_ratio(min(oracles))} to {_ratio(max(oracles))} torch. Choosing among these kernels costs very little on
+average; where the result is slower than torch, the kernels themselves are what keep it slower.</p>
+<p class="callout">This is not a replay of my tuning policies. I pick the fastest action on the earlier bank and score
+that fixed action on the later bank. That describes the stored data; it is not a rerun of Thompson sampling or
+transfer, and it is not a probe-budget result. Several archives also repeat identical normalized cells: combined
+archives repeat their component acquisitions, and canonical validation relabels raw sessions. These are different
+views of the same measurements, not independent repeats, so I never sum their rows or pool their statistics.</p>
 {multi_table}
 {single_table}
-<p class="note">Each archive is split by its exact recorded hardware profile, so a canonical relabelled profile and
-the raw per-device profiles it came from appear as separate rows. {len(diagnosis["shared_cells"])} view pairs share
-byte-identical cells. Per-regime and per-bank statistics, failure stages and shared-cell counts are in
+<p class="note">I split each archive by its exact recorded hardware profile. A canonical profile that relabels several
+devices therefore appears as its own row, next to the raw per-device profiles it was built from.
+{len(diagnosis["shared_cells"])} view pairs share identical normalized cells. A normalized cell is one stored row
+reduced to its workload, bank, action, family, failure, candidate median and torch median, with times in
+microseconds. Per-regime and per-bank statistics, failure stages and the shared-cell counts are in
 {_repo_link(DIAGNOSIS)}.</p>
 </section>"""
 
@@ -692,7 +701,8 @@ def _dossier_section(diagnosis: Mapping[str, Any]) -> str:
     split_bm = sorted({p["config"]["block_m"] for p in predictions if p["family"] == "split_k"})
     padding = "; ".join(f"M={m}: {_pct(v)}" for m, v in sorted(masked.items()))
     sparse = "; ".join(
-        f"M={p['shape'][0]}: {p['matmul_programs']} programs"
+        f"M={p['shape'][0]}: {p['matmul_programs']} programs, so at least "
+        f"{p['sm_count'] - p['matmul_programs']} SMs get none"
         for p in predictions
         if p["arm"] == "new" and p["bank1_selected"] and p["matmul_programs"] < p["sm_count"]
     )
@@ -708,23 +718,24 @@ def _dossier_section(diagnosis: Mapping[str, Any]) -> str:
     return f"""
 <section id="dossier" aria-labelledby="dossier-title">
 <h2 id="dossier-title">6 · Analytical kernel dossier <span class="badge inference">Inference</span></h2>
-<p class="callout inference">These are source-level counts from the frozen configurations, not profiler measurements
-and not a latency model. The measured columns are bank-2 medians placed beside the predictions; the juxtaposition
-does not establish why any action is fast or slow.</p>
+<p class="callout inference">These numbers are counts I derived from the source and the frozen configurations. They
+are not profiler measurements, and they are not a latency model. I put the bank-2 medians next to them for
+reference, but that does not tell us why any action is fast or slow.</p>
 <h3>Where each kernel comes from</h3>
 <ul>{provenance}</ul>
-<h3>Selected actions beside their predictions</h3>
+<h3>Selected actions next to their predictions</h3>
 {table}
-<p>Smallest masked-row fraction among all applicable new actions on this projection: {_e(padding)}. Every ordinary
-and persistent new action has BM ≥ {smallest_bm}; only split-K (M ≤ 31) uses BM = {_e(", ".join(map(str, split_bm)))}.
-Selected new actions launching fewer matmul programs than the {dossier["sm_count"]} SMs: {_e(sparse)}; in those
-launches at least the difference in SMs receives no matmul program. Whether padding or grid size explains any
-measured gap is untested without profiler counters.</p>
-<p class="note">All {len(predictions)} predictions, including unselected actions, are under <code>dossier</code> in
-{_repo_link(DIAGNOSIS)}; {_repo_link("tests/test_kernel_dossier.py")} checks the formulas against hand calculations.</p>
+<p>The smallest masked-row fraction among all applicable new actions on this projection is {_e(padding)}. Every
+ordinary and persistent new action has BM ≥ {smallest_bm}; only split-K, for M ≤ 31, uses
+BM = {_e(", ".join(map(str, split_bm)))}. Some selected new actions launch fewer matmul programs than the
+{dossier["sm_count"]} SMs: {_e(sparse)}. I have not tested whether padding or grid size explains any of the measured
+gap; that needs profiler counters.</p>
+<p class="note">The JSON in {_repo_link(DIAGNOSIS)} has all {len(predictions)} predictions under <code>dossier</code>,
+including the actions that were not selected. {_repo_link("tests/test_kernel_dossier.py")} checks the formulas
+against hand calculations.</p>
 <h3>Formulas</h3>
 {formulas}
-<h3>What the dossier cannot say</h3>
+<h3>What the dossier does not cover</h3>
 <ul>{limits}</ul>
 </section>"""
 
@@ -733,23 +744,23 @@ def _limits_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) ->
     wins = _wins(summary)
     below = sum(w["new_to_torch"] > 0.99 for w in wins)
     items = (
-        "One H100 collection, not a device-replication study. Repeated shapes are not independent devices.",
-        f"Quantiles describe spread, not confidence intervals; individual timing samples were not retained. "
-        f"{below} of the {len(wins)} wins have margins below 1%.",
-        "Torch was timed first in each workload's order while candidate order was shuffled.",
-        "The baseline is allocating torch.matmul, not matched cuBLASLt or CUTLASS kernels or "
-        "preallocated/graph endpoints.",
-        "Warmed medians omit compilation, acquisition and serving cost.",
-        "I did not rerun Thompson or transfer policies on the expanded bank: this is a better-actions result, "
-        "not a better-autotuner result.",
-        "Bank 2 holds only finalists, so full-bank oracle regret and winner stability for the new bank are "
+        "This is one H100 collection, not a study across devices. Repeated shapes are not independent devices.",
+        f"Quantiles describe spread, not confidence intervals, and I did not keep individual timing samples. "
+        f"{below} of the {len(wins)} wins are by less than 1%.",
+        "Torch was timed first for each workload, while the candidate order was shuffled.",
+        "The baseline is allocating torch.matmul. I did not compare against matched cuBLASLt or CUTLASS kernels, "
+        "or against preallocated or CUDA-graph calls.",
+        "Warmed medians leave out compilation, acquisition and serving cost.",
+        "I did not rerun Thompson or transfer policies on the expanded bank. This shows better actions, not a "
+        "better autotuner.",
+        "Bank 2 holds only the finalists, so full-bank oracle regret and winner stability for the new bank are "
         "unidentifiable.",
-        "Exhaustive earlier-bank selection and in-sample oracles are descriptive; they are not a probe-budget "
-        "or policy result.",
-        f"Stored archives overlap ({len(diagnosis['shared_cells'])} view pairs share identical cells); "
-        "I never pool them as repetitions.",
-        "The kernel dossier is analytical. There is no profiler evidence for any cause of the remaining gap.",
-        "Ten new actions do not establish a hardware optimum or exhaust possible Triton kernels.",
+        "Exhaustive earlier-bank selection and in-sample oracles describe the stored data. They are not a "
+        "probe-budget or policy result.",
+        f"The stored archives overlap: {len(diagnosis['shared_cells'])} view pairs share identical normalized "
+        "cells. I never pool them as repetitions.",
+        "The kernel dossier is analytical. I have no profiler evidence for what causes the remaining gap.",
+        "Ten new actions do not find the hardware optimum or cover every possible Triton kernel.",
     )
     body = "".join(f"<li>{_e(item)}</li>" for item in items)
     return f"""
@@ -768,7 +779,7 @@ def _archive_section() -> str:
     return f"""
 <section id="archive" aria-labelledby="archive-title">
 <h2 id="archive-title">8 · Earlier reports</h2>
-<p>These pages are preserved as published; historical manifests still bind their exact bytes.</p>
+<p>I left these pages as they were published, because historical manifests still check their exact bytes.</p>
 <ul>{reports}</ul>
 <p class="note">Data published with the transfer reports: {data}.</p>
 </section>"""
@@ -834,16 +845,18 @@ def render(
 <div class="page">
 <header>
 <p class="eyebrow">quartet · formerly HeliosTune · <a href="{REPOSITORY}">source</a></p>
-<h1>Is the search policy the problem, or the kernel bank?</h1>
-<p class="lede">I added ten Hopper-aware actions to my original 36 Triton matmul configurations and re-measured
-{overall["named_workload_count"]} named LLM projection GEMMs ({overall["unique_shape_count"]} unique shapes) on one
-H100. Bank 1 selects; bank 2 scores. Everything here is regenerated on CPU from committed measurements.</p>
-<p><span class="badge">MEAS · one H100 collection</span><span class="badge">CPU replay · no new timings</span></p>
+<h1>Results of expanding my H100 matmul action bank</h1>
+<p class="lede">My tuner picks Triton matmul kernels for LLM projection shapes. I wanted to know whether its search
+policy or its set of kernels was holding it back. So I added ten Hopper-aware actions to my original 36 and
+re-measured {overall["named_workload_count"]} named GEMMs ({overall["unique_shape_count"]} unique shapes) on one H100.
+I pick actions on bank 1 and score them on bank 2. Everything on this page is recomputed on CPU from committed
+measurements.</p>
+<p><span class="badge">MEAS: one H100 collection</span><span class="badge">Recomputed on CPU; no new timings</span></p>
 <div class="strip">{strip}</div>
 <nav aria-label="Sections"><ul>
-<li><a href="#result">Result</a></li><li><a href="#split">Selection / scoring</a></li>
-<li><a href="#contract">Contract</a></li><li><a href="#regimes">Regimes</a></li>
-<li><a href="#bank">Bank or selection</a></li><li><a href="#dossier">Kernel dossier</a></li>
+<li><a href="#result">Results</a></li><li><a href="#split">Selection and scoring</a></li>
+<li><a href="#contract">Setup</a></li><li><a href="#regimes">By M</a></li>
+<li><a href="#bank">Selection loss</a></li><li><a href="#dossier">Kernel dossier</a></li>
 <li><a href="#limits">Limits</a></li><li><a href="#archive">Earlier reports</a></li>
 </ul></nav>
 </header>

@@ -326,8 +326,16 @@ def test_page_is_static_offline_and_carries_a_strict_policy() -> None:
     assert "script" not in page.tags and "iframe" not in page.tags and "img" not in page.tags
     assert "script-src 'none'" in _PAGE and "default-src 'none'" in _PAGE
     assert "<svg" in _PAGE and "http://" not in _PAGE.replace("http://www.w3.org/2000/svg", "")
-    for marker in ("Not policy replay", "unidentifiable", "MEAS", "no new timings"):
+    for marker in (
+        "This is not a replay of my tuning policies.",
+        "unidentifiable",
+        "MEAS",
+        "no new timings",
+        "identical normalized cells",
+        "Inference",
+    ):
         assert marker in _PAGE
+    assert "byte-identical cells" not in _PAGE
 
 
 def test_historical_landing_page_is_preserved_byte_for_byte() -> None:

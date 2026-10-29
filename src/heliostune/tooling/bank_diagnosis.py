@@ -257,7 +257,11 @@ def diagnose(cells: Sequence[Cell]) -> dict[str, Any]:
 
 
 def shared_cells(views: Mapping[str, Sequence[Cell]]) -> list[dict[str, Any]]:
-    """Count byte-identical cells between views; any overlap forbids pooling them."""
+    """Count identical normalized cells between views; any overlap forbids pooling them.
+
+    Cells compare their normalized fields (workload, bank, action, family, microsecond
+    medians and failure), not the bytes of the source rows.
+    """
     sets = {name: frozenset(cells) for name, cells in views.items()}
     names = sorted(sets)
     return [
@@ -305,8 +309,8 @@ def expansion_view(summary: Mapping[str, Any]) -> dict[str, Any]:
         "full_bank2_oracle": None,
         "full_winner_stability": None,
         "missing_reason": (
-            "Bank 2 measures only the fixed old/new finalists and torch, not the entire "
-            "action set. Full-bank oracle regret and per-family winner stability are "
+            "Bank 2 re-times only the fixed old and new finalists and torch, not the whole "
+            "action set. Full-bank oracle regret and per-family winner stability are therefore "
             "unidentifiable. The common-action bank-pair view compares only these finalists."
         ),
         "workloads": records,

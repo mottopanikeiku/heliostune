@@ -10,7 +10,7 @@ Six nominal torch wins use split-K and three use larger ordinary tiles. The larg
 
 ## What remains unchanged
 
-The [historical audit](../results/action-set-audit.json) still reports torch below every stored H100 Triton candidate, including the optimistic same-bank minimum. L4/A10 have mixed wins, so neither the historical H100 gap nor this expansion is a universal GPU claim. I do not pool acquisition stages or device types. The [kernel-bank diagnosis](../results/kernel-bank-diagnosis.json) adds a held-out check: in every stored multi-bank archive, the exhaustive earlier-bank minimum scores close to the later bank's in-sample minimum. That separates bank quality from selection cost; it is not a policy replay.
+The [historical audit](../results/action-set-audit.json) still reports torch below every stored H100 Triton candidate, including the optimistic same-bank minimum. L4/A10 have mixed wins, so neither the historical H100 gap nor this expansion is a universal GPU claim. I do not pool acquisition stages or device types. I also added a [kernel-bank diagnosis](../results/kernel-bank-diagnosis.json). In every stored multi-bank archive, the fastest action from an earlier bank, timed on a later bank, comes close to that bank's own fastest action. That lets me separate how good the kernels are from the cost of choosing among them. It is not a replay of my policies.
 
 The [original transfer comparison](../results/tuner-comparison.md) favored cold Thompson over Parhelion and selected zero posterior-transfer strengths. I have not rerun those policies on the expanded bank. A better kernel bank cannot retroactively establish a transfer gain.
 

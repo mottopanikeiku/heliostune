@@ -79161,7 +79161,7 @@
         "failure_row_count": 0,
         "full_bank2_oracle": null,
         "full_winner_stability": null,
-        "missing_reason": "Bank 2 measures only the fixed old/new finalists and torch, not the entire action set. Full-bank oracle regret and per-family winner stability are unidentifiable. The common-action bank-pair view compares only these finalists.",
+        "missing_reason": "Bank 2 re-times only the fixed old and new finalists and torch, not the whole action set. Full-bank oracle regret and per-family winner stability are therefore unidentifiable. The common-action bank-pair view compares only these finalists.",
         "new_winner_families": {
           "persistent": 16,
           "split_k": 38,
@@ -80099,7 +80099,7 @@
         "failure_row_count": 0,
         "full_bank2_oracle": null,
         "full_winner_stability": null,
-        "missing_reason": "Bank 2 measures only the fixed old/new finalists and torch, not the entire action set. Full-bank oracle regret and per-family winner stability are unidentifiable. The common-action bank-pair view compares only these finalists.",
+        "missing_reason": "Bank 2 re-times only the fixed old and new finalists and torch, not the whole action set. Full-bank oracle regret and per-family winner stability are therefore unidentifiable. The common-action bank-pair view compares only these finalists.",
         "new_winner_families": {
           "persistent": 1,
           "split_k": 3
@@ -80355,7 +80355,7 @@
     "coverage": "Observed and failed cells by bank/config/regime. Missing cells are not successes. Unequal bank action rosters appear only in common_actions_only, never full_roster; workloads absent from either bank appear only in status_counts. No bank-pair claim for single-bank artifacts.",
     "non_action_artifacts": "The precision probe measures fixed preselected configs under arithmetic settings, not an action bank; fusion/RMSNorm artifacts are different operators. Their reports remain linked in the historical archive.",
     "oracle": "Retrospective minimum valid later-bank median over the compared actions; an optimistic in-sample diagnostic, not the hardware optimum. Failed candidates cannot win.",
-    "overlap": "Combined archives, raw/canonical validation and component acquisitions repeat identical cells (counted in shared_cells). They are alternative views, never independent replicates; do not sum rows or pool their statistics.",
+    "overlap": "Combined archives, raw/canonical validation and component acquisitions repeat identical normalized cells (workload, bank, action, family, failure, candidate and torch medians in microseconds; counted in shared_cells). They are alternative views, never independent replicates, so I do not sum their rows or pool their statistics.",
     "policy": "Exhaustive earlier-bank selection, then fixed-action later-bank scoring. This is a descriptive selector diagnosis, not a rerun of Thompson/transfer policies or a probe-budget result.",
     "regret": "policy/oracle ratio (1 is best); absolute regret = policy_us - oracle_us. Separate from the policy/torch and oracle/torch ratios.",
     "scope": "All benchmarks/data/*.jsonl.zst action matrices, both action-expansion artifacts, and the single-bank Hopper engineering screen. Each file and exact hardware profile stays a separate view.",
@@ -80381,7 +80381,7 @@
       "Persistent program count is not achieved occupancy; masked rows are not measured wasted time.",
       "Logical traffic is not HBM traffic: caching/reloads, spills, descriptor scratch and allocation are unmodelled.",
       "Pipeline stages and warp counts change scheduling/resources but not these source-level tensor byte counts.",
-      "A prediction beside a measurement is a juxtaposition, not a causal explanation of that measurement."
+      "Putting a prediction next to a measurement does not explain that measurement."
     ],
     "predictions": [
       {
@@ -83173,7 +83173,7 @@
     "failure_row_count": 0,
     "full_bank2_oracle": null,
     "full_winner_stability": null,
-    "missing_reason": "Bank 2 measures only the fixed old/new finalists and torch, not the entire action set. Full-bank oracle regret and per-family winner stability are unidentifiable. The common-action bank-pair view compares only these finalists.",
+    "missing_reason": "Bank 2 re-times only the fixed old and new finalists and torch, not the whole action set. Full-bank oracle regret and per-family winner stability are therefore unidentifiable. The common-action bank-pair view compares only these finalists.",
     "new_winner_families": {
       "persistent": 16,
       "split_k": 38,
