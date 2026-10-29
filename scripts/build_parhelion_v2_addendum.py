@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import cast
 
 from heliostune.tooling.artifacts import (
+    historical_artifact_path,
     read_json,
     read_measurements,
     write_json_atomic,
@@ -51,7 +52,7 @@ def _sha256(path: Path) -> str:
 def _historical_digests() -> dict[str, str]:
     baseline = cast(Mapping[str, object], read_json(_BASELINE))
     present = cast(Mapping[str, Mapping[str, object]], baseline["present_artifacts"])
-    return {relative: _sha256(_REPO / relative) for relative in present}
+    return {relative: _sha256(historical_artifact_path(_REPO, relative)) for relative in present}
 
 
 def _sha256_bytes(payload: bytes) -> str:

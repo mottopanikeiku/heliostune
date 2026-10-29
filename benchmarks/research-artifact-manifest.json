@@ -1637,7 +1637,7 @@
       ],
       "result_links": {
         "final": "benchmarks/results/parhelion-h100-final.json",
-        "report": "site/index.html",
+        "report": "site/transfer.html",
         "selection": "benchmarks/results/parhelion-t4-selection.json"
       },
       "results": [
