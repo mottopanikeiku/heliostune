@@ -1,41 +1,24 @@
-"""Check that the README's action-expansion numbers match committed results."""
+"""Keep the README's result tables and linked figure tied to the measurements."""
 
 from __future__ import annotations
 
-import importlib.util
 import json
-from decimal import Decimal
+import re
 from pathlib import Path
 from typing import Any
 
 _REPO = Path(__file__).resolve().parents[1]
 _README = (_REPO / "README.md").read_text(encoding="utf-8")
-_NEXT = (_REPO / "docs/NEXT.md").read_text(encoding="utf-8")
 _SUMMARY: dict[str, Any] = json.loads(
     (_REPO / "results/action-expansion-summary.json").read_text(encoding="utf-8")
 )
-_SPEC = importlib.util.spec_from_file_location(
-    "_test_readme_build_site", Path(__file__).resolve().parents[1] / "scripts/build_site.py"
+_DIAGNOSIS: dict[str, Any] = json.loads(
+    (_REPO / "results/kernel-bank-diagnosis.json").read_text(encoding="utf-8")
 )
-assert _SPEC is not None and _SPEC.loader is not None
-_BUILD_SITE = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(_BUILD_SITE)
-_SHORT_MODEL = {
-    "granite-3.1-8b": "Granite",
-    "mistral-7b": "Mistral",
-    "phi-3-mini": "Phi",
-    "qwen2.5-7b": "Qwen",
-}
-_PROJECTION = {
-    "attention-out": "attention-out",
-    "attention-qkv": "attention-QKV",
-    "ffn-down": "FFN-down",
-    "ffn-up": "FFN-up",
-}
 
 
-def _table_rows(text: str, header: str) -> list[list[str]]:
-    lines = text.splitlines()
+def _table_rows(header: str) -> list[list[str]]:
+    lines = _README.splitlines()
     start = next(i for i, line in enumerate(lines) if line.startswith(f"| {header} |"))
     rows = []
     for line in lines[start + 2 :]:
@@ -45,144 +28,79 @@ def _table_rows(text: str, header: str) -> list[list[str]]:
     return rows
 
 
-def test_headline_counts_match_summary() -> None:
-    overall = _SUMMARY["overall"]
-    new = overall["arms"]["new"]
-    old = overall["arms"]["old"]
-    named = overall["named_workload_count"]
-    assert f"**{new['comparable_win_count']}/{named} named workloads**" in _README
-    assert f"**{old['comparable_win_count']}/{named}**" in _README
-    assert new["comparable_tie_count"] == 1
-    assert f"one exact median tie and {new['comparable_loss_count']} losses" in _README
-    assert f"**{overall['old_new_comparison']['new_faster_count']}/{named}**" in _README
-    assert f"**{named} workloads / {overall['unique_shape_count']} unique shapes**" in _README
-
-
-def test_bank2_table_matches_summary() -> None:
-    arms = _SUMMARY["overall"]["arms"]
-    rows = {row[0]: row[1:] for row in _table_rows(_README, "Bank-2 result")}
-    order = ("old", "new", "union")
-    assert rows["Wins against torch"] == [str(arms[a]["comparable_win_count"]) for a in order]
-    assert rows["Exact ties"] == [str(arms[a]["comparable_tie_count"]) for a in order]
-    assert rows["Geometric-mean latency / torch"] == [
-        f"{arms[a]['geometric_mean_to_torch']:.6f}" for a in order
-    ]
-
-
-def test_old_new_ratio_row_count_and_cost_match_committed_files() -> None:
-    ratio = _SUMMARY["overall"]["old_new_comparison"]["geometric_mean_new_to_old"]
-    assert f"**new / old latency is {ratio:.6f}**" in _README
-    assert f"**{(1 - ratio) * 100:.1f}% reduction**" in _README
-    raw = json.loads((_REPO / "results/action-expansion-raw.json").read_text(encoding="utf-8"))
-    assert f"**{len(raw['rows']):,} measurement rows**" in _README
-    assert _SUMMARY["failure_row_count"] == 0
-    cost = json.loads((_REPO / "results/action-expansion-cost.json").read_text(encoding="utf-8"))
-    assert f"**${cost['total_cost_upper_usd']}**" in _README
-
-
-def test_win_table_lists_exactly_the_summary_wins() -> None:
-    workloads = {w["workload_key"]: w for w in _SUMMARY["workloads"]}
-    wins = [workloads[w["workload_key"]] for w in _SUMMARY["largest_wins"]["new"]]
-    assert len(wins) == _SUMMARY["overall"]["arms"]["new"]["comparable_win_count"]
-    expected = sorted(
-        [
-            f"{_SHORT_MODEL[w['model']]} / {_PROJECTION[w['projection']]}",
-            "({},{},{})".format(*w["shape"]),
-            f"{w['new_ms'] * 1000:.3f} / {w['torch_ms'] * 1000:.3f}",
-            f"{w['new_to_torch']:.6f}",
+def test_original_four_gpu_table_matches_separately_scored_results() -> None:
+    sources = (
+        ("T4", "benchmarks/data/t4-measurements.jsonl.zst", "Tesla T4"),
+        ("A10", "benchmarks/data/measurements.jsonl.zst", "NVIDIA A10"),
+        ("L4", "benchmarks/data/measurements.jsonl.zst", "NVIDIA L4"),
+        ("H100", "benchmarks/data/h100-measurements.jsonl.zst", "NVIDIA H100 80GB HBM3"),
+    )
+    expected = []
+    for label, path, hardware in sources:
+        (dataset,) = [
+            d
+            for d in _DIAGNOSIS["datasets"]
+            if d["path"] == path and d["hardware"]["device_name"] == hardware
         ]
-        for w in wins
-    )
-    assert sorted(_table_rows(_README, "Model / projection")) == expected
+        (pair,) = [
+            p for p in dataset["bank_pairs"] if p["selection_bank"] == 1 and p["scoring_bank"] == 2
+        ]
+        overall = pair["full_roster"]["overall"]
+        assert (overall["named_count"], overall["shape_count"]) == (96, 84)
+        overhead = overall["policy_oracle_ratio"]["named"] - 1
+        assert overhead < 0.007
+        ratio = overall["policy_torch_ratio"]["named"]
+        if label in {"A10", "L4"}:
+            assert abs(ratio - 1) < 0.03
+        expected.append([label, f"{ratio:.3f}×", f"{overhead * 100:.2f}%"])
+    assert _table_rows("GPU") == expected
 
 
-def test_win_breakdown_sentences_match_summary() -> None:
+def test_h100_expansion_table_matches_summary() -> None:
+    arms = _SUMMARY["overall"]["arms"]
+    labels = (("old", "Original 36"), ("new", "Ten new configurations"), ("union", "Combined set"))
+    expected = [
+        [
+            label,
+            f"{arms[key]['geometric_mean_to_torch']:.3f}×",
+            str(arms[key]["comparable_win_count"]),
+        ]
+        for key, label in labels
+    ]
+    assert _table_rows("H100 kernel set") == expected
+    comparison = _SUMMARY["overall"]["old_new_comparison"]
+    assert f"{(1 - comparison['geometric_mean_new_to_old']) * 100:.0f}%" in _README
+    assert f"{comparison['new_faster_count']} of 96" in _README
+
+
+def test_largest_h100_win_matches_measured_latencies() -> None:
     wins = _SUMMARY["largest_wins"]["new"]
+    (best,) = [
+        w
+        for w in _SUMMARY["workloads"]
+        if w["workload_key"] == min(wins, key=lambda w: w["ratio_to_torch"])["workload_key"]
+    ]
+    assert best["shape"] == [1, 3584, 18944]
+    assert f"{(1 - best['new_to_torch']) * 100:.2f}%" in _README
+    assert f"{best['new_ms'] * 1000:.3f} µs" in _README
+    assert f"{best['torch_ms'] * 1000:.3f} µs" in _README
     families = [w["selected"]["family"] for w in wins]
-    split_k, tile = families.count("split_k"), families.count("tile")
+    assert families.count("split_k") == 6
+    assert families.count("tile") == 3
     assert families.count("persistent") == 0
-    words = {3: "three", 5: "Five", 6: "Six"}
-    assert f"{words[split_k]} wins use split-K; {words[tile]} use larger ordinary tiles" in _README
-    below_one_percent = sum(w["ratio_to_torch"] > 0.99 for w in wins)
-    assert f"{words[below_one_percent]} margins are below 1%" in _README
-    best = min(w["ratio_to_torch"] for w in wins)
-    assert f"**{(1 - best) * 100:.2f}%**" in _README
-    assert f"{(1 - best) * 100:.2f}%" in _NEXT
-    winning_m = {m["m"] for m in _SUMMARY["by_m"] if m["arms"]["new"]["comparable_win_count"] > 0}
-    losing_m = sorted({m["m"] for m in _SUMMARY["by_m"]} - winning_m)
-    assert f"at M={','.join(map(str, losing_m))}." in _README
-    assert f"wins at M={','.join(map(str, losing_m))}." in _NEXT
+    assert sum(w["ratio_to_torch"] > 0.99 for w in wins) == 5
 
 
-def test_next_document_repeats_the_same_aggregates() -> None:
-    overall = _SUMMARY["overall"]
-    arms = overall["arms"]
-    new = arms["new"]
-    assert (
-        f"beat torch on {new['comparable_win_count']} workloads, tie once and lose on "
-        f"{new['comparable_loss_count']}" in _NEXT
-    )
-    assert f"loses on all {overall['named_workload_count']}" in _NEXT
-    assert f"New/torch geometric-mean latency is {new['geometric_mean_to_torch']:.6f}" in _NEXT
-    assert f"old/torch {arms['old']['geometric_mean_to_torch']:.6f}" in _NEXT
-    ratio = overall["old_new_comparison"]["geometric_mean_new_to_old"]
-    assert f"new/old is {ratio:.6f}" in _NEXT
-    persistent = sum(w["selected"]["new"]["family"] == "persistent" for w in _SUMMARY["workloads"])
-    assert f"Persistent TMA is selected for {persistent} workloads" in _NEXT
+def test_eight_probe_result_matches_h100_replay() -> None:
+    result = json.loads((_REPO / "benchmarks/results/parhelion-h100-final.json").read_text())
+    (point,) = [p for p in result["methods"]["cold_thompson"] if p["budget"] == 8]
+    assert f"{point['mean_fraction_oracle'] * 100:.1f}%" in _README
+    assert result["hyperparameters"]["parhelion"]["transfer_strength"] == 0
 
 
-_DIAGNOSIS: dict[str, Any] = json.loads(
-    (_REPO / "results/kernel-bank-diagnosis.json").read_text(encoding="utf-8")
-)
-
-
-def _full_pairs(dataset: dict[str, Any]) -> list[dict[str, Any]]:
-    return [
-        p["full_roster"]["overall"]
-        for p in dataset["bank_pairs"]
-        if p["full_roster"]["overall"]["named_count"]
-    ]
-
-
-def test_regime_gap_sentence_matches_the_diagnosis() -> None:
-    regimes = {r["m_values"][0]: r for r in _DIAGNOSIS["expansion"]["by_regime"]}
-    ratios = [f"**{regimes[m]['new_torch_ratio']['named']:.3f}×**" for m in (96, 257)]
-    assert f"At M=96 and M=257 the new bank is still {ratios[0]} and {ratios[1]} torch." in _README
-
-
-def test_bank_or_selection_numbers_match_the_diagnosis() -> None:
-    (h100,) = [
-        d
-        for d in _DIAGNOSIS["datasets"]
-        if d["view"] == "benchmarks/data/h100-measurements.jsonl.zst [NVIDIA H100 80GB HBM3]"
-    ]
-    pairs = _full_pairs(h100)
-    worst = max(p["policy_oracle_ratio"]["named"] for p in pairs)
-    oracle = [p["oracle_torch_ratio"]["named"] for p in pairs]
-    bound = _BUILD_SITE.bound_pct(worst - 1, upper=True)
-    assert f"at most **{bound}** slower" in _README
-    # An "at most" bound must not understate the exact value.
-    assert Decimal(bound.rstrip("%")) >= Decimal(worst - 1) * 100
-    assert f"**{min(oracle):.3f}–{max(oracle):.3f}×** torch" in _README
-    views = [d for d in _DIAGNOSIS["datasets"] if _full_pairs(d)]
-    every = [p for d in views for p in _full_pairs(d)]
-    worst_all = max(p["policy_oracle_ratio"]["named"] for p in every)
-    oracles = [p["oracle_torch_ratio"]["named"] for p in every]
-    assert f"In all **{len(views)} multi-bank views**" in _README
-    bound_all = _BUILD_SITE.bound_pct(worst_all - 1, upper=True)
-    assert f"within **{bound_all}**" in _README
-    assert Decimal(bound_all.rstrip("%")) >= Decimal(worst_all - 1) * 100
-    assert f"from **{min(oracles):.3f}×** to **{max(oracles):.3f}×** torch" in _README
-    assert _DIAGNOSIS["shared_cells"], "the README says views overlap"
-
-
-def test_dossier_sentence_matches_the_prediction() -> None:
-    (persistent,) = [
-        p
-        for p in _DIAGNOSIS["dossier"]["predictions"]
-        if p["bank1_selected"] and p["arm"] == "new" and p["shape"][0] == 96
-    ]
-    assert persistent["family"] == "persistent"
-    assert (
-        f"**{persistent['matmul_programs']} programs on {persistent['sm_count']} SMs**" in _README
-    )
+def test_readme_relative_links_exist() -> None:
+    links = re.findall(r"\]\(([^)]+)\)", _README)
+    for link in links:
+        if "://" not in link and not link.startswith("#"):
+            assert (_REPO / link.split("#", 1)[0]).is_file(), link
+    assert "site/h100-by-m.svg" in links
