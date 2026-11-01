@@ -1,9 +1,44 @@
 # Security policy
 
-I support base and CPU-only functionality in the latest [GitHub release](https://github.com/mottopanikeiku/quartet/releases/latest), not earlier releases. I evaluate security reports and issue fixes when warranted. This experiment is not a security boundary, and I cannot guarantee a response time.
+## Supported versions
 
-I retain historical GPU dependency pins for reproduction, not as supported service dependencies. They should run only with trusted inputs in an isolated environment. Fixes belong in new code, not rewritten benchmark measurements.
+I support base and CPU-only functionality in the latest
+[GitHub release](https://github.com/mottopanikeiku/quartet/releases/latest).
+Earlier releases are unsupported. I evaluate reports and issue fixes when
+warranted, without a guaranteed response time.
 
-`heliostune replay-bundle` runs package-shipped analyzers from a fixed registry. It requires Linux isolation features and rejects a run when they are unavailable. Bounded inputs, namespace isolation and resource limits do not make malicious installed packages safe. A successful replay reproduces declared output bytes; it does not establish that the measurements are true or reproducible on another GPU. I retain the implementation boundaries in the [historical security policy](docs/history/SECURITY.md).
+Historical GPU dependency pins are for reproducing experiments. Use them only
+with trusted inputs in an isolated environment, not in a service or a
+multi-tenant deployment. Security fixes ship in new versions; they do not
+rewrite benchmark measurements or reports.
 
-I accept vulnerability reports through GitHub's [private reporting form](https://github.com/mottopanikeiku/quartet/security/advisories/new). Include affected versions, impact and reproduction details. Please report an unaddressed vulnerability privately before publishing it.
+## Offline analyzer replay
+
+`heliostune replay-bundle` runs only installed analyzers from a fixed registry.
+A bundle cannot choose a command, module, path or callable to execute.
+Verification limits reads to 2 MiB for a bundle root, 32 MiB per component and
+64 MiB in total. The worker checks that its installed package and sources match
+the parent's identity before running.
+
+Replay requires Linux user, network, mount and PID namespaces with
+`no-new-privileges`. Each worker checks its namespace mappings, mounts an empty
+`nosuid,nodev,noexec` tmpfs, remounts it read-only, checks `ST_RDONLY` and an
+`EROFS` write failure, then chroots into it. Resource limits, closed non-stdio
+descriptors, bounded output and process-group termination constrain failures.
+The Python audit hook adds detection of forbidden operations; it is not a
+general Python sandbox. Replay fails if required isolation is unavailable.
+
+The analyzer runs twice and must reproduce the bundle's declared outputs
+exactly. This checks same-host output reproduction, not the accuracy of GPU
+measurements or their reproducibility elsewhere. The isolation mechanisms do
+not make malicious installed packages safe. See the
+[bundle and replay format](docs/history/EXPERIMENT_SCOPE.md#offline-analyzer-replay)
+for input and output contracts.
+
+## Reporting a vulnerability
+
+Use GitHub's
+[private reporting form](https://github.com/mottopanikeiku/quartet/security/advisories/new)
+for vulnerabilities, exposed credentials or release-integrity concerns.
+Include affected versions, impact and reproduction details. Please report an
+unaddressed vulnerability privately before publishing it.

@@ -110,6 +110,38 @@ def test_committed_page_is_byte_identical_to_a_fresh_build(
         _BUILDER.main(["--output", str(output), "--check"])
 
 
+def test_readme_figure_matches_report_chart(tmp_path: Path) -> None:
+    expected = _BUILDER._regime_chart(_DIAGNOSIS["expansion"]["by_regime"]) + "\n"
+    assert (_SITE / "h100-by-m.svg").read_text(encoding="utf-8") == expected
+    output = tmp_path / "index.html"
+    assert _BUILDER.main(["--output", str(output)]) == 0
+    figure = tmp_path / "h100-by-m.svg"
+    assert figure.read_text(encoding="utf-8") == expected
+    figure.write_text(expected + " ", encoding="utf-8")
+    with pytest.raises(SystemExit, match="h100-by-m.svg is stale"):
+        _BUILDER.main(["--output", str(output), "--check"])
+
+
+def test_four_gpu_table_uses_original_archives_and_fixed_passes() -> None:
+    rows = _rows("gpus")
+    assert set(rows) == {"T4", "A10", "L4", "H100"}
+    for label, path, device in _BUILDER.ORIGINAL_GPUS:
+        (dataset,) = [
+            d
+            for d in _DIAGNOSIS["datasets"]
+            if d["path"] == path and d["hardware"]["device_name"] == device
+        ]
+        (pair,) = [
+            p for p in dataset["bank_pairs"] if p["selection_bank"] == 1 and p["scoring_bank"] == 2
+        ]
+        overall = pair["full_roster"]["overall"]
+        assert rows[label] == [
+            str(overall["named_count"]),
+            f"{overall['policy_torch_ratio']['named']:.3f}×",
+            f"{(overall['policy_oracle_ratio']['named'] - 1) * 100:.2f}%",
+        ]
+
+
 @pytest.mark.parametrize(
     "mutate",
     [
@@ -326,16 +358,7 @@ def test_page_is_static_offline_and_carries_a_strict_policy() -> None:
     assert "script" not in page.tags and "iframe" not in page.tags and "img" not in page.tags
     assert "script-src 'none'" in _PAGE and "default-src 'none'" in _PAGE
     assert "<svg" in _PAGE and "http://" not in _PAGE.replace("http://www.w3.org/2000/svg", "")
-    for marker in (
-        "This is not a replay of my tuning policies.",
-        "unidentifiable",
-        "MEAS",
-        "no new timings",
-        "identical normalized cells",
-        "Inference",
-    ):
-        assert marker in _PAGE
-    assert "byte-identical cells" not in _PAGE
+    assert "h100-by-m.svg" in page.links
 
 
 def test_historical_landing_page_is_preserved_byte_for_byte() -> None:

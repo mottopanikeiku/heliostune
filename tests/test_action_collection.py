@@ -412,7 +412,7 @@ def _repository(tmp_path: Path) -> Path:
     repository = tmp_path / "repo"
     (repository / "docs").mkdir(parents=True)
     (repository / "src/heliostune").mkdir(parents=True)
-    (repository / "docs/action-expansion-plan.md").write_text("plan\n", encoding="utf-8")
+    (repository / "docs/action-expansion.md").write_text("plan\n", encoding="utf-8")
     (repository / "src/heliostune/__init__.py").write_text("", encoding="utf-8")
     _git(repository, "init", "-q")
     _git(repository, "add", ".")
@@ -506,7 +506,7 @@ def test_local_runner_refuses_dirty_trees_existing_outputs_and_missing_cuda(
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     with pytest.raises(SystemExit, match="no CUDA device"):
         runner.main([*base, "--output", str(tmp_path / "new.json")], repository=repository)
-    (repository / "docs/action-expansion-plan.md").write_text("edited\n", encoding="utf-8")
+    (repository / "docs/action-expansion.md").write_text("edited\n", encoding="utf-8")
     with pytest.raises(SystemExit, match="commit every tracked change"):
         runner.main(base, repository=repository)
     with pytest.raises(ProtocolError, match="no hardware expectation"):
