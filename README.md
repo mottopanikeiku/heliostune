@@ -4,7 +4,7 @@ I built a Triton matmul autotuner and compared it with `torch.matmul` on 96 LLM-
 
 [![H100 latency relative to torch, before and after expanding the kernel set](site/h100-by-m.svg)](https://mottopanikeiku.github.io/quartet/)
 
-The interesting part was separating search quality from kernel quality. Selecting on one timing pass and scoring on another costs less than 0.7% against the best measured configuration on each of the four GPUs. The large T4 and H100 gaps come from the available kernels.
+Picking the best of all 36 kernels on one timing pass and re-timing on another lands within 0.7% of the best kernel on the second pass, on every GPU. The large T4 and H100 gaps come from the kernels, not the search.
 
 [Full report](https://mottopanikeiku.github.io/quartet/) · [Measurement method](docs/action-expansion.md) · [Contributing](CONTRIBUTING.md)
 

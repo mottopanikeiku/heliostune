@@ -10,6 +10,10 @@ import pytest
 
 _REPO = Path(__file__).resolve().parents[1]
 _SCRIPT = _REPO / "scripts/summarize_tuner_results.py"
+_LABEL_OVERRIDES = {
+    "parhelion_thompson": "Retrieval-anchored Thompson sampling",
+    "transfer_thompson": "Transfer Thompson sampling",
+}
 
 
 @pytest.fixture
@@ -41,22 +45,24 @@ def test_summary_extracts_every_displayed_method_from_committed_inputs(
             sum(points[b]["mean_fraction_oracle"] for b in range(1, 9)) / 8
         )
         endpoint = points[8]
+        label = _LABEL_OVERRIDES.get(method, h100["method_labels"][method])
         row = (
-            f"| {h100['method_labels'][method]} (`{method}`) | "
+            f"| {label} (`{method}`) | "
             f"{h100['auc'][method]:.6f} | {endpoint['mean_fraction_oracle']:.6f} | "
             f"[{endpoint['ci95_low']:.6f}, {endpoint['ci95_high']:.6f}] |"
         )
         assert row in summary
         curve = " | ".join(f"{points[b]['mean_fraction_oracle']:.6f}" for b in range(1, 9))
-        assert f"| {h100['method_labels'][method]} | {curve} |" in summary
+        assert f"| {label} | {curve} |" in summary
     for name in ("l4-to-a10.json", "a10-to-l4.json"):
         result = results[name]
         for method in summarizer._V1_METHODS:
             endpoint = next(p for p in result["methods"][method] if p["budget"] == 8)
             auc = result["primary_metrics"]["fraction_reference_auc"][method]
+            label = _LABEL_OVERRIDES.get(method, result["method_labels"][method])
             row = (
                 f"| {result['source_gpu']} → {result['target_gpu']} | "
-                f"{result['method_labels'][method]} (`{method}`) | "
+                f"{label} (`{method}`) | "
                 f"{auc:.6f} | {endpoint['mean_fraction_oracle']:.6f} |"
             )
             assert row in summary
@@ -68,14 +74,17 @@ def test_summary_names_denominator_action_set_and_protocol_limits(
     summarizer: ModuleType,
 ) -> None:
     summary = summarizer.build_summary(_REPO)
-    assert "bank-1-selected, bank-2-scored curated 36-config Triton reference" in summary
-    assert "not the hardware optimum" in summary
+    assert "fastest of the 36 Triton configurations" in summary
+    assert "chosen on the selection pass and timed on the scoring pass" in summary
     assert "reference latency / recommendation latency" in summary
-    assert "evaluation-only, outside the tuner's action set" in summary
+    assert "the tuner cannot choose it" in summary
     assert "not a trapezoidal integral" in summary
     assert "separate protocol" in summary
     assert "Do not pool the rows across protocols or GPUs" in summary
-    assert "does not claim a physical collection cost reduction" in summary
+    assert (
+        "Source measurements and the two selection/scoring passes are outside that budget"
+        in summary
+    )
 
 
 def test_selection_provenance_uses_real_committed_parameters(summarizer: ModuleType) -> None:
