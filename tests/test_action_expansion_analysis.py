@@ -13,7 +13,7 @@ from xml.etree import ElementTree
 
 import pytest
 
-from heliostune.action_configs import candidates_for
+from heliostune.action_configs import action_set_manifest, candidates_for
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, Workload
 
 _REPO = Path(__file__).resolve().parents[1]
@@ -85,7 +85,7 @@ def _artifact(workloads: tuple[Workload, ...] = _WORKLOADS) -> dict[str, Any]:
         "hardware": {"device_name": "NVIDIA H100"},
         "software": {"torch": "2.8.0", "triton": "3.4.0"},
         "protocol": {"selection_bank": 1, "scoring_bank": 2},
-        "action_set": _ANALYZER.action_manifest(),
+        "action_set": action_set_manifest(),
         "rows": rows,
         "selected": selected,
         "duration_seconds": 12.0,
@@ -456,6 +456,30 @@ def test_collector_metadata_is_preserved_and_pilot_cannot_enter_full_analysis() 
     data["pilot"] = False
     with pytest.raises(ValueError, match="workload"):
         _ANALYZER.analyze(data)
+
+
+def test_run_identity_is_preserved_and_validated() -> None:
+    data = _artifact()
+    baseline = _analyze(data)
+    run = {
+        "run_id": "a100-repeat-1",
+        "runner": "local",
+        "gpu": "A100-80GB",
+        "hardware_validation": "registry expectation",
+    }
+    data["run"] = run
+    summary = _analyze(data)
+    assert summary["run"] == run
+    assert {k: v for k, v in summary.items() if k != "run"} == baseline
+    for broken, message in (
+        ({**run, "run_id": "../escape"}, "run ID"),
+        ({**run, "runner": "slurm"}, "runner"),
+        ({**run, "gpu": ""}, "run.gpu"),
+        ({k: v for k, v in run.items() if k != "runner"}, "run"),
+    ):
+        data["run"] = broken
+        with pytest.raises(ValueError, match=message):
+            _analyze(data)
 
 
 def test_cloud_estimate_is_preserved_without_changing_selection() -> None:

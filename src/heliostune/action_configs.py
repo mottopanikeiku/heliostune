@@ -8,9 +8,9 @@ IDs include the family, independently of the historical configuration IDs.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Literal
+from typing import Any, Literal
 
-from heliostune.configs import HopperGemmConfig, KernelConfig, Workload
+from heliostune.configs import DEFAULT_CONFIGS, HopperGemmConfig, KernelConfig, Workload
 from heliostune.errors import SchemaError
 from heliostune.validation import exact_int
 
@@ -117,3 +117,15 @@ ALL_CANDIDATES: tuple[ActionCandidate, ...] = tuple(
 def candidates_for(workload: Workload) -> tuple[ActionCandidate, ...]:
     """Return the predeclared candidates; no measurements influence enumeration."""
     return ALL_CANDIDATES if workload.m <= SPLIT_K_M_LIMIT else NON_SPLIT_CANDIDATES
+
+
+def action_set_manifest() -> dict[str, list[dict[str, Any]]]:
+    """Return the frozen old/new action identities recorded in every raw artifact."""
+    return {
+        "old": [
+            {"family": "old", "config_key": c.key, "config": c.to_dict()} for c in DEFAULT_CONFIGS
+        ],
+        "new": [
+            {"family": c.family, "config_key": c.key, "config": c.to_dict()} for c in ALL_CANDIDATES
+        ],
+    }
