@@ -107,6 +107,15 @@ def read_json(path: str | Path) -> object:
     return strict_json_loads(payload, source=source)
 
 
+def historical_artifact_path(root: Path, relative: str) -> Path:
+    """Locate frozen evidence after the landing page's explicit archive move.
+
+    Historical manifests retain their original paths and hashes. Only their
+    byte-preserving report relocation is resolved here, never the current page.
+    """
+    return root / ("site/transfer.html" if relative == "site/index.html" else relative)
+
+
 def _is_zstd(path: Path) -> bool:
     return path.name.endswith(".zst")
 

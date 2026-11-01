@@ -17,7 +17,8 @@ from html import escape
 from pathlib import Path
 from typing import Any, cast
 
-from heliostune.action_configs import ALL_CANDIDATES, candidates_for
+from heliostune.action_collection import RUNNERS, validate_run_id
+from heliostune.action_configs import action_set_manifest, candidates_for
 from heliostune.configs import DEFAULT_CONFIGS, DEFAULT_WORKLOADS, Workload
 from heliostune.tooling.artifacts import read_json, strict_json_dumps
 from heliostune.validation import (
@@ -58,18 +59,6 @@ _NOTE = (
     "statistical significance nor a hardware-cause claim. "
     "Named workloads are counted separately even when shapes coincide."
 )
-
-
-def action_manifest() -> dict[str, list[dict[str, Any]]]:
-    """Return the exact frozen, CPU-safe action-set identity."""
-    return {
-        "old": [
-            {"family": "old", "config_key": c.key, "config": c.to_dict()} for c in DEFAULT_CONFIGS
-        ],
-        "new": [
-            {"family": c.family, "config_key": c.key, "config": c.to_dict()} for c in ALL_CANDIDATES
-        ],
-    }
 
 
 def _valid(row: dict[str, Any]) -> bool:
@@ -171,7 +160,7 @@ def analyze(
     raw = exact_object(data, context="action expansion artifact")
     metadata: dict[str, Any] = {
         field: raw[field]
-        for field in ("pilot", "precision", "source_commit", "cloud", "sessions")
+        for field in ("run", "pilot", "precision", "source_commit", "cloud", "sessions")
         if field in raw
     }
     raw = exact_fields(
@@ -190,6 +179,17 @@ def analyze(
         ),
         context="action expansion artifact",
     )
+    if "run" in metadata:
+        run = exact_fields(
+            metadata["run"],
+            required=("run_id", "runner", "gpu", "hardware_validation"),
+            context="run",
+        )
+        validate_run_id(nonblank_string(run["run_id"], context="run.run_id"))
+        if run["runner"] not in RUNNERS:
+            raise ValueError(f"run.runner must be one of {RUNNERS}")
+        for field in ("gpu", "hardware_validation"):
+            nonblank_string(run[field], context=f"run.{field}")
     if "pilot" in metadata:
         exact_bool(metadata["pilot"], context="pilot")
     if "precision" in metadata:
@@ -220,7 +220,7 @@ def analyze(
     for field in ("hardware", "software", "protocol"):
         exact_object(raw[field], context=field)
     finite_float(raw["duration_seconds"], context="duration_seconds", minimum=0)
-    manifest = action_manifest()
+    manifest = action_set_manifest()
     saved_manifest = exact_fields(raw["action_set"], required=("old", "new"), context="action_set")
     for arm in ("old", "new"):
         records = saved_manifest[arm]

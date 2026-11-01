@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +14,12 @@ _NEXT = (_REPO / "docs/NEXT.md").read_text(encoding="utf-8")
 _SUMMARY: dict[str, Any] = json.loads(
     (_REPO / "results/action-expansion-summary.json").read_text(encoding="utf-8")
 )
+_SPEC = importlib.util.spec_from_file_location(
+    "_test_readme_build_site", Path(__file__).resolve().parents[1] / "scripts/build_site.py"
+)
+assert _SPEC is not None and _SPEC.loader is not None
+_BUILD_SITE = importlib.util.module_from_spec(_SPEC)
+_SPEC.loader.exec_module(_BUILD_SITE)
 _SHORT_MODEL = {
     "granite-3.1-8b": "Granite",
     "mistral-7b": "Mistral",
@@ -121,3 +129,60 @@ def test_next_document_repeats_the_same_aggregates() -> None:
     assert f"new/old is {ratio:.6f}" in _NEXT
     persistent = sum(w["selected"]["new"]["family"] == "persistent" for w in _SUMMARY["workloads"])
     assert f"Persistent TMA is selected for {persistent} workloads" in _NEXT
+
+
+_DIAGNOSIS: dict[str, Any] = json.loads(
+    (_REPO / "results/kernel-bank-diagnosis.json").read_text(encoding="utf-8")
+)
+
+
+def _full_pairs(dataset: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        p["full_roster"]["overall"]
+        for p in dataset["bank_pairs"]
+        if p["full_roster"]["overall"]["named_count"]
+    ]
+
+
+def test_regime_gap_sentence_matches_the_diagnosis() -> None:
+    regimes = {r["m_values"][0]: r for r in _DIAGNOSIS["expansion"]["by_regime"]}
+    ratios = [f"**{regimes[m]['new_torch_ratio']['named']:.3f}×**" for m in (96, 257)]
+    assert f"At M=96 and M=257 the new bank is still {ratios[0]} and {ratios[1]} torch." in _README
+
+
+def test_bank_or_selection_numbers_match_the_diagnosis() -> None:
+    (h100,) = [
+        d
+        for d in _DIAGNOSIS["datasets"]
+        if d["view"] == "benchmarks/data/h100-measurements.jsonl.zst [NVIDIA H100 80GB HBM3]"
+    ]
+    pairs = _full_pairs(h100)
+    worst = max(p["policy_oracle_ratio"]["named"] for p in pairs)
+    oracle = [p["oracle_torch_ratio"]["named"] for p in pairs]
+    bound = _BUILD_SITE.bound_pct(worst - 1, upper=True)
+    assert f"at most **{bound}** slower" in _README
+    # An "at most" bound must not understate the exact value.
+    assert Decimal(bound.rstrip("%")) >= Decimal(worst - 1) * 100
+    assert f"**{min(oracle):.3f}–{max(oracle):.3f}×** torch" in _README
+    views = [d for d in _DIAGNOSIS["datasets"] if _full_pairs(d)]
+    every = [p for d in views for p in _full_pairs(d)]
+    worst_all = max(p["policy_oracle_ratio"]["named"] for p in every)
+    oracles = [p["oracle_torch_ratio"]["named"] for p in every]
+    assert f"In all **{len(views)} multi-bank views**" in _README
+    bound_all = _BUILD_SITE.bound_pct(worst_all - 1, upper=True)
+    assert f"within **{bound_all}**" in _README
+    assert Decimal(bound_all.rstrip("%")) >= Decimal(worst_all - 1) * 100
+    assert f"from **{min(oracles):.3f}×** to **{max(oracles):.3f}×** torch" in _README
+    assert _DIAGNOSIS["shared_cells"], "the README says views overlap"
+
+
+def test_dossier_sentence_matches_the_prediction() -> None:
+    (persistent,) = [
+        p
+        for p in _DIAGNOSIS["dossier"]["predictions"]
+        if p["bank1_selected"] and p["arm"] == "new" and p["shape"][0] == 96
+    ]
+    assert persistent["family"] == "persistent"
+    assert (
+        f"**{persistent['matmul_programs']} programs on {persistent['sm_count']} SMs**" in _README
+    )

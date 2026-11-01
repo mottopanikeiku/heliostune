@@ -4,7 +4,7 @@ This is my small GPU matrix-multiplication tuning experiment, formerly HeliosTun
 
 **Question:** is the search policy the problem, or is its kernel bank too limited? I added ten Hopper-aware actions: larger tiles, deeper pipelines, persistent TMA and tensor-core split-K. The persistent path builds on [Triton's pinned tutorial](https://github.com/triton-lang/triton/blob/v3.4.0/python/tutorials/09-persistent-matmul.py); my split-K path is in [`action_expansion.py`](src/heliostune/action_expansion.py).
 
-**New H100 result:** bank-1-selected new actions beat `torch.matmul` on **9/96 named workloads**, versus **0/96** for the original 36 actions. There is **one exact median tie and 86 losses**. The new bank improves on the old bank on **95/96**, but torch still wins most workloads. These are descriptive medians, not significance claims. [Full summary](results/action-expansion-summary.json).
+**New H100 result:** bank-1-selected new actions beat `torch.matmul` on **9/96 named workloads**, versus **0/96** for the original 36 actions. There is **one exact median tie and 86 losses**. The new bank improves on the old bank on **95/96**, but torch still wins most workloads. These are descriptive medians, not significance claims. [Full summary](results/action-expansion-summary.json) · [report](https://mottopanikeiku.github.io/quartet/).
 
 ## What changed
 
@@ -36,19 +36,27 @@ Ratio means **new / torch**; lower is better. These are all nine nominal wins fr
 | Qwen / FFN-down | (7,3584,18944) | 64.256 / 67.712 | 0.948960 |
 | Granite / FFN-up | (96,12800,4096) | 51.712 / 52.032 | 0.993850 |
 
-Six wins use split-K; three use larger ordinary tiles; none uses persistent TMA. The largest saving is **5.55%** on Qwen's M=1 FFN-down. No selected new action beats torch at M=31,257,1024.
+Six wins use split-K; three use larger ordinary tiles; none uses persistent TMA. The largest saving is **5.55%** on Qwen's M=1 FFN-down. No selected new action beats torch at M=31,257,1024. At M=96 and M=257 the new bank is still **1.378×** and **1.373×** torch.
 
 ![Old and new independently scored ratios for all workloads](results/action-expansion.svg)
+
+## Selection loss in the stored measurements
+
+I wanted to know how much the choice of action costs, separately from how good the actions are. So I re-read every stored action matrix on CPU. For each pair of banks, I take each workload's fastest action on the earlier bank and time it on the later bank, then compare it with the later bank's own fastest action. In the original 36-action H100 archive, the earlier-bank pick is at most **0.14%** slower than that in-sample minimum (geometric mean over workloads, worst bank pair). That minimum is still **1.608–1.609×** torch. In all **19 multi-bank views**, the earlier-bank pick stays within **0.83%** of the in-sample minimum, and the minimum ranges from **0.936×** to **3.828×** torch. I rounded both bounds up. Individual workloads can lose more than these means. Several views are overlapping copies of the same measurements, so I report each one separately and pool none. Choosing among these kernels costs very little; the kernels themselves are what keep it slower than torch.
+
+This is exhaustive earlier-bank selection, not a replay of Thompson sampling or transfer. In the expansion, bank 2 holds only the finalists, so I cannot compute its full-bank regret or winner stability. I also wrote an analytical dossier that counts programs, masked rows and split-K workspace for Qwen's FFN-down at every M. It is a prediction, not profiler evidence. For example, at M=96 the selected persistent action launches **28 programs on 132 SMs**. [Diagnosis](results/kernel-bank-diagnosis.json) · [report](https://mottopanikeiku.github.io/quartet/).
 
 ## Reproduce
 
 ```sh
 uv sync --python 3.13 --locked --extra dev --extra modal
 uv run python scripts/analyze_action_expansion.py
-uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py
+uv run python scripts/diagnose_kernel_bank.py && uv run python scripts/build_site.py
+uv run python scripts/build_modal_wheel.py && uv run modal run modal_action_expansion.py --run-id h100-repeat-1
+uv run python scripts/collect_action_expansion.py --run-id a100-repeat-1 --gpu A100-80GB --dry-run
 ```
 
-The second command regenerates the summary and figure on CPU. The third starts or resumes an H100 collection from a clean commit; completed workload units are reused. `--pilot` measures four workloads separately. [Fresh-repeat instructions](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
+The second command regenerates the summary and figure on CPU. The third rebuilds the cross-archive diagnosis and the [Pages report](site/index.html) from committed files; `--check` on either script verifies the committed bytes. The fourth starts or resumes an H100 collection on Modal from a clean commit. The fifth plans the same collection for a local CUDA machine; without `--dry-run`, and with the `gpu` extra installed, it runs it there. Each run ID has its own checkpoint, and a resume reuses completed units only if the plan, hardware profile, code and protocol all match. `--pilot` measures four workloads separately. [Collection details](CONTRIBUTING.md). I used Torch 2.8.0 / Triton 3.4.0, FP16 allocating calls, 25 ms warmup / 100 ms timing, and p20/median/p80. The [cost estimate](results/action-expansion-cost.json) is **$2.0655**, including a failed startup, pilot and full run—not a provider invoice.
 
 ## Limits and history
 
@@ -58,7 +66,7 @@ The second command regenerates the summary and figure on CPU. The third starts o
 - Warmed medians omit compilation, acquisition and serving cost. I did not rerun transfer policies on the expanded bank.
 - Ten new actions do not establish a hardware optimum or exhaust all possible Triton kernels.
 
-The [earlier audit](results/action-set-audit.json) remains unchanged. The [original transfer comparison](results/tuner-comparison.md) favored cold Thompson over Parhelion; selected posterior transfer strengths were zero. Retrieval and posterior code remain in [`retrieval.py`](src/heliostune/retrieval.py) and [`bandit.py`](src/heliostune/bandit.py). [Next comparison](docs/NEXT.md).
+The [earlier audit](results/action-set-audit.json) remains unchanged. The [original transfer comparison](results/tuner-comparison.md) favored cold Thompson over Parhelion; selected posterior transfer strengths were zero. Its [report](https://mottopanikeiku.github.io/quartet/transfer.html) is preserved byte-for-byte. Retrieval and posterior code remain in [`retrieval.py`](src/heliostune/retrieval.py) and [`bandit.py`](src/heliostune/bandit.py). [Next comparison](docs/NEXT.md).
 
 I build on [AutoTVM](https://arxiv.org/abs/1805.08166), [linear Thompson sampling](https://proceedings.mlr.press/v28/agrawal13.html), [RGPE](https://arxiv.org/abs/1802.02219) and [Transfer-Tuning](https://arxiv.org/abs/2201.05587). MIT [license](LICENSE).
 
