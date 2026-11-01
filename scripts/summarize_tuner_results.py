@@ -49,7 +49,7 @@ def _link(name: str) -> str:
 
 
 def _label(result: dict[str, Any], method: str) -> str:
-    return _LABEL_OVERRIDES.get(method, result["method_labels"][method])
+    return _LABEL_OVERRIDES.get(method, str(result["method_labels"][method]))
 
 
 def build_summary(repo: Path = _REPO) -> str:
