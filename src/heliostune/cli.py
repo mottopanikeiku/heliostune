@@ -518,7 +518,7 @@ def _select_parhelion(args: argparse.Namespace) -> int:
                 args.summary_output: staged_summary,
             }
         )
-    _CONSOLE.print(f"Wrote frozen Parhelion selection to [bold]{args.output}[/bold]")
+    _CONSOLE.print(f"Wrote selected transfer parameters to [bold]{args.output}[/bold]")
     _CONSOLE.print(f"Wrote selected T4 replay to [bold]{args.summary_output}[/bold]")
     return 0
 
@@ -661,7 +661,7 @@ def _demo(args: argparse.Namespace) -> int:
 
 def _inspect(args: argparse.Namespace) -> int:
     measurements = read_measurements(args.input)
-    view = Table(title="HeliosTune benchmark matrix")
+    view = Table(title="quartet benchmark matrix")
     view.add_column("GPU")
     view.add_column("Device")
     view.add_column("Workloads", justify="right")
@@ -1222,7 +1222,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     multisource = subparsers.add_parser(
         "compare-multisource",
-        help="replay Parhelion and baselines from a multi-GPU archive",
+        help="replay cross-GPU transfer and baselines from a multi-GPU archive",
     )
     multisource.add_argument("input", type=Path)
     multisource.add_argument("--sources", required=True, type=_strict_csv)
@@ -1252,7 +1252,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     selection = subparsers.add_parser(
         "select-parhelion",
-        help="run the frozen method-local Parhelion grids on T4",
+        help="select transfer and baseline hyperparameters on T4",
     )
     selection.add_argument("input", type=Path)
     selection.add_argument("--jobs", type=_positive_int, default=1)
@@ -1262,7 +1262,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     selection_v3 = subparsers.add_parser(
         "select-v3",
-        help="run frozen method-local Parhelion v3 grids on A100-80GB",
+        help="select transfer and baseline hyperparameters on A100-80GB",
     )
     selection_v3.add_argument("input", type=Path)
     selection_v3.add_argument(

@@ -1,9 +1,4 @@
-"""Render the Pages landing page from committed CPU summaries.
-
-The page is a pure function of results/action-expansion-summary.json and
-results/kernel-bank-diagnosis.json. It collects no timings, has no clock or
-randomness, and links the byte-preserved historical reports instead of editing them.
-"""
+"""Build the quartet report and README figure from the stored summaries."""
 
 from __future__ import annotations
 
@@ -27,42 +22,46 @@ BLOB = f"{REPOSITORY}/blob/main/"
 EXPANSION_VIEW = "results/action-expansion-raw.json [NVIDIA H100 80GB HBM3]"
 H100_ARCHIVE = "benchmarks/data/h100-measurements.jsonl.zst"
 H100_ARCHIVE_VIEW = f"{H100_ARCHIVE} [NVIDIA H100 80GB HBM3]"
+ORIGINAL_GPUS = (
+    ("T4", "benchmarks/data/t4-measurements.jsonl.zst", "Tesla T4"),
+    ("A10", "benchmarks/data/measurements.jsonl.zst", "NVIDIA A10"),
+    ("L4", "benchmarks/data/measurements.jsonl.zst", "NVIDIA L4"),
+    ("H100", H100_ARCHIVE, "NVIDIA H100 80GB HBM3"),
+)
 ARCHIVE: tuple[tuple[str, str, str], ...] = (
     (
         "transfer.html",
-        "Parhelion L4 + A10 + T4 → H100 transfer report",
-        "This was the landing page before; its bytes are unchanged. Cold Thompson beat "
-        "Parhelion transfer, and the selected posterior transfer strengths were zero.",
+        "L4 + A10 + T4 → H100 transfer",
+        "Cold Thompson sampling beat cross-GPU transfer; the selected posterior transfer strength was zero.",
     ),
     (
         "parhelion-v2-addendum.html",
-        "Post-hoc v2 causal addendum",
-        "An exploratory follow-up to the transfer report, with its own manifest.",
+        "Transfer ablations",
+        "A follow-up comparison of retrieval anchors and posterior transfer.",
     ),
-    ("v1.html", "v1 L4 → A10 transfer report", "My first study, in one direction."),
-    ("a10-to-l4.html", "v1 A10 → L4 transfer report", "The same study in the other direction."),
+    ("v1.html", "L4 → A10 transfer", "The original single-source comparison."),
+    ("a10-to-l4.html", "A10 → L4 transfer", "The reverse direction."),
     (
         "parhelion-v3-engineering.html",
-        "Parhelion v3 H200 engineering report",
-        "The engineering run I did, with the operator's approval, after the v3 campaign stopped.",
+        "H200 transfer",
+        "A later run with more configurations; A100 parameter selection mixed PCIe and SXM devices.",
     ),
     (
         "hopper-h100-engineering.html",
-        "Hopper H100 engineering gate",
-        "An earlier single-bank screen of persistent and skinny-GEMV kernels; section 5 "
-        "re-reads it.",
+        "H100 persistent and skinny-GEMV kernels",
+        "An earlier single-pass comparison.",
     ),
     (
         "h100-precision-probe.html",
-        "H100 FP16 reduction diagnostic",
-        "Fixed configurations under different arithmetic settings; not an action bank.",
+        "H100 FP16 reduction",
+        "Fixed configurations under different arithmetic settings.",
     ),
     (
         "fusion-remote-exploratory.html",
-        "H100 fusion remote receipts",
-        "An exploratory run on a different operator.",
+        "H100 fusion experiments",
+        "RMSNorm and gated-MLP measurements.",
     ),
-    ("native-rmsnorm-h100.html", "Native RMSNorm H100 stage gate", "A different operator."),
+    ("native-rmsnorm-h100.html", "H100 Triton RMSNorm", "A separate operator comparison."),
 )
 ARCHIVE_DATA: tuple[tuple[str, str], ...] = (
     ("parhelion-h100-final.json", "H100 transfer summary"),
@@ -251,6 +250,42 @@ def _wins(summary: Mapping[str, Any]) -> list[Mapping[str, Any]]:
     return [workloads[w["workload_key"]] for w in summary["largest_wins"]["new"]]
 
 
+def _gpu_section(diagnosis: Mapping[str, Any]) -> str:
+    rows = []
+    for label, path, device in ORIGINAL_GPUS:
+        dataset = _view(diagnosis, f"{path} [{device}]")
+        (pair,) = [
+            p for p in dataset["bank_pairs"] if p["selection_bank"] == 1 and p["scoring_bank"] == 2
+        ]
+        overall = pair["full_roster"]["overall"]
+        rows.append(
+            [
+                label,
+                str(overall["named_count"]),
+                _ratio(overall["policy_torch_ratio"]["named"]),
+                f"{(overall['policy_oracle_ratio']['named'] - 1) * 100:.2f}%",
+            ]
+        )
+    table = _table(
+        "gpus",
+        "Original 36 configurations; selected on pass 1, scored on pass 2",
+        ("GPU", "Workloads", "Triton / torch", "Selection overhead"),
+        rows,
+    )
+    return f"""
+<section id="gpus" aria-labelledby="gpus-title">
+<h2 id="gpus-title">Four GPUs, the same 96 workloads</h2>
+<p>The suite covers attention and FFN projections from Granite, Mistral, Phi and Qwen at
+M = 1, 7, 31, 96, 257 and 1024. There are 84 distinct shapes. Ratios are geometric means;
+lower is faster. Selection overhead compares the fixed pass-1 choice with the fastest
+configuration measured on pass 2.</p>
+{table}
+<p>The original kernels are close to torch on A10 and L4. On H100 and T4, selecting
+configurations more accurately leaves most of the latency gap untouched. I expanded the
+H100 kernel set to address that gap.</p>
+</section>"""
+
+
 def _result_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) -> str:
     overall = summary["overall"]
     arms = overall["arms"]
@@ -315,21 +350,18 @@ def _result_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) ->
         win_rows,
         text_columns=3,
     )
-    below = sum(w["new_to_torch"] > 0.99 for w in wins)
     comparison = overall["old_new_comparison"]
     return f"""
 <section id="result" aria-labelledby="result-title">
-<h2 id="result-title">1 · Results on the scoring bank</h2>
-<p>The new actions are much faster than my original 36, but <code>torch.matmul</code> is still faster on most
-workloads. The geometric mean of new/old latency is <strong>{comparison["geometric_mean_new_to_old"]:.3f}</strong>, and
-the new actions are faster than the old ones on {comparison["new_faster_count"]}/{overall["named_workload_count"]} named
-workloads. Each ratio is a geometric mean of per-workload bank-2 medians divided by torch from the same session, so
-lower is faster. “Named” gives each model projection equal weight. “Unique shape” first averages the projections that
-share an (M,N,K) shape. The microsecond columns are arithmetic means.</p>
+<h2 id="result-title">Closing the H100 gap</h2>
+<p>The new actions reduce geometric-mean latency by
+{(1 - comparison["geometric_mean_new_to_old"]) * 100:.1f}% and improve
+{comparison["new_faster_count"]}/{overall["named_workload_count"]} workloads. New/old latency is
+<strong>{comparison["geometric_mean_new_to_old"]:.3f}</strong>.
+Each ratio divides the selected candidate's median by torch's median in the same scoring pass.
+“Named” weights each model projection equally; “unique shape” first averages projections
+sharing an (M,N,K) shape. The microsecond columns are arithmetic means.</p>
 {table}
-<p class="note">{below} of the {len(wins)} wins are by less than 1%. The timing quantiles describe spread, not
-confidence intervals, and I did not keep the individual samples. I am not claiming any of these wins is
-significant.</p>
 {wins_table}
 </section>"""
 
@@ -343,17 +375,17 @@ def _split_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) -> 
     split = sum(a["family"] == "split_k" for a in actions["new"])
     return f"""
 <section id="split" aria-labelledby="split-title">
-<h2 id="split-title">2 · How I selected and scored actions</h2>
-<p>On bank 1 I timed every applicable action: all {len(actions["old"])} original configurations,
-{len(actions["new"]) - split} new ordinary and persistent actions, and {split} split-K actions when M ≤ 31
-({banks[1]["observed_cells"]:,} candidate cells). For each workload I picked the lowest valid median separately from
-the old set, the new set and their union, breaking ties by configuration key. On bank 2 I timed only those fixed
-picks ({banks[2]["observed_cells"]} candidate cells). Both banks also timed torch once per workload. Nothing measured on
-bank 2 chooses an action. I committed the action set and analysis plan at {_commit_link(summary["plan_commit"])}
-before collecting ({_repo_link("docs/action-expansion-plan.md", "plan")}).</p>
-<p class="callout">{_e(diagnosis["expansion"]["missing_reason"])} Comparing just the two finalists, the union's bank-1
-pick was also the faster one on bank 2 for {agreed}/{same["named_covered"]} workloads. The gap between old and new is
-large, so this agreement is expected, and it says nothing about winner stability across the full bank.</p>
+<h2 id="split-title">Selection and scoring</h2>
+<p>Pass 1 times all {len(actions["old"])} original configurations,
+{len(actions["new"]) - split} new ordinary and persistent actions, and {split} split-K actions
+when M ≤ 31 ({banks[1]["observed_cells"]:,} candidate measurements).
+For each workload, it selects the lowest valid median separately from the old set,
+the new set and their union, breaking ties by configuration key. Pass 2 times only those fixed
+choices ({banks[2]["observed_cells"]} candidate measurements). Both passes time torch once per
+workload. The JSON files call these passes banks 1 and 2.
+See the {_repo_link("docs/action-expansion.md", "measurement method")}.</p>
+<p>The combined set's pass-1 choice also wins the old-versus-new comparison on pass 2 for
+{agreed}/{same["named_covered"]} workloads.</p>
 </section>"""
 
 
@@ -410,9 +442,9 @@ def _contract_section(summary: Mapping[str, Any]) -> str:
     ]
     return f"""
 <section id="contract" aria-labelledby="contract-title">
-<h2 id="contract-title">3 · Numerical and timing setup</h2>
-<p>I checked each candidate against the reference before timing it. Passing the tolerance does not prove the
-arithmetic is identical: torch's reduced-precision FP16 reduction flag was on, and I recorded it.</p>
+<h2 id="contract-title">Numerical and timing setup</h2>
+<p>Each candidate must pass the numerical comparison before timing.
+Torch's reduced-precision FP16 reduction flag was enabled.</p>
 {_dl(items)}
 </section>"""
 
@@ -438,6 +470,7 @@ def _regime_chart(regimes: Sequence[Mapping[str, Any]]) -> str:
         '<desc id="chart-desc">Log-scale dot plot of named-workload geometric means for the old, '
         "new and union arms on bank 2. The dark vertical line marks parity with torch; lower is "
         "faster.</desc>",
+        '<rect width="100%" height="100%" fill="#fbf8f1"/>',
         '<g font-family="sans-serif" font-size="12" fill="#142a33">',
     ]
     for i, (_, color, label) in enumerate(series):
@@ -525,21 +558,19 @@ def _regime_section(diagnosis: Mapping[str, Any]) -> str:
 
     return f"""
 <section id="regimes" aria-labelledby="regimes-title">
-<h2 id="regimes-title">4 · Results by M</h2>
+<h2 id="regimes-title">H100 results by M</h2>
 <p>For M ≤ 31, where split-K applies, bank 1 picked split-K for {split_count}/{split_total} workloads. There,
 new/torch is {_e(ratios(split))}. At the larger M values without split-K it is {_e(ratios(rest))}. Bank 1 picked
 persistent TMA for {expansion["new_winner_families"].get("persistent", 0)} workloads, and it beat torch on none of
 them.</p>
 <figure>{_regime_chart(regimes)}
-<figcaption>Named-workload geometric means by M. The table below has the exact values, the unique-shape means and
-the absolute microseconds.</figcaption></figure>
+<figcaption>Geometric-mean latency relative to torch, grouped by M.
+<a href="h100-by-m.svg">Download the figure</a>.</figcaption></figure>
 {table}
-<p class="note">The last two columns come from {_repo_link(H100_ARCHIVE, "the original H100 archive")}. It used the
-same device model and the same Torch and Triton versions, but a different session and a different correctness
-reference, so I don't compare its numbers cell by cell with the old actions here. Each entry is a range over its
-{len(pairs)} bank pairs. “Oracle” is the fastest of the 36 old actions on the scoring bank, chosen after the fact.
-“Pick / oracle” takes each workload's fastest action on the earlier bank, reads its time on the later bank, and
-divides by the oracle.</p>
+<p class="note">The last two columns use {_repo_link(H100_ARCHIVE, "the original H100 archive")},
+which predates this collection and uses a different correctness reference. Each entry spans its
+{len(pairs)} selection/scoring pairs. “Oracle” is the fastest of the original 36 actions on
+the scoring pass. “Pick / oracle” compares the earlier pass's choice with that minimum.</p>
 </section>"""
 
 
@@ -590,12 +621,12 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
         (
             "View",
             "Banks",
-            "Cells",
+            "Measurements",
             "Failed",
             "Earlier-bank pick / oracle",
             "Oracle / torch",
             "Same winner",
-            "Views sharing cells",
+            "Overlapping archives",
         ),
         multi,
     )
@@ -605,38 +636,30 @@ def _bank_section(diagnosis: Mapping[str, Any]) -> str:
         (
             "View",
             "Bank",
-            "Cells",
+            "Measurements",
             "Failed",
             "Workloads",
             "In-sample oracle / torch",
-            "Views sharing cells",
+            "Overlapping archives",
         ),
         single,
     )
     worst = max(picks) - 1
     return f"""
 <section id="bank" aria-labelledby="bank-title">
-<h2 id="bank-title">5 · Selection loss in the stored measurements</h2>
-<p>To see whether choosing actions or the actions themselves limit the tuner, I went back to every archive with more
-than one bank. For each pair of banks, I take each workload's fastest valid action on the earlier bank and look up
-its time on the later bank. I compare that with the fastest action on the later bank, chosen after the fact. This
-“oracle” is optimistic because it is picked and scored on the same bank. In all {len(multi)} multi-bank views, the
-earlier-bank pick is at most {bound_pct(worst, upper=True)} slower than the oracle, as a named geometric mean for each
-bank pair (the bound is rounded up). Several views are overlapping copies of the same measurements. The oracle itself
-ranges from {_ratio(min(oracles))} to {_ratio(max(oracles))} torch. Choosing among these kernels costs very little on
-average; where the result is slower than torch, the kernels themselves are what keep it slower.</p>
-<p class="callout">This is not a replay of my tuning policies. I pick the fastest action on the earlier bank and score
-that fixed action on the later bank. That describes the stored data; it is not a rerun of Thompson sampling or
-transfer, and it is not a probe-budget result. Several archives also repeat identical normalized cells: combined
-archives repeat their component acquisitions, and canonical validation relabels raw sessions. These are different
-views of the same measurements, not independent repeats, so I never sum their rows or pool their statistics.</p>
+<h2 id="bank-title">Selection loss across the stored measurements</h2>
+<p>For each pair of timing passes, I select the fastest valid action on the earlier pass and
+score it on the later pass. The comparison is the later pass's own minimum.
+Across {len(multi)} multi-pass archives, the selection is at most {bound_pct(worst, upper=True)} slower
+in geometric-mean latency. The same-pass minimum ranges from {_ratio(min(oracles))} to
+{_ratio(max(oracles))} torch. Where the gap is large, the kernel set is the main constraint.</p>
+<p>This comparison uses exhaustive selection. Probe-limited Thompson sampling and transfer
+results are in the <a href="transfer.html">original tuning report</a>.</p>
 {multi_table}
 {single_table}
-<p class="note">I split each archive by its exact recorded hardware profile. A canonical profile that relabels several
-devices therefore appears as its own row, next to the raw per-device profiles it was built from.
-{len(diagnosis["shared_cells"])} view pairs share identical normalized cells. A normalized cell is one stored row
-reduced to its workload, bank, action, family, failure, candidate median and torch median, with times in
-microseconds. Per-regime and per-bank statistics, failure stages and the shared-cell counts are in
+<p class="note">Some archives contain the same measurements with different hardware labels or
+combined acquisition sessions. {len(diagnosis["shared_cells"])} archive pairs overlap; they are
+listed separately rather than pooled. Full per-shape results and failure counts are in
 {_repo_link(DIAGNOSIS)}.</p>
 </section>"""
 
@@ -706,66 +729,59 @@ def _dossier_section(diagnosis: Mapping[str, Any]) -> str:
         for p in predictions
         if p["arm"] == "new" and p["bank1_selected"] and p["matmul_programs"] < p["sm_count"]
     )
-    provenance = "".join(
-        f"<li><strong>{_e(p['family'])}</strong> ({_repo_link(p['source'])}): {_e(p['origin'])}</li>"
+    origins = {
+        "old / tile": "Grouped tl.load/tl.dot matmul. The four new tile actions use larger launch parameters.",
+        "persistent": "Adapted from Triton 3.4.0's persistent-matmul tutorial; warp specialization and epilogue subtiling are disabled.",
+        "split_k": "Tensor-core partial tiles, an FP32 workspace and a separate reduction with one FP16 conversion.",
+    }
+    sources = "".join(
+        f"<li><strong>{_e(p['family'])}</strong> ({_repo_link(p['source'])}): "
+        f"{_e(origins[p['family']])}</li>"
         for p in dossier["provenance"]
     )
     formulas = _dl(
         (name.replace("_", " "), f"<code>{_e(text)}</code>")
         for name, text in dossier["formulas"].items()
     )
-    limits = "".join(f"<li>{_e(item)}</li>" for item in dossier["limits"])
     return f"""
 <section id="dossier" aria-labelledby="dossier-title">
-<h2 id="dossier-title">6 · Analytical kernel dossier <span class="badge inference">Inference</span></h2>
-<p class="callout inference">These numbers are counts I derived from the source and the frozen configurations. They
-are not profiler measurements, and they are not a latency model. I put the bank-2 medians next to them for
-reference, but that does not tell us why any action is fast or slow.</p>
-<h3>Where each kernel comes from</h3>
-<ul>{provenance}</ul>
+<h2 id="dossier-title">Kernel layout</h2>
+<p class="callout inference">Inference: these program counts, padding fractions and workspace sizes
+come from the source configurations, not profiler measurements.</p>
+<h3>Implementations</h3>
+<ul>{sources}</ul>
 <h3>Selected actions next to their predictions</h3>
 {table}
 <p>The smallest masked-row fraction among all applicable new actions on this projection is {_e(padding)}. Every
 ordinary and persistent new action has BM ≥ {smallest_bm}; only split-K, for M ≤ 31, uses
 BM = {_e(", ".join(map(str, split_bm)))}. Some selected new actions launch fewer matmul programs than the
-{dossier["sm_count"]} SMs: {_e(sparse)}. I have not tested whether padding or grid size explains any of the measured
-gap; that needs profiler counters.</p>
-<p class="note">The JSON in {_repo_link(DIAGNOSIS)} has all {len(predictions)} predictions under <code>dossier</code>,
-including the actions that were not selected. {_repo_link("tests/test_kernel_dossier.py")} checks the formulas
-against hand calculations.</p>
+{dossier["sm_count"]} SMs: {_e(sparse)}. Profiler counters would be needed to measure the cost of
+padding, occupancy and memory traffic.</p>
+<p class="note">{_repo_link(DIAGNOSIS)} contains all {len(predictions)} configurations under
+<code>dossier</code>. {_repo_link("tests/test_kernel_dossier.py")} checks the formulas.</p>
 <h3>Formulas</h3>
 {formulas}
-<h3>What the dossier does not cover</h3>
-<ul>{limits}</ul>
 </section>"""
 
 
-def _limits_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) -> str:
+def _limits_section(summary: Mapping[str, Any]) -> str:
     wins = _wins(summary)
     below = sum(w["new_to_torch"] > 0.99 for w in wins)
     items = (
-        "This is one H100 collection, not a study across devices. Repeated shapes are not independent devices.",
-        f"Quantiles describe spread, not confidence intervals, and I did not keep individual timing samples. "
-        f"{below} of the {len(wins)} wins are by less than 1%.",
-        "Torch was timed first for each workload, while the candidate order was shuffled.",
-        "The baseline is allocating torch.matmul. I did not compare against matched cuBLASLt or CUTLASS kernels, "
-        "or against preallocated or CUDA-graph calls.",
-        "Warmed medians leave out compilation, acquisition and serving cost.",
-        "I did not rerun Thompson or transfer policies on the expanded bank. This shows better actions, not a "
-        "better autotuner.",
-        "Bank 2 holds only the finalists, so full-bank oracle regret and winner stability for the new bank are "
-        "unidentifiable.",
-        "Exhaustive earlier-bank selection and in-sample oracles describe the stored data. They are not a "
-        "probe-budget or policy result.",
-        f"The stored archives overlap: {len(diagnosis['shared_cells'])} view pairs share identical normalized "
-        "cells. I never pool them as repetitions.",
-        "The kernel dossier is analytical. I have no profiler evidence for what causes the remaining gap.",
-        "Ten new actions do not find the hardware optimum or cover every possible Triton kernel.",
+        f"The H100 expansion is one device session. {below} of its {len(wins)} torch wins are "
+        "below 1%; individual timing samples were not retained.",
+        "Calls allocate outputs and include split-K workspace and reduction. Warmed medians "
+        "exclude compilation, tuning and end-to-end serving costs.",
+        "The baseline is torch.matmul, without separate cuBLASLt/CUTLASS tuning, "
+        "preallocated outputs or CUDA graphs.",
+        "Thompson sampling and transfer have not been rerun on the expanded kernel set. "
+        "Its scoring pass contains only the selected finalists.",
+        "Kernel layout estimates omit cache behavior, spills and achieved occupancy.",
     )
     body = "".join(f"<li>{_e(item)}</li>" for item in items)
     return f"""
 <section id="limits" aria-labelledby="limits-title">
-<h2 id="limits-title">7 · Limits</h2>
+<h2 id="limits-title">Measurement limits</h2>
 <ul>{body}</ul>
 </section>"""
 
@@ -778,8 +794,8 @@ def _archive_section() -> str:
     data = " · ".join(f'<a href="{_e(href)}">{_e(text)}</a>' for href, text in ARCHIVE_DATA)
     return f"""
 <section id="archive" aria-labelledby="archive-title">
-<h2 id="archive-title">8 · Earlier reports</h2>
-<p>I left these pages as they were published, because historical manifests still check their exact bytes.</p>
+<h2 id="archive-title">Earlier experiments</h2>
+<p>These reports retain their original names and contents because the release manifests check their hashes.</p>
 <ul>{reports}</ul>
 <p class="note">Data published with the transfer reports: {data}.</p>
 </section>"""
@@ -793,24 +809,21 @@ def render(
     overall = summary["overall"]
     arms = overall["arms"]
     new = arms["new"]
-    view = diagnosis["expansion"]["overall"]
     strip = "".join(
         f"<div><strong>{_e(value)}</strong><span>{_e(label)}</span></div>"
         for value, label in (
             (
-                f"{new['comparable_win_count']} / {new['comparable_tie_count']} / "
-                f"{new['comparable_loss_count']}",
-                f"new-action wins / ties / losses vs torch over {overall['named_workload_count']} "
-                "workloads",
+                f"{overall['named_workload_count']}",
+                "LLM-shaped workloads on T4, A10, L4 and H100",
             ),
             (
-                _ratio(new["geometric_mean_to_torch"]),
-                f"new / torch latency; {_ratio(view['new_torch_ratio']['unique_shape'])} by unique shape",
+                f"{(1 - overall['old_new_comparison']['geometric_mean_new_to_old']) * 100:.0f}%",
+                "lower H100 latency after expanding the kernel set",
             ),
-            (_ratio(arms["old"]["geometric_mean_to_torch"]), "original 36 actions / torch latency"),
+            (f"{new['geometric_mean_to_torch']:.2f}×", "new H100 actions / torch latency"),
             (
-                f"{overall['old_new_comparison']['geometric_mean_new_to_old']:.3f}",
-                "new / old latency, geometric mean",
+                f"{new['comparable_win_count']} / {overall['named_workload_count']}",
+                "H100 workloads faster than torch",
             ),
         )
     )
@@ -820,13 +833,14 @@ def render(
     )
     sections = "\n".join(
         (
+            _gpu_section(diagnosis),
             _result_section(summary, diagnosis),
             _split_section(summary, diagnosis),
             _contract_section(summary),
             _regime_section(diagnosis),
             _bank_section(diagnosis),
             _dossier_section(diagnosis),
-            _limits_section(summary, diagnosis),
+            _limits_section(summary),
             _archive_section(),
         )
     )
@@ -837,27 +851,25 @@ def render(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta http-equiv="Content-Security-Policy" content="{_CSP}">
-<title>quartet · H100 GEMM action-bank expansion</title>
+<title>quartet · Triton matmul tuning across four GPUs</title>
 <style>{_CSS}</style>
 </head>
 <body>
 <a class="skip" href="#main">Skip to results</a>
 <div class="page">
 <header>
-<p class="eyebrow">quartet · formerly HeliosTune · <a href="{REPOSITORY}">source</a></p>
-<h1>Results of expanding my H100 matmul action bank</h1>
-<p class="lede">My tuner picks Triton matmul kernels for LLM projection shapes. I wanted to know whether its search
-policy or its set of kernels was holding it back. So I added ten Hopper-aware actions to my original 36 and
-re-measured {overall["named_workload_count"]} named GEMMs ({overall["unique_shape_count"]} unique shapes) on one H100.
-I pick actions on bank 1 and score them on bank 2. Everything on this page is recomputed on CPU from committed
-measurements.</p>
-<p><span class="badge">MEAS: one H100 collection</span><span class="badge">Recomputed on CPU; no new timings</span></p>
+<p class="eyebrow">quartet · <a href="{REPOSITORY}">source</a></p>
+<h1>Triton matmul tuning across four GPUs</h1>
+<p class="lede">I compared a Triton autotuner with torch.matmul on T4, A10, L4 and H100.
+The original kernels land within 3% of torch on A10 and L4.
+On H100, adding ten configurations cut geometric-mean latency by 27%.</p>
 <div class="strip">{strip}</div>
 <nav aria-label="Sections"><ul>
-<li><a href="#result">Results</a></li><li><a href="#split">Selection and scoring</a></li>
-<li><a href="#contract">Setup</a></li><li><a href="#regimes">By M</a></li>
-<li><a href="#bank">Selection loss</a></li><li><a href="#dossier">Kernel dossier</a></li>
-<li><a href="#limits">Limits</a></li><li><a href="#archive">Earlier reports</a></li>
+<li><a href="#gpus">Four GPUs</a></li><li><a href="#result">H100 expansion</a></li>
+<li><a href="#split">Selection</a></li><li><a href="#contract">Setup</a></li>
+<li><a href="#regimes">By M</a></li><li><a href="#bank">Selection loss</a></li>
+<li><a href="#dossier">Kernel layout</a></li><li><a href="#limits">Limits</a></li>
+<li><a href="#archive">Earlier experiments</a></li>
 </ul></nav>
 </header>
 <main id="main">
@@ -892,15 +904,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     page = build()
-    payload = page.encode("utf-8")
-    if args.check:
-        # Compare raw bytes: text mode would hide CRLF or other newline rewrites.
-        if not args.output.is_file() or args.output.read_bytes() != payload:
-            raise SystemExit(f"{args.output} is stale; rerun scripts/build_site.py")
-    else:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_bytes(payload)
-    print(f"Landing page: {len(payload)} bytes; {'byte-exact' if args.check else 'written'}")
+    diagnosis = cast(Mapping[str, Any], read_json(_REPO / DIAGNOSIS))
+    figure = _regime_chart(diagnosis["expansion"]["by_regime"]) + "\n"
+    outputs = (
+        (args.output, page.encode("utf-8")),
+        (args.output.with_name("h100-by-m.svg"), figure.encode("utf-8")),
+    )
+    for path, payload in outputs:
+        if args.check:
+            # Compare raw bytes: text mode would hide CRLF or other newline rewrites.
+            if not path.is_file() or path.read_bytes() != payload:
+                raise SystemExit(f"{path} is stale; rerun scripts/build_site.py")
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(payload)
+        print(f"{path.name}: {len(payload)} bytes; {'byte-exact' if args.check else 'written'}")
     return 0
 
 

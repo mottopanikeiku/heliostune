@@ -1,6 +1,6 @@
 # H100 action-set comparison
 
-I will test whether a small Hopper-aware expansion closes the gap between the original 36 Triton configurations and `torch.matmul`. The earlier saved-data audit found almost no gap between the selected old configuration and the best old configuration, but that did not show whether a different kernel family would help.
+The H100 comparison measures how ten additional Triton configurations change the gap to `torch.matmul`. The original 36 configurations remain unchanged.
 
 ## Fixed action set
 
@@ -12,7 +12,7 @@ The CPU manifest in `src/heliostune/action_configs.py` defines the ten new actio
 
 ## Selection and measurement
 
-I use all 96 original named workloads, representing 84 distinct (M,N,K) shapes, on one H100. For bank 1, I measure all 36 old configurations and all applicable new configurations. I select the lowest correct median separately within the old and new sets, breaking ties by configuration key. Bank 2 measures only those two fixed winners and `torch.matmul`; no bank-2 outcome changes the selected action. The expanded union additionally chooses old versus new using bank-1 medians, not bank 2.
+The suite has 96 named workloads and 84 distinct (M,N,K) shapes. Pass 1 measures all 36 original configurations and every applicable new configuration. For each workload, it selects the lowest correct median separately within the old and new sets, breaking ties by configuration key. Pass 2 measures those two fixed winners and `torch.matmul`. The combined set chooses between old and new using pass-1 medians. In the JSON files, these passes are called banks 1 and 2.
 
 Both banks use uniform FP16 operands. The workload order is shuffled with the bank number; tensor seed is bank*10000 plus the index in that shuffled order, matching the collector's original default seed convention. Candidate order uses bank*10000+index+70000 so the larger cross-product has a recorded deterministic shuffle. The reference is `torch.mm` with FP32 output and TF32 disabled only for that reference call, then restored. Every candidate must satisfy the unchanged elementwise atol=rtol=0.01 comparison and finite-output check before timing. Failed compilation, correctness and timing attempts remain in the raw data; they are not replaced by another configuration after bank 2.
 
@@ -20,8 +20,8 @@ Timing follows the original protocol: allocating CUDA FP16 calls, Triton `do_ben
 
 ## Primary analysis
 
-For each workload, the primary ratio is the bank-2 median of the bank-1-selected new action divided by its bank-2 torch median; below one is a Triton win. I report old/new/expanded-union win counts, all per-workload ratios and selected configurations, geometric means over comparable scored workloads, M-group summaries and unscored failures. I distinguish 96 named workloads from 84 unique shapes and make no statistical-significance or hardware-cause claim from a single device and descriptive quantiles.
+For each workload, the ratio is the pass-2 median of the selected new action divided by the same pass's torch median. Below one is a Triton win. The summary includes old, new and combined-set win counts, per-workload ratios and selected configurations, geometric means, M-group summaries and failures.
 
-The pilot measures four large-K workloads at M=1,7,31,1024 and is saved separately. It sizes compilation and timing cost but does not change the fixed action set, timing windows, numerical tolerance or estimator. The full run repeats all workloads independently and may reuse compiled binaries. I book one H100 container at a time, one CPU core and 4 GiB host memory, with a four-minute pilot and at most a 28-minute full call inside a $2.50 budget. Actual elapsed cloud minutes and a conservative cost estimate are added to the result metadata after each run. Compilation, tuning and cold-start cost are reported separately from warmed call medians.
+The pilot measures four large-K workloads at M=1,7,31,1024 and is saved separately. It estimates compilation and timing cost without changing the action set, timing windows or numerical tolerance. The full run repeats every workload and may reuse compiled binaries.
 
-Raw measurements are `results/action-expansion-raw.json`; `scripts/analyze_action_expansion.py` writes `results/action-expansion-summary.json` and `results/action-expansion.svg`. The experiment records the commit containing this plan and the fixed implementation. Pilot and full data remain separate; all scientific conclusions use the full run.
+Raw measurements are in [`results/action-expansion-raw.json`](../results/action-expansion-raw.json). [`scripts/analyze_action_expansion.py`](../scripts/analyze_action_expansion.py) builds the summary and per-workload figure. Each collection records the source commit and the latest commit to this method document. Pilot timings are excluded from the reported result.
