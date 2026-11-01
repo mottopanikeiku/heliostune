@@ -36,7 +36,7 @@ REP_MS = 100
 QUANTILES = (0.2, 0.5, 0.8)
 ATOL = 1e-2
 RTOL = 1e-2
-PLAN_PATH = "docs/action-expansion-plan.md"
+PLAN_PATH = "docs/action-expansion.md"
 # Fields a resumed checkpoint must match exactly. Sessions, rows, selections and
 # durations accumulate; everything here identifies one experiment.
 IDENTITY_FIELDS = (
