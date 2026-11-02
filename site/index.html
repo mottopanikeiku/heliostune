@@ -66,16 +66,16 @@ footer { margin: 4rem 0 2rem; padding-top: 1rem; border-top: 0.0625rem solid var
 <header>
 <p class="eyebrow">quartet · <a href="https://github.com/mottopanikeiku/quartet">source</a></p>
 <h1>Triton matmul tuning across four GPUs</h1>
-<p class="lede">I compared a Triton autotuner with torch.matmul on T4, A10, L4 and H100.
-The original kernels land within 3% of torch on A10 and L4.
-On H100, adding ten configurations cut geometric-mean latency by 27%.</p>
+<p class="lede">A Triton autotuner measured against torch.matmul on T4, A10, L4 and H100. In the
+original four-GPU comparison, the configuration picked on one timing pass was within 0.7% of the
+fastest of the 36 on a second pass, yet Triton on the H100 still trailed torch. Ten new kernels cut
+its H100 latency by 27%.</p>
 <div class="strip"><div><strong>96</strong><span>LLM-shaped workloads on T4, A10, L4 and H100</span></div><div><strong>27%</strong><span>lower H100 latency after expanding the kernel set</span></div><div><strong>1.17×</strong><span>new H100 actions / torch latency</span></div><div><strong>9 / 96</strong><span>H100 workloads faster than torch</span></div></div>
 <nav aria-label="Sections"><ul>
 <li><a href="#gpus">Four GPUs</a></li><li><a href="#result">H100 expansion</a></li>
 <li><a href="#split">Selection</a></li><li><a href="#contract">Setup</a></li>
 <li><a href="#regimes">By M</a></li><li><a href="#bank">Selection loss</a></li>
-<li><a href="#dossier">Kernel layout</a></li><li><a href="#limits">Limits</a></li>
-<li><a href="#archive">Earlier experiments</a></li>
+<li><a href="#dossier">Kernel layout</a></li><li><a href="#archive">Other reports</a></li>
 </ul></nav>
 </header>
 <main id="main">
@@ -100,7 +100,8 @@ H100 kernel set to address that gap.</p>
 <strong>0.730</strong>.
 Each ratio divides the selected candidate's median by torch's median in the same scoring pass.
 “Named” weights each model projection equally; “unique shape” first averages projections
-sharing an (M,N,K) shape. The microsecond columns are arithmetic means.</p>
+sharing an (M,N,K) shape. The microsecond columns are arithmetic means. All of this is one H100
+session, and 5 of the 9 wins are under 1%.</p>
 <div class="wrap"><table id="headline"><caption>Bank-2 scoring of bank-1 selections: 96 named workloads, 84 unique shapes, one H100</caption><thead><tr><th scope="col" class="text">Arm</th><th scope="col">Wins vs torch</th><th scope="col">Exact ties</th><th scope="col">Losses</th><th scope="col">Latency / torch (named)</th><th scope="col">Latency / torch (unique shape)</th><th scope="col">Mean µs (named)</th><th scope="col">Mean µs (unique shape)</th></tr></thead><tbody><tr><td class="text">Old 36</td><td>0</td><td>0</td><td>96</td><td>1.608×</td><td>1.602×</td><td>78.7</td><td>82.4</td></tr><tr><td class="text">New actions</td><td>9</td><td>1</td><td>86</td><td>1.174×</td><td>1.171×</td><td>58.3</td><td>61.1</td></tr><tr><td class="text">Expanded union</td><td>9</td><td>1</td><td>86</td><td>1.173×</td><td>1.169×</td><td>58.2</td><td>61.0</td></tr><tr><td class="text">torch.matmul</td><td>—</td><td>—</td><td>—</td><td>1.000×</td><td>1.000×</td><td>49.8</td><td>52.2</td></tr></tbody></table></div>
 <div class="wrap"><table id="wins"><caption>Every nominal new-action win, smallest ratio first; the exact median tie is not a win</caption><thead><tr><th scope="col" class="text">Model / projection</th><th scope="col" class="text">(M,N,K)</th><th scope="col" class="text">Family</th><th scope="col">New µs</th><th scope="col">Torch µs</th><th scope="col">New / torch</th></tr></thead><tbody><tr><td class="text">Qwen / ffn-down</td><td class="text">(1,3584,18944)</td><td class="text">split_k</td><td>63.456</td><td>67.184</td><td>0.944511</td></tr><tr><td class="text">Qwen / ffn-down</td><td class="text">(7,3584,18944)</td><td class="text">split_k</td><td>64.256</td><td>67.712</td><td>0.948960</td></tr><tr><td class="text">Phi / attention-out</td><td class="text">(1,3072,3072)</td><td class="text">split_k</td><td>17.664</td><td>18.272</td><td>0.966725</td></tr><tr><td class="text">Phi / attention-out</td><td class="text">(7,3072,3072)</td><td class="text">split_k</td><td>18.048</td><td>18.432</td><td>0.979167</td></tr><tr><td class="text">Mistral / ffn-up</td><td class="text">(1,14336,4096)</td><td class="text">tile</td><td>53.952</td><td>54.336</td><td>0.992933</td></tr><tr><td class="text">Mistral / ffn-up</td><td class="text">(7,14336,4096)</td><td class="text">tile</td><td>54.560</td><td>54.944</td><td>0.993011</td></tr><tr><td class="text">Granite / ffn-up</td><td class="text">(96,12800,4096)</td><td class="text">tile</td><td>51.712</td><td>52.032</td><td>0.993850</td></tr><tr><td class="text">Mistral / ffn-down</td><td class="text">(1,4096,14336)</td><td class="text">split_k</td><td>56.768</td><td>56.992</td><td>0.996070</td></tr><tr><td class="text">Granite / ffn-down</td><td class="text">(1,4096,12800)</td><td class="text">split_k</td><td>52.928</td><td>53.056</td><td>0.997587</td></tr></tbody></table></div>
 </section>
@@ -116,14 +117,15 @@ choices (192 candidate measurements). Both passes time torch once per
 workload. The JSON files call these passes banks 1 and 2.
 See the <a href="https://github.com/mottopanikeiku/quartet/blob/main/docs/action-expansion.md"><code>measurement method</code></a>.</p>
 <p>The combined set's pass-1 choice also wins the old-versus-new comparison on pass 2 for
-96/96 workloads.</p>
+96/96 workloads. This page measures exhaustive selection;
+Thompson sampling has not been rerun on the expanded set.</p>
 </section>
 
 <section id="contract" aria-labelledby="contract-title">
 <h2 id="contract-title">Numerical and timing setup</h2>
 <p>Each candidate must pass the numerical comparison before timing.
 Torch's reduced-precision FP16 reduction flag was enabled.</p>
-<dl><dt>Device</dt><dd>NVIDIA H100 80GB HBM3, 132 SMs, compute capability 9.0</dd><dt>Software</dt><dd>Torch 2.8.0+cu128, Triton 3.4.0, CUDA 12.8</dd><dt>Operands</dt><dd>FP16 A[M,K] @ B[K,N] with FP16 output</dd><dt>Reference</dt><dd>FP16 operands; torch.mm out_dtype=float32, TF32 disabled only for reference</dd><dt>Tolerance</dt><dd>atol=0.01, rtol=0.01</dd><dt>Torch precision flags</dt><dd>allow_tf32=False, allow_fp16_reduced_precision_reduction=True, float32_matmul_precision=highest</dd><dt>Timed call</dt><dd>allocating CUDA FP16 calls; split-K workspace/reduction included</dd><dt>Timing</dt><dd>25 ms warmup, 100 ms timing; p20/p50/p80</dd><dt>Order and seeds</dt><dd>workload order: bank; config order: bank * 10000 + workload index + 70000; tensors: bank * 10000 + index in that bank&#x27;s shuffled workload order</dd><dt>Selection rule</dt><dd>minimum correct bank-1 median, then config-key tie-break</dd><dt>Measured source</dt><dd><a href="https://github.com/mottopanikeiku/quartet/commit/318187e3b71ad77fc98293292291b8473d000357"><code>318187e</code></a>; collector and package hashes are in the <a href="https://github.com/mottopanikeiku/quartet/blob/main/results/action-expansion-raw.json"><code>raw artifact</code></a></dd><dt>Failure rows</dt><dd>0; a failed row would stay unscored</dd></dl>
+<dl><dt>Device</dt><dd>NVIDIA H100 80GB HBM3, 132 SMs, compute capability 9.0</dd><dt>Software</dt><dd>Torch 2.8.0+cu128, Triton 3.4.0, CUDA 12.8</dd><dt>Operands</dt><dd>FP16 A[M,K] @ B[K,N] with FP16 output</dd><dt>Reference</dt><dd>FP16 operands; torch.mm out_dtype=float32, TF32 disabled only for reference</dd><dt>Tolerance</dt><dd>atol=0.01, rtol=0.01</dd><dt>Torch precision flags</dt><dd>allow_tf32=False, allow_fp16_reduced_precision_reduction=True, float32_matmul_precision=highest</dd><dt>Timed call</dt><dd>allocating CUDA FP16 calls; split-K workspace/reduction included</dd><dt>Timing</dt><dd>25 ms warmup, 100 ms timing; p20/p50/p80</dd><dt>Order and seeds</dt><dd>workload order: bank; config order: bank * 10000 + workload index + 70000; tensors: bank * 10000 + index in that bank&#x27;s shuffled workload order</dd><dt>Selection rule</dt><dd>minimum correct bank-1 median, then config-key tie-break</dd><dt>Measured source</dt><dd>The original action-expansion collection; collector and package hashes are in the <a href="https://github.com/mottopanikeiku/quartet/blob/main/results/action-expansion-raw.json"><code>raw artifact</code></a></dd><dt>Failure rows</dt><dd>0; a failed row would stay unscored</dd></dl>
 </section>
 
 <section id="regimes" aria-labelledby="regimes-title">
@@ -178,14 +180,9 @@ padding, occupancy and memory traffic.</p>
 <dl><dt>ideal bytes</dt><dd><code>2*(M*K+K*N+M*N) FP16 bytes, one read per operand and one output write</code></dd><dt>intensity</dt><dd><code>useful GEMM FLOPs 2*M*N*K divided by logical bytes; split-K adds workspace traffic to the denominator</code></dd><dt>launches</dt><dd><code>ordinary/persistent: 1; tensor-core split-K: 2 (partials and reduction)</code></dd><dt>masked rows</dt><dd><code>1-M/(Tm*BM); masked dot lanes, NOT a fraction of latency or HBM bytes</code></dd><dt>no cross tile reuse</dt><dd><code>2*(Tn*M*K+Tm*K*N+M*N) + workspace write/read; no inter-tile input reuse</code></dd><dt>padded dot</dt><dd><code>2*(Tm*BM)*(Tn*BN)*(S*Tk*BK); source-level padded dot work, not instruction counts</code></dd><dt>persistent balance</dt><dd><code>each persistent program strides tiles by SMs: at most ceil(Tm*Tn/P) tiles per program; balance = Tm*Tn/(P*ceil(Tm*Tn/P)), 1 when every program gets the same tile count</code></dd><dt>programs</dt><dd><code>ordinary: Tm*Tn; persistent: min(SMs,Tm*Tn); split-K: S*Tm*Tn plus ceil(M*N/256) reduction programs</code></dd><dt>tiles</dt><dd><code>Tm=ceil(M/BM), Tn=ceil(N/BN), Tk=ceil(ceil(K/BK)/S); S=1 except split-K</code></dd><dt>workspace</dt><dd><code>4*S*M*N FP32 bytes; write plus read = 8*S*M*N; unpadded; zero without split-K</code></dd></dl>
 </section>
 
-<section id="limits" aria-labelledby="limits-title">
-<h2 id="limits-title">Measurement limits</h2>
-<ul><li>The H100 expansion is one device session. 5 of its 9 torch wins are below 1%; individual timing samples were not retained.</li><li>Calls allocate outputs and include split-K workspace and reduction. Warmed medians exclude compilation, tuning and end-to-end serving costs.</li><li>The baseline is torch.matmul, without separate cuBLASLt/CUTLASS tuning, preallocated outputs or CUDA graphs.</li><li>Thompson sampling and transfer have not been rerun on the expanded kernel set. Its scoring pass contains only the selected finalists.</li><li>Kernel layout estimates omit cache behavior, spills and achieved occupancy.</li></ul>
-</section>
-
 <section id="archive" aria-labelledby="archive-title">
-<h2 id="archive-title">Earlier experiments</h2>
-<p>These reports retain their original names and contents because the release manifests check their hashes.</p>
+<h2 id="archive-title">Other reports</h2>
+<p>Older studies, kept unchanged because the release manifests hash them.</p>
 <ul><li><a href="transfer.html">L4 + A10 + T4 → H100 transfer</a>: Cold Thompson sampling beat cross-GPU transfer; the selected posterior transfer strength was zero.</li><li><a href="parhelion-v2-addendum.html">Transfer ablations</a>: A follow-up comparison of retrieval anchors and posterior transfer.</li><li><a href="v1.html">L4 → A10 transfer</a>: The original single-source comparison.</li><li><a href="a10-to-l4.html">A10 → L4 transfer</a>: The reverse direction.</li><li><a href="parhelion-v3-engineering.html">H200 transfer</a>: A later run with more configurations; A100 parameter selection mixed PCIe and SXM devices.</li><li><a href="hopper-h100-engineering.html">H100 persistent and skinny-GEMV kernels</a>: An earlier single-pass comparison.</li><li><a href="h100-precision-probe.html">H100 FP16 reduction</a>: Fixed configurations under different arithmetic settings.</li><li><a href="fusion-remote-exploratory.html">H100 fusion experiments</a>: RMSNorm and gated-MLP measurements.</li><li><a href="native-rmsnorm-h100.html">H100 Triton RMSNorm</a>: A separate operator comparison.</li></ul>
 <p class="note">Data published with the transfer reports: <a href="parhelion-h100-final.json">H100 transfer summary</a> · <a href="parhelion-t4-selection.json">T4 selection summary</a> · <a href="a10-to-l4.json">v1 A10 → L4 summary</a> · <a href="l4-to-a10.json">v1 L4 → A10 summary</a>.</p>
 </section>

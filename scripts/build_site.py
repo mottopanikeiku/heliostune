@@ -147,10 +147,6 @@ def _repo_link(path: str, text: str | None = None) -> str:
     return f'<a href="{_e(BLOB + path)}"><code>{_e(text or path)}</code></a>'
 
 
-def _commit_link(commit: str) -> str:
-    return f'<a href="{REPOSITORY}/commit/{_e(commit)}"><code>{_e(commit[:7])}</code></a>'
-
-
 def _ratio(value: float | None) -> str:
     return "—" if value is None else f"{value:.3f}×"
 
@@ -360,7 +356,8 @@ def _result_section(summary: Mapping[str, Any], diagnosis: Mapping[str, Any]) ->
 <strong>{comparison["geometric_mean_new_to_old"]:.3f}</strong>.
 Each ratio divides the selected candidate's median by torch's median in the same scoring pass.
 “Named” weights each model projection equally; “unique shape” first averages projections
-sharing an (M,N,K) shape. The microsecond columns are arithmetic means.</p>
+sharing an (M,N,K) shape. The microsecond columns are arithmetic means. All of this is one H100
+session, and {sum(w["new_to_torch"] > 0.99 for w in wins)} of the {len(wins)} wins are under 1%.</p>
 {table}
 {wins_table}
 </section>"""
@@ -385,7 +382,8 @@ choices ({banks[2]["observed_cells"]} candidate measurements). Both passes time 
 workload. The JSON files call these passes banks 1 and 2.
 See the {_repo_link("docs/action-expansion.md", "measurement method")}.</p>
 <p>The combined set's pass-1 choice also wins the old-versus-new comparison on pass 2 for
-{agreed}/{same["named_covered"]} workloads.</p>
+{agreed}/{same["named_covered"]} workloads. This page measures exhaustive selection;
+Thompson sampling has not been rerun on the expanded set.</p>
 </section>"""
 
 
@@ -435,7 +433,7 @@ def _contract_section(summary: Mapping[str, Any]) -> str:
         ("Selection rule", _e(protocol["selection"])),
         (
             "Measured source",
-            f"{_commit_link(summary['source_commit'])}; collector and package hashes are in the "
+            "The original action-expansion collection; collector and package hashes are in the "
             f"{_repo_link('results/action-expansion-raw.json', 'raw artifact')}",
         ),
         ("Failure rows", _e(f"{summary['failure_row_count']}; a failed row would stay unscored")),
@@ -764,28 +762,6 @@ padding, occupancy and memory traffic.</p>
 </section>"""
 
 
-def _limits_section(summary: Mapping[str, Any]) -> str:
-    wins = _wins(summary)
-    below = sum(w["new_to_torch"] > 0.99 for w in wins)
-    items = (
-        f"The H100 expansion is one device session. {below} of its {len(wins)} torch wins are "
-        "below 1%; individual timing samples were not retained.",
-        "Calls allocate outputs and include split-K workspace and reduction. Warmed medians "
-        "exclude compilation, tuning and end-to-end serving costs.",
-        "The baseline is torch.matmul, without separate cuBLASLt/CUTLASS tuning, "
-        "preallocated outputs or CUDA graphs.",
-        "Thompson sampling and transfer have not been rerun on the expanded kernel set. "
-        "Its scoring pass contains only the selected finalists.",
-        "Kernel layout estimates omit cache behavior, spills and achieved occupancy.",
-    )
-    body = "".join(f"<li>{_e(item)}</li>" for item in items)
-    return f"""
-<section id="limits" aria-labelledby="limits-title">
-<h2 id="limits-title">Measurement limits</h2>
-<ul>{body}</ul>
-</section>"""
-
-
 def _archive_section() -> str:
     reports = "".join(
         f'<li><a href="{_e(href)}">{_e(title)}</a>: {_e(text)}</li>'
@@ -794,8 +770,8 @@ def _archive_section() -> str:
     data = " · ".join(f'<a href="{_e(href)}">{_e(text)}</a>' for href, text in ARCHIVE_DATA)
     return f"""
 <section id="archive" aria-labelledby="archive-title">
-<h2 id="archive-title">Earlier experiments</h2>
-<p>These reports retain their original names and contents because the release manifests check their hashes.</p>
+<h2 id="archive-title">Other reports</h2>
+<p>Older studies, kept unchanged because the release manifests hash them.</p>
 <ul>{reports}</ul>
 <p class="note">Data published with the transfer reports: {data}.</p>
 </section>"""
@@ -840,7 +816,6 @@ def render(
             _regime_section(diagnosis),
             _bank_section(diagnosis),
             _dossier_section(diagnosis),
-            _limits_section(summary),
             _archive_section(),
         )
     )
@@ -860,16 +835,16 @@ def render(
 <header>
 <p class="eyebrow">quartet · <a href="{REPOSITORY}">source</a></p>
 <h1>Triton matmul tuning across four GPUs</h1>
-<p class="lede">I compared a Triton autotuner with torch.matmul on T4, A10, L4 and H100.
-The original kernels land within 3% of torch on A10 and L4.
-On H100, adding ten configurations cut geometric-mean latency by 27%.</p>
+<p class="lede">A Triton autotuner measured against torch.matmul on T4, A10, L4 and H100. In the
+original four-GPU comparison, the configuration picked on one timing pass was within 0.7% of the
+fastest of the 36 on a second pass, yet Triton on the H100 still trailed torch. Ten new kernels cut
+its H100 latency by 27%.</p>
 <div class="strip">{strip}</div>
 <nav aria-label="Sections"><ul>
 <li><a href="#gpus">Four GPUs</a></li><li><a href="#result">H100 expansion</a></li>
 <li><a href="#split">Selection</a></li><li><a href="#contract">Setup</a></li>
 <li><a href="#regimes">By M</a></li><li><a href="#bank">Selection loss</a></li>
-<li><a href="#dossier">Kernel layout</a></li><li><a href="#limits">Limits</a></li>
-<li><a href="#archive">Earlier experiments</a></li>
+<li><a href="#dossier">Kernel layout</a></li><li><a href="#archive">Other reports</a></li>
 </ul></nav>
 </header>
 <main id="main">
