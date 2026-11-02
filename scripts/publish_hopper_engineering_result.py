@@ -34,6 +34,7 @@ from analyze_precision_probe import (
 from heliostune.collection import AttemptJournal, sha256_file
 from heliostune.schema import HardwareProfile
 from heliostune.tooling.artifacts import (
+    read_git_blob,
     read_json,
     strict_json_dumps,
     strict_json_loads,
@@ -1222,12 +1223,7 @@ def _publication_source_sha256(path: Path, *, historical: bool) -> str:
         return sha256_file(path)
     relative = path.relative_to(_REPO).as_posix()
     try:
-        blob = subprocess.run(
-            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
-            cwd=_REPO,
-            check=True,
-            capture_output=True,
-        ).stdout
+        blob = read_git_blob(_REPO, _HISTORICAL_SOURCE_COMMIT, relative)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise ValueError(
             f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"

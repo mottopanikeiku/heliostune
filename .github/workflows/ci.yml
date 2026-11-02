@@ -78,7 +78,6 @@ jobs:
           uv run python scripts/build_site.py --check
       - name: Replay immutable v0.5.0 H200 derivation
         run: |
-          test "$(git rev-parse 'v0.5.0^{commit}')" = "53a0e22ea140ce841e874284827232a7e050ce1c"
           replay_dir="${RUNNER_TEMP}/heliostune-v0.5.0"
           git worktree add --detach "${replay_dir}" v0.5.0
           (

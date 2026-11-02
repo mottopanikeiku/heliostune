@@ -20,7 +20,7 @@ import zstandard
 
 from heliostune.hardware import expectation_for_gpu, validate_hardware
 from heliostune.local_executor import LocalExecutionResult
-from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
+from heliostune.tooling.artifacts import read_git_blob, strict_json_loads, write_bytes_atomic
 from heliostune.tooling.remote_execution import (
     RemoteIntent,
     RemoteJournalRecord,
@@ -916,12 +916,7 @@ def _publisher_bytes(*, historical: bool) -> bytes:
         return _PUBLISHER_PATH.read_bytes()
     relative = "scripts/publish_fusion_remote_results.py"
     try:
-        return subprocess.run(
-            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
-            cwd=_REPOSITORY,
-            check=True,
-            capture_output=True,
-        ).stdout
+        return read_git_blob(_REPOSITORY, _HISTORICAL_SOURCE_COMMIT, relative)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise ValueError(
             f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"

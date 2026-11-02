@@ -8,6 +8,7 @@ import io
 import json
 import os
 import stat
+import subprocess
 import sys
 import tempfile
 from collections.abc import Iterable, Iterator
@@ -114,6 +115,25 @@ def historical_artifact_path(root: Path, relative: str) -> Path:
     byte-preserving report relocation is resolved here, never the current page.
     """
     return root / ("site/transfer.html" if relative == "site/index.html" else relative)
+
+
+# Published manifests quote the commits their sources were read from. Those commits were
+# squashed away, so each maps to the commit that now holds the identical tree.
+_SNAPSHOT_COMMITS = {
+    "9f29906220f7c5e4d7662f60738fd483fcbe5fdc": "ed4816c258edb7b1df87a3f0383e50835ce568e5",
+    "b60db72b67eba94b0575ff25006a2587d05e72ac": "2603a83a173e0e85f9bc356fcc0762ff53579c40",
+}
+
+
+def read_git_blob(repository: Path, commit: str, relative: str) -> bytes:
+    """Return ``relative`` as committed at ``commit``, following the squashed-history map."""
+    resolved = _SNAPSHOT_COMMITS.get(commit, commit)
+    return subprocess.run(
+        ["git", "cat-file", "blob", f"{resolved}:{relative}"],
+        cwd=repository,
+        check=True,
+        capture_output=True,
+    ).stdout
 
 
 def _is_zstd(path: Path) -> bool:

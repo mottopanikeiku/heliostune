@@ -12,6 +12,7 @@ from typing import cast
 
 from heliostune.tooling.artifacts import (
     historical_artifact_path,
+    read_git_blob,
     read_json,
     read_measurements,
     write_json_atomic,
@@ -63,12 +64,7 @@ def _implementation_digests() -> dict[str, str]:
     digests: dict[str, str] = {}
     for relative in _IMPLEMENTATION_PATHS:
         try:
-            blob = subprocess.run(
-                ["git", "cat-file", "blob", f"{_ADDENDUM_IMPLEMENTATION_COMMIT}:{relative}"],
-                cwd=_REPO,
-                check=True,
-                capture_output=True,
-            ).stdout
+            blob = read_git_blob(_REPO, _ADDENDUM_IMPLEMENTATION_COMMIT, relative)
         except (OSError, subprocess.CalledProcessError) as exc:
             raise RuntimeError(
                 "addendum provenance requires a full git clone containing "

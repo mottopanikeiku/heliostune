@@ -17,7 +17,7 @@ import zstandard
 
 from heliostune.native_fusion_analysis import analyze_native_fusion_result
 from heliostune.native_fusion_executor import NativeFusionExecutionResult
-from heliostune.tooling.artifacts import strict_json_loads, write_bytes_atomic
+from heliostune.tooling.artifacts import read_git_blob, strict_json_loads, write_bytes_atomic
 from heliostune.tooling.remote_execution import (
     VerifiedRemoteReceipt,
     canonical_json_bytes,
@@ -597,12 +597,7 @@ def _source_bytes(relative: str, *, historical: bool) -> bytes:
     if not historical:
         return (_REPOSITORY / relative).read_bytes()
     try:
-        return subprocess.run(
-            ["git", "cat-file", "blob", f"{_HISTORICAL_SOURCE_COMMIT}:{relative}"],
-            cwd=_REPOSITORY,
-            check=True,
-            capture_output=True,
-        ).stdout
+        return read_git_blob(_REPOSITORY, _HISTORICAL_SOURCE_COMMIT, relative)
     except (OSError, subprocess.CalledProcessError) as exc:
         raise ValueError(
             f"historical publication requires source snapshot {_HISTORICAL_SOURCE_COMMIT}: {relative}"
